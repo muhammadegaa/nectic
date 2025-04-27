@@ -1,0 +1,467 @@
+"use client"
+
+import { useParams, useRouter } from "next/navigation"
+import { ArrowLeft, Calendar, CheckCircle2, Clock, DollarSign, FileText, HelpCircle, Users, BarChart3, TrendingUp, AlertTriangle, Building, ChevronRight } from 'lucide-react'
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Progress } from "@/components/ui/progress"
+import { opportunitiesData } from "@/lib/opportunities-data"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { motion } from "framer-motion"
+import { useState, useEffect } from "react"
+import Image from "next/image"
+import { companyData, getPersonalizedDescription, getWorkflowSteps, getImprovedWorkflowSteps, getDocumentDataForOpportunity } from "@/lib/personalization-data"
+
+export default function OpportunityDetailPage() {
+  const params = useParams()
+  const router = useRouter()
+  const id = params.id as string
+  const [activeTab, setActiveTab] = useState("overview")
+  const [animateScore, setAnimateScore] = useState(false)
+
+  // Find the opportunity by ID
+  const opportunity = opportunitiesData.find((opp) => opp.id === id)
+
+  // Get personalized data
+  const documentData = opportunity ? getDocumentDataForOpportunity(opportunity.id) : null
+  const currentWorkflow = opportunity ? getWorkflowSteps(opportunity.id) : []
+  const improvedWorkflow = opportunity ? getImprovedWorkflowSteps(opportunity.id) : []
+
+  // Calculate total time for workflows
+  const currentTotalTime = currentWorkflow.reduce((sum, step) => sum + step.time, 0)
+  const improvedTotalTime = improvedWorkflow.reduce((sum, step) => sum + step.time, 0)
+  const timeReduction = Math.round(((currentTotalTime - improvedTotalTime) / currentTotalTime) * 100)
+
+  // Trigger animation when component mounts
+  useEffect(() => {
+    setAnimateScore(true)
+  }, [])
+
+  // If opportunity not found, show error
+  if (!opportunity) {
+    return (
+      <div className="flex-1 p-8 flex flex-col items-center justify-center">
+        <h1 className="text-2xl font-bold mb-4">Opportunity Not Found</h1>
+        <p className="text-muted-foreground mb-6">The opportunity you're looking for doesn't exist.</p>
+        <Button onClick={() => router.push("/app/opportunities")}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Opportunities
+        </Button>
+      </div>
+    )
+  }
+
+  // Format currency
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 0,
+    }).format(amount)
+  }
+
+  // Function to determine difficulty text and color
+  const getDifficultyBadge = () => {
+    if (opportunity.implementationEffort <= 2) {
+      return <Badge className="bg-green-100 text-green-800 hover:bg-green-200">Easy</Badge>
+    } else if (opportunity.implementationEffort <= 4) {
+      return <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-200">Medium</Badge>
+    } else {
+      return <Badge className="bg-red-100 text-red-800 hover:bg-red-200">Complex</Badge>
+    }
+  }
+
+  // Get complexity description
+  const getComplexityDescription = () => {
+    if (opportunity.implementationEffort <= 2) {
+      return "Simple implementation requiring minimal IT resources"
+    } else if (opportunity.implementationEffort <= 4) {
+      return "Moderate complexity requiring some IT support"
+    } else {
+      return "Complex implementation requiring significant IT resources"
+    }
+  }
+
+  // Calculate industry average (simulated)
+  const industryAverage = opportunity.impactScore - Math.floor(Math.random() * 15 + 10) // 10-25% lower
+  const percentAboveAverage = Math.round(((opportunity.impactScore - industryAverage) / industryAverage) * 100)
+
+  // Get personalized description
+  const personalizedDescription = getPersonalizedDescription(opportunity.id, opportunity.description)
+
+  return (
+    <div className="flex-1 space-y-6 p-6 md:p-8">
+      {/* Personalized Header Section */}
+      <div className="bg-white rounded-lg shadow-sm border p-6 mb-8">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 relative">
+              <Image 
+                src="/company-logo.svg" 
+                alt={companyData.name} 
+                fill 
+                className="object-contain"
+              />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold">{companyData.name}</h2>
+              <div className="flex items-center text-sm text-gray-500">
+                <Building className="h-4 w-4 mr-1" />
+                <span>{companyData.industry} • {companyData.employees} Employees</span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-6">
+            <div>
+              <div className="text-sm text-gray-500 mb-1">AI Readiness Score</div>
+              <div className="flex items-center">
+                <div className="w-full bg-gray-200 rounded-full h-2.5 mr-2">
+                  <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${companyData.aiReadinessScore}%` }}></div>
+                </div>
+                <span className="text-sm font-medium">{companyData.aiReadinessScore}%</span>
+              </div>
+            </div>
+            <div className="border-l pl-6">
+              <div className="text-sm text-gray-500 mb-1">Connected Systems</div>
+              <div className="flex items-center gap-2">
+                {companyData.systemsConnected.slice(0, 3).map((system, index) => (
+                  <Badge key={index} variant="outline" className="bg-blue-50">{system}</Badge>
+                ))}
+                {companyData.systemsConnected.length > 3 && (
+                  <Badge variant="outline" className="bg-blue-50">+{companyData.systemsConnected.length - 3}</Badge>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-2 text-sm text-gray-500 border-t pt-4">
+          <div className="bg-blue-100 text-blue-800 rounded-full p-1">
+            <CheckCircle2 className="h-4 w-4" />
+          </div>
+          <span>Hello, {companyData.userProfile.name}! Here's a personalized AI opportunity we've identified for your business.</span>
+        </div>
+      </div>
+
+      {/* Progress Tracker */}
+      <div className="mb-8 bg-white p-4 rounded-lg shadow-sm border">
+        <div className="flex items-center justify-between max-w-3xl mx-auto">
+          <div className="flex flex-col items-center">
+            <div className="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-sm">
+              <CheckCircle2 className="h-5 w-5" />
+            </div>
+            <span className="text-xs mt-1 text-gray-600">Connect Systems</span>
+          </div>
+          <div className="flex-1 h-1 bg-green-200 mx-2"></div>
+          <div className="flex flex-col items-center">
+            <div className="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-sm">
+              <CheckCircle2 className="h-5 w-5" />
+            </div>
+            <span className="text-xs mt-1 text-gray-600">Discover Opportunities</span>
+          </div>
+          <div className="flex-1 h-1 bg-amber-200 mx-2"></div>
+          <div className="flex flex-col items-center">
+            <div className="w-8 h-8 rounded-full bg-amber-600 text-white flex items-center justify-center text-sm font-medium">
+              3
+            </div>
+            <span className="text-xs mt-1 font-medium text-amber-600">Explore Details</span>
+          </div>
+          <div className="flex-1 h-1 bg-gray-200 mx-2"></div>
+          <div className="flex flex-col items-center">
+            <div className="w-8 h-8 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center text-sm font-medium">
+              4
+            </div>
+            <span className="text-xs mt-1 text-gray-400">Implement Solution</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2 mb-6">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => router.push("/app/opportunities")}
+          className="group transition-all duration-200 hover:border-amber-500 hover:bg-amber-50"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4 transition-transform group-hover:-translate-x-1" />
+          Back to Opportunities
+        </Button>
+        {opportunity.recommended && (
+          <Badge variant="outline" className="border-amber-500 text-amber-700">
+            Recommended
+          </Badge>
+        )}
+        {opportunity.quickWin && (
+          <Badge variant="outline" className="border-green-500 text-green-700">
+            Quick Win
+          </Badge>
+        )}
+        {getDifficultyBadge()}
+      </div>
+
+      <div className="flex flex-col md:flex-row justify-between gap-6">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold">{opportunity.name}</h1>
+          <p className="text-muted-foreground">{personalizedDescription}</p>
+        </div>
+
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="relative flex-shrink-0 flex flex-col items-center">
+                <div className="w-28 h-28 rounded-full bg-gray-100 flex items-center justify-center">
+                  <svg viewBox="0 0 100 100" className="w-full h-full">
+                    <circle cx="50" cy="50" r="45" fill="none" stroke="#e5e7eb" strokeWidth="8" />
+                    <motion.circle
+                      cx="50"
+                      cy="50"
+                      r="45"
+                      fill="none"
+                      stroke="#f59e0b"
+                      strokeWidth="8"
+                      strokeLinecap="round"
+                      strokeDasharray={`${animateScore ? opportunity.impactScore * 2.83 : 0} 283`}
+                      strokeDashoffset="0"
+                      transform="rotate(-90 50 50)"
+                      initial={{ strokeDasharray: "0 283" }}
+                      animate={{ strokeDasharray: `${opportunity.impactScore * 2.83} 283` }}
+                      transition={{ duration: 1.5, ease: "easeOut" }}
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-3xl font-bold text-amber-600">{opportunity.impactScore}%</span>
+                    <span className="text-xs text-gray-500">Impact Score</span>
+                  </div>
+                </div>
+                <div className="mt-2 text-center text-xs text-green-600 font-medium">
+                  {percentAboveAverage}% higher than industry average
+                </div>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs">
+              <p>
+                Impact score is calculated based on potential cost savings, time saved, and strategic alignment with
+                your business goals.
+              </p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Monthly Savings</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center">
+              <DollarSign className="h-5 w-5 text-green-500 mr-2" />
+              <span className="text-2xl font-bold">{formatCurrency(opportunity.monthlySavings)}</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Time Saved</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center">
+              <Clock className="h-5 w-5 text-blue-500 mr-2" />
+              <span className="text-2xl font-bold">{opportunity.timeSavedHours} hrs/month</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Implementation Timeline</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center">
+              <Calendar className="h-5 w-5 text-amber-500 mr-2" />
+              <span className="text-2xl font-bold">{opportunity.implementationTimeWeeks} weeks</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Department</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center">
+              <Users className="h-5 w-5 text-purple-500 mr-2" />
+              <span className="text-2xl font-bold capitalize">{opportunity.department.replace("-", " ")}</span>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Tabs
+        defaultValue="overview"
+        value={activeTab}
+        onValueChange={(value) => setActiveTab(value)}
+        className="space-y-4"
+      >
+        <TabsList className="bg-muted/30 p-1 h-auto">
+          {["overview", "current-process", "transformation", "implementation", "roi", "vendors"].map((tab) => (
+            <TabsTrigger
+              key={tab}
+              value={tab}
+              className={`
+                capitalize px-6 py-2.5 text-sm font-medium transition-all duration-200
+                data-[state=active]:bg-white data-[state=active]:text-amber-600 data-[state=active]:shadow-sm
+                data-[state=active]:border-b-[3px] data-[state=active]:border-amber-500
+                hover:text-amber-600
+              `}
+            >
+              {tab.replace("-", " ")}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <TabsContent value="overview" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Opportunity Overview</CardTitle>
+                <CardDescription>Key information about this AI opportunity</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <h3 className="font-medium mb-2">Description</h3>
+                  <p>{personalizedDescription}</p>
+                </div>
+
+                <div>
+                  <h3 className="font-medium mb-2">Business Impact</h3>
+                  <p className="mb-2">
+                    This opportunity has a <strong>{opportunity.impactScore}%</strong> impact score, indicating its
+                    potential to significantly improve business operations.
+                  </p>
+                  <Progress value={opportunity.impactScore} className="h-2" />
+                </div>
+
+                <div>
+                  <h3 className="font-medium mb-2 flex items-center">
+                    Implementation Complexity
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-4 w-4 ml-1 text-gray-400" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Complexity is rated from 1 (simplest) to 5 (most complex)</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </h3>
+
+                  <div className="flex flex-col space-y-2">
+                    <div className="flex items-center">
+                      <div className="flex-1">
+                        <div className="flex items-center">
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <div
+                              key={i}
+                              className={`w-6 h-6 rounded-full mx-1 flex items-center justify-center ${
+                                i < opportunity.implementationEffort
+                                  ? "bg-amber-500 text-white"
+                                  : "bg-gray-200 text-gray-400"
+                              }`}
+                            >
+                              {i + 1}
+                            </div>
+                          ))}
+                        </div>
+                        <div className="flex justify-between mt-1 text-xs text-gray-500 px-1">
+                          <span>Simple</span>
+                          <span>Complex</span>
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-600">{getComplexityDescription()}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Benefits</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2">
+                    <li className="flex items-start gap-2">
+                      <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
+                      <span>
+                        Reduce manual processing time by up to {Math.round(opportunity.timeSavedHours / 4)} hours per
+                        week for your {opportunity.department.replace("-", " ")} team
+                      </span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
+                      <span>Improve accuracy and reduce your current {companyData.currentProcessMetrics.errorRate}% error rate</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
+                      <span>
+                        Annual cost savings of approximately {formatCurrency(opportunity.monthlySavings * 12)} for {companyData.name}
+                      </span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
+                      <span>Reduce customer wait time from {companyData.currentProcessMetrics.customerWaitTime} days to under 1 day</span>
+                    </li>
+                  </ul>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Requirements</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2">
+                    <li className="flex items-start gap-2">
+                      <FileText className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
+                      <span>Access to your {companyData.systemsConnected.join(", ")} systems</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <FileText className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
+                      <span>IT resources for integration and deployment (estimated {Math.ceil(opportunity.implementationTimeWeeks * 0.3)} weeks)</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <FileText className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
+                      <span>Training for your {opportunity.department.replace("-", " ")} team (2 sessions)</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <FileText className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
+                      <span>Estimated budget: {formatCurrency(opportunity.monthlySavings * 3)}</span>
+                    </li>
+                  </ul>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="current-process" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Current Process Analysis</CardTitle>
+                <CardDescription>We've analyzed your current workflow based on your connected systems</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div>
+                  <h3 className="font-medium mb-4">Current Workflow</h3>
+                  <div className="relative">
