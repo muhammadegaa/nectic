@@ -30,12 +30,16 @@ export const useLanguage = () => useContext(LanguageContext)
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<SupportedLanguage>("en")
   const [isLoading, setIsLoading] = useState(true)
+  const [isMounted, setIsMounted] = useState(false)
 
   useEffect(() => {
+    setIsMounted(true)
     // Check for saved language preference
-    const savedLanguage = localStorage.getItem("language") as SupportedLanguage
-    if (savedLanguage === "en" || savedLanguage === "id") {
-      setLanguageState(savedLanguage)
+    if (typeof window !== "undefined") {
+      const savedLanguage = localStorage.getItem("language") as SupportedLanguage
+      if (savedLanguage === "en" || savedLanguage === "id") {
+        setLanguageState(savedLanguage)
+      }
     }
     setIsLoading(false)
   }, [])
@@ -43,7 +47,9 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const setLanguage = (lang: SupportedLanguage) => {
     setLanguageState(lang)
     // Save preference to localStorage
-    localStorage.setItem("language", lang)
+    if (typeof window !== "undefined") {
+      localStorage.setItem("language", lang)
+    }
   }
 
   const t = (key: string, params?: Record<string, string | number>) => {
@@ -57,6 +63,13 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     }
 
     return translation
+  }
+
+  // If not mounted yet, provide a minimal context to avoid hydration issues
+  if (!isMounted) {
+    return (
+      <LanguageContext.Provider value={{ language, setLanguage, t, isLoading }}>{children}</LanguageContext.Provider>
+    )
   }
 
   return <LanguageContext.Provider value={{ language, setLanguage, t, isLoading }}>{children}</LanguageContext.Provider>

@@ -105,7 +105,7 @@ export default function PaymentPage() {
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle>Complete Your Purchase</CardTitle>
-            <CardDescription>{planTitle} - Early Adopter Pricing</CardDescription>
+            <CardDescription>{planTitle} - Current Pricing</CardDescription>
           </CardHeader>
           <CardContent>
             {loading ? (

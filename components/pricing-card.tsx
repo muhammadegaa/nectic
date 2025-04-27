@@ -4,7 +4,7 @@ import Link from "next/link"
 import { CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useCurrency } from "@/lib/currency-context"
-import { formatCurrency } from "@/lib/currency-utils"
+import { useLanguage } from "@/lib/language-context"
 
 interface PricingCardProps {
   title: string
@@ -16,20 +16,27 @@ interface PricingCardProps {
   popular?: boolean
 }
 
-export function PricingCard({
-  title,
-  description,
-  priceUSD,
-  earlyAdopterPriceUSD,
-  features,
-  plan,
-  popular = false,
-}: PricingCardProps) {
+export function PricingCard({ title, description, features, plan, popular = false }: PricingCardProps) {
   const { currency } = useCurrency()
+  const { language, t } = useLanguage()
 
-  // Format the prices based on the selected currency
-  const formattedRegularPrice = formatCurrency(priceUSD, currency)
-  const formattedEarlyAdopterPrice = formatCurrency(earlyAdopterPriceUSD, currency)
+  // Get the price keys based on the plan
+  const regularPriceKey = plan === "standard" ? "pricing_standard_regular_price" : "pricing_premium_regular_price"
+  const earlyPriceKey = plan === "standard" ? "pricing_standard_early_price" : "pricing_premium_early_price"
+  const priceKey = plan === "standard" ? "pricing_standard_price" : "pricing_premium_price"
+  const currentKey = plan === "standard" ? "pricing_standard_current" : "pricing_premium_current"
+
+  // Get the title and description keys
+  const titleKey = plan === "standard" ? "pricing_standard_title" : "pricing_premium_title"
+  const descKey = plan === "standard" ? "pricing_standard_desc" : "pricing_premium_desc"
+
+  // Feature keys
+  const featureKeys = [
+    plan === "standard" ? "pricing_standard_feature1" : "pricing_premium_feature1",
+    plan === "standard" ? "pricing_standard_feature2" : "pricing_premium_feature2",
+    plan === "standard" ? "pricing_standard_feature3" : "pricing_premium_feature3",
+    plan === "standard" ? "pricing_standard_feature4" : "pricing_premium_feature4",
+  ]
 
   return (
     <div
@@ -39,28 +46,30 @@ export function PricingCard({
     >
       {popular && (
         <div className="absolute -top-4 left-0 right-0 flex justify-center">
-          <span className="bg-primary text-white text-xs font-semibold px-3 py-1 rounded-full">Most Popular</span>
+          <span className="bg-primary text-white text-xs font-semibold px-3 py-1 rounded-full">
+            {t("pricing_popular", "Most Popular")}
+          </span>
         </div>
       )}
       <div className="text-center mb-6">
-        <h3 className="text-2xl font-bold">{title}</h3>
-        <p className="text-gray-500 mt-2">{description}</p>
+        <h3 className="text-2xl font-bold">{t(titleKey, title)}</h3>
+        <p className="text-gray-500 mt-2">{t(descKey, description)}</p>
       </div>
       <div className="text-center mb-6">
         <div className="flex items-center justify-center">
-          <span className="text-4xl font-bold">{formattedEarlyAdopterPrice}</span>
-          <span className="text-gray-500 ml-2">/ month</span>
+          <span className="text-4xl font-bold">{t(earlyPriceKey, "$199")}</span>
+          <span className="text-gray-500 ml-2">{t(priceKey, "/ month")}</span>
         </div>
         <div className="flex items-center justify-center mt-2">
-          <span className="text-sm text-gray-500 line-through">{formattedRegularPrice}</span>
-          <span className="text-xs text-primary ml-2">Early Adopter Price</span>
+          <span className="text-sm text-gray-500 line-through">{t(regularPriceKey, "$249")}</span>
+          <span className="text-xs text-primary ml-2">{t(currentKey, "Current Price")}</span>
         </div>
       </div>
       <ul className="space-y-3 mb-6">
         {features.map((feature, index) => (
           <li key={index} className="flex items-start">
             <CheckCircle2 className="h-5 w-5 text-primary mr-2 flex-shrink-0 mt-0.5" />
-            <span dangerouslySetInnerHTML={{ __html: feature }} />
+            <span dangerouslySetInnerHTML={{ __html: t(featureKeys[index], feature) }} />
           </li>
         ))}
       </ul>
@@ -74,7 +83,7 @@ export function PricingCard({
           }`}
           variant={popular ? "default" : "outline"}
         >
-          <Link href={`/payment?plan=${plan}`}>Get Early Access</Link>
+          <Link href={`/payment?plan=${plan}`}>{t("pricing_cta", "Subscribe Now")}</Link>
         </Button>
       </div>
     </div>

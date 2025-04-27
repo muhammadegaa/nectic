@@ -36,6 +36,20 @@ export default function RootLayout({
     <html lang="en" className="bg-white">
       <head>
         <script src="https://js.stripe.com/v3/" async></script>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                const savedLanguage = localStorage.getItem('language');
+                if (savedLanguage === 'id') {
+                  document.documentElement.lang = 'id';
+                }
+              } catch (e) {
+                console.error('Error setting language:', e);
+              }
+            `,
+          }}
+        />
       </head>
       <body className={`${inter.className} bg-white`}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>

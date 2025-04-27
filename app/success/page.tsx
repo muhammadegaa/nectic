@@ -163,7 +163,7 @@ export default function SuccessPage() {
 
             <h1 className="text-2xl font-bold mb-4">You're All Set!</h1>
             <p className="text-gray-600 mb-6 max-w-md mx-auto">
-              Thank you for becoming an early adopter of Nectic and completing your onboarding.
+              Thank you for subscribing to Nectic and completing your onboarding.
             </p>
 
             <div className="bg-amber-50 p-6 rounded-lg border border-amber-100 mb-8 text-left">

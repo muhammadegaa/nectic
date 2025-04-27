@@ -1,216 +1,250 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import { z } from "zod"
-import { loadStripe } from "@stripe/stripe-js"
-import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js"
+import type React from "react"
 
+import { useState, useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { CardElement, useStripe, useElements } from "@stripe/react-stripe-js"
 import { Button } from "@/components/ui/button"
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { toast } from "@/hooks/use-toast"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
 
-// Load Stripe outside of component render to avoid recreating Stripe object on every render
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "")
+export default function PaymentForm() {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [clientSecret, setClientSecret] = useState("")
+  const [name, setName] = useState("")
+  const [email, setEmail] = useState("")
+  const [company, setCompany] = useState("")
+  const [priceId, setPriceId] = useState("")
+  const [priceDetails, setPriceDetails] = useState<any>(null)
 
-const formSchema = z.object({
-  fullName: z.string().min(2, {
-    message: "Full name must be at least 2 characters.",
-  }),
-  email: z.string().email({
-    message: "Please enter a valid email address.",
-  }),
-  companyName: z.string().min(2, {
-    message: "Company name must be at least 2 characters.",
-  }),
-  plan: z.enum(["standard", "premium"], {
-    required_error: "Please select a plan.",
-  }),
-})
-
-function PaymentFormContent() {
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [cardError, setCardError] = useState("")
-  const router = useRouter()
   const stripe = useStripe()
   const elements = useElements()
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const plan = searchParams.get("plan") || "standard"
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      fullName: "",
-      email: "",
-      companyName: "",
-      plan: "premium",
-    },
-  })
+  useEffect(() => {
+    // Fetch the price ID based on the plan
+    const fetchPriceId = async () => {
+      try {
+        const response = await fetch(`/api/verify-price-ids?plan=${plan}`)
+        const data = await response.json()
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+        if (data.priceId) {
+          setPriceId(data.priceId)
+          setPriceDetails(data.priceDetails)
+        } else {
+          setError("Invalid plan selected. Please try again.")
+        }
+      } catch (error) {
+        console.error("Error fetching price ID:", error)
+        setError("Failed to load pricing information. Please try again.")
+      }
+    }
+
+    fetchPriceId()
+  }, [plan])
+
+  useEffect(() => {
+    // Create a payment intent when the component mounts
+    if (priceId) {
+      const createPaymentIntent = async () => {
+        try {
+          setLoading(true)
+          const response = await fetch("/api/create-payment-intent", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              priceId,
+            }),
+          })
+
+          if (!response.ok) {
+            throw new Error("Failed to create payment intent")
+          }
+
+          const data = await response.json()
+          setClientSecret(data.clientSecret)
+        } catch (error) {
+          console.error("Error creating payment intent:", error)
+          setError("Failed to initialize payment. Please try again.")
+        } finally {
+          setLoading(false)
+        }
+      }
+
+      createPaymentIntent()
+    }
+  }, [priceId])
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
     if (!stripe || !elements) {
-      // Stripe.js has not loaded yet. Make sure to disable form submission until Stripe.js has loaded.
       return
     }
 
-    setIsSubmitting(true)
-    setCardError("")
+    const cardElement = elements.getElement(CardElement)
+
+    if (!cardElement) {
+      setError("Card element not found. Please refresh and try again.")
+      return
+    }
+
+    setLoading(true)
+    setError(null)
 
     try {
-      // Get card element
-      const cardElement = elements.getElement(CardElement)
-
-      if (!cardElement) {
-        throw new Error("Card element not found")
-      }
-
-      // Create payment method
-      const { error: createPaymentMethodError, paymentMethod } = await stripe.createPaymentMethod({
-        type: "card",
-        card: cardElement,
-        billing_details: {
-          name: values.fullName,
-          email: values.email,
-        },
-      })
-
-      if (createPaymentMethodError) {
-        setCardError(createPaymentMethodError.message || "An error occurred with your card")
-        setIsSubmitting(false)
-        return
-      }
-
-      // Send to server to create subscription
-      const response = await fetch("/api/create-subscription", {
+      // Create a temporary customer
+      const customerResponse = await fetch("/api/create-temp-customer", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          paymentMethodId: paymentMethod.id,
-          email: values.email,
-          name: values.fullName,
-          companyName: values.companyName,
-          plan: values.plan,
+          email,
+          name,
+          company,
         }),
       })
 
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to process payment")
+      if (!customerResponse.ok) {
+        throw new Error("Failed to create customer")
       }
 
-      // Handle subscription
-      if (data.requiresAction) {
-        // Card requires authentication
-        const { error: confirmationError } = await stripe.confirmCardPayment(data.clientSecret)
+      const { customerId } = await customerResponse.json()
 
-        if (confirmationError) {
-          throw new Error(confirmationError.message || "Failed to confirm payment")
-        }
-      }
-
-      // Success
-      toast({
-        title: "Payment successful!",
-        description: "We'll notify you before Nectic launches. Your card will be charged according to your plan.",
+      // Confirm the payment with the customer ID
+      const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+        payment_method: {
+          card: cardElement,
+          billing_details: {
+            name,
+            email,
+          },
+        },
+        receipt_email: email,
       })
 
-      // Redirect to success page
-      router.push(`/success?plan=${values.plan}`)
-    } catch (error) {
+      if (stripeError) {
+        throw new Error(stripeError.message || "Payment failed. Please try again.")
+      }
+
+      if (paymentIntent.status === "succeeded") {
+        // Create the subscription
+        const subscriptionResponse = await fetch("/api/create-subscription", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            customerId,
+            priceId,
+            paymentMethodId: paymentIntent.payment_method,
+            email,
+            name,
+            company,
+          }),
+        })
+
+        if (!subscriptionResponse.ok) {
+          throw new Error("Payment succeeded but subscription creation failed. Our team will contact you.")
+        }
+
+        const { subscriptionId } = await subscriptionResponse.json()
+
+        // Save the customer details
+        await fetch("/api/save-customer", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            customerId,
+            subscriptionId,
+            email,
+            name,
+            company,
+            plan,
+          }),
+        })
+
+        // Redirect to success page
+        router.push(`/success?email=${encodeURIComponent(email)}&plan=${plan}`)
+      } else {
+        throw new Error("Payment not completed. Please try again.")
+      }
+    } catch (error: any) {
       console.error("Payment error:", error)
-      setCardError(error instanceof Error ? error.message : "An unexpected error occurred")
+      setError(error.message || "Payment failed. Please try again.")
     } finally {
-      setIsSubmitting(false)
+      setLoading(false)
     }
   }
 
+  if (loading && !clientSecret) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px]">
+        <LoadingSpinner size="lg" />
+        <p className="mt-4 text-gray-600">Preparing your payment...</p>
+      </div>
+    )
+  }
+
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <FormField
-          control={form.control}
-          name="plan"
-          render={({ field }) => (
-            <FormItem className="space-y-3">
-              <FormLabel>Select Plan</FormLabel>
-              <FormControl>
-                <RadioGroup
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                  className="flex flex-col space-y-1"
-                >
-                  <FormItem className="flex items-center space-x-3 space-y-0">
-                    <FormControl>
-                      <RadioGroupItem value="standard" />
-                    </FormControl>
-                    <FormLabel className="font-normal">Standard Plan ($249/month)</FormLabel>
-                  </FormItem>
-                  <FormItem className="flex items-center space-x-3 space-y-0">
-                    <FormControl>
-                      <RadioGroupItem value="premium" />
-                    </FormControl>
-                    <FormLabel className="font-normal">Premium Plan ($499/month)</FormLabel>
-                  </FormItem>
-                </RadioGroup>
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <div className="grid gap-4 md:grid-cols-2">
-          <FormField
-            control={form.control}
-            name="fullName"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Full Name</FormLabel>
-                <FormControl>
-                  <Input placeholder="John Doe" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="email"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Email</FormLabel>
-                <FormControl>
-                  <Input placeholder="john@example.com" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="space-y-4">
+        <div>
+          <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+            Full Name
+          </label>
+          <input
+            type="text"
+            id="name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+            required
           />
         </div>
 
-        <FormField
-          control={form.control}
-          name="companyName"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Company Name</FormLabel>
-              <FormControl>
-                <Input placeholder="Acme Inc." {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div>
+          <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+            Email Address
+          </label>
+          <input
+            type="email"
+            id="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+            required
+          />
+        </div>
 
-        {/* Card Information Section */}
-        <div className="space-y-2">
-          <h3 className="text-sm font-medium">Card Information</h3>
-          <div className="border border-gray-300 rounded-md p-3">
+        <div>
+          <label htmlFor="company" className="block text-sm font-medium text-gray-700">
+            Company Name
+          </label>
+          <input
+            type="text"
+            id="company"
+            value={company}
+            onChange={(e) => setCompany(e.target.value)}
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+            required
+          />
+        </div>
+
+        <div>
+          <label htmlFor="card" className="block text-sm font-medium text-gray-700">
+            Card Details
+          </label>
+          <div className="mt-1 block w-full px-3 py-4 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary bg-white">
             <CardElement
               options={{
                 style: {
@@ -228,26 +262,42 @@ function PaymentFormContent() {
               }}
             />
           </div>
-          {cardError && <p className="text-sm text-red-500">{cardError}</p>}
-          <div className="mt-1">
-            <p className="text-xs text-gray-500">
-              Your card will be charged immediately. You can cancel your subscription anytime.
-            </p>
+        </div>
+      </div>
+
+      {priceDetails && (
+        <div className="bg-gray-50 p-4 rounded-md">
+          <h3 className="font-medium text-gray-900">Order Summary</h3>
+          <div className="mt-2 flex justify-between text-sm text-gray-500">
+            <p>{plan === "premium" ? "Premium Plan" : "Standard Plan"}</p>
+            <p>${priceDetails.unit_amount / 100}/month</p>
+          </div>
+          <div className="mt-1 flex justify-between text-sm text-gray-500">
+            <p>Early Adopter Discount</p>
+            <p>Applied</p>
+          </div>
+          <div className="mt-3 flex justify-between font-medium">
+            <p>Total</p>
+            <p>${priceDetails.unit_amount / 100}/month</p>
           </div>
         </div>
+      )}
 
-        <Button type="submit" className="w-full" disabled={isSubmitting || !stripe}>
-          {isSubmitting ? "Processing..." : "Subscribe Now"}
-        </Button>
-      </form>
-    </Form>
-  )
-}
+      <div className="text-sm text-gray-500">
+        <p>Your card will be charged immediately upon subscription. You can cancel anytime.</p>
+        <p className="mt-1">By subscribing, you agree to our Terms of Service and Privacy Policy.</p>
+      </div>
 
-export default function PaymentForm() {
-  return (
-    <Elements stripe={stripePromise}>
-      <PaymentFormContent />
-    </Elements>
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      <Button type="submit" className="w-full" disabled={!stripe || loading}>
+        {loading ? <LoadingSpinner size="sm" className="mr-2" /> : null}
+        {loading ? "Processing..." : "Subscribe Now"}
+      </Button>
+    </form>
   )
 }

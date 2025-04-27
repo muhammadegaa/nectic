@@ -14,7 +14,7 @@ export const en = {
   hero_feature_1: "Spot inefficiencies in your workflows",
   hero_feature_2: "Find practical AI solutions",
   hero_feature_3: "Get clear implementation roadmaps",
-  hero_feature_4: "Navigate the AI landscape with confidence",
+  hero_spots: "Only few spots available",
   hero_cta: "Secure Early Access",
 
   // Value Proposition
@@ -42,30 +42,37 @@ export const en = {
 
   // Pricing
   pricing_badge: "Limited Time Offer",
-  pricing_title: "Early Access Pricing",
-  pricing_subtitle: "Secure your spot now. Your card won't be charged until we launch.",
+  pricing_title: "Subscription Plans",
+  pricing_subtitle: "Choose the plan that best fits your business needs",
   pricing_standard_title: "Standard Plan",
   pricing_standard_desc: "For businesses starting their AI journey",
-  pricing_standard_feature_1: "AI opportunity assessment",
-  pricing_standard_feature_2: "Top 3 implementation guides",
-  pricing_standard_feature_3: "Basic vendor comparisons",
-  pricing_standard_feature_4: "30-day implementation support",
+  pricing_standard_price: "/ month",
+  pricing_standard_regular_price: "$249",
+  pricing_standard_early_price: "$199",
+  pricing_standard_current: "Current Price",
+  pricing_standard_feature1: "AI opportunity assessment",
+  pricing_standard_feature2: "Top 3 implementation guides",
+  pricing_standard_feature3: "Basic vendor comparisons",
+  pricing_standard_feature4: "30-day implementation support",
   pricing_premium_title: "Premium Plan",
   pricing_premium_desc: "For businesses serious about AI transformation",
-  pricing_premium_feature_1: "<strong>Complete</strong> AI opportunity assessment",
-  pricing_premium_feature_2: "<strong>Unlimited</strong> implementation guides",
-  pricing_premium_feature_3: "Advanced vendor comparisons with ROI calculators",
-  pricing_premium_feature_4: "<strong>90-day</strong> implementation support",
-  pricing_early_adopter: "Early adopter: {price}/month at launch",
-  pricing_per_month: "/month",
-  pricing_most_popular: "MOST POPULAR",
-  pricing_cta: "Secure Early Access",
+  pricing_premium_price: "/ month",
+  pricing_premium_regular_price: "$499",
+  pricing_premium_early_price: "$399",
+  pricing_premium_current: "Current Price",
+  pricing_premium_feature1: "<strong>Complete</strong> AI opportunity assessment",
+  pricing_premium_feature2: "<strong>Unlimited</strong> implementation guides",
+  pricing_premium_feature3: "Advanced vendor comparisons with ROI calculators",
+  pricing_premium_feature4: "<strong>90-day</strong> implementation support",
+  pricing_popular: "Most Popular",
+  pricing_cta: "Subscribe Now",
+  pricing_guarantee: "30-day money-back guarantee",
 
   // FAQ
   faq_title: "Common Questions",
-  faq_q1: "When will my card be charged?",
+  faq_q1: "When will I be charged?",
   faq_a1:
-    "Your card won't be charged until Nectic launches. We'll notify you 7 days before any charges occur, giving you time to cancel if you wish.",
+    "Your card will be charged immediately upon subscription. We offer a 30-day money-back guarantee if you're not satisfied with our service.",
   faq_q2: "How does Nectic identify AI opportunities?",
   faq_a2:
     "Nectic connects to your business systems through secure, read-only integrations. We analyze your workflows and processes to find areas where AI can improve efficiency or outcomes.",
@@ -76,33 +83,14 @@ export const en = {
   faq_a4:
     "Nectic is designed for businesses without technical AI expertise. Our platform handles the analysis, and our implementation guides use plain language with step-by-step instructions.",
 
+  // CTA Section
+  cta_title: "Ready to Transform Your Business with AI?",
+  cta_subtitle: "Join our early adopter program today and help shape the future of AI implementation.",
+  cta_button: "Secure Early Access",
+  cta_learn_more: "Learn More",
+  cta_limited: "Limited spots available. Early adopters get lifetime discounted pricing.",
+
   // Footer
   footer_rights: "© 2025 Nectic. All rights reserved.",
   footer_contact: "Contact",
-
-  // Checkout
-  checkout_back: "Back to home",
-  checkout_title: "Secure Your Early Access",
-  checkout_plan_info: "{price}/month (not charged until launch)",
-  checkout_benefit_1: "Your card will NOT be charged now",
-  checkout_benefit_2: "You'll be notified 7 days before any charges",
-  checkout_benefit_3: "Cancel anytime with no obligation",
-  checkout_name: "Name",
-  checkout_email: "Email",
-  checkout_payment_info: "Payment Information",
-  checkout_cta: "Secure Early Access",
-  checkout_processing: "Processing...",
-  checkout_secure: "Secure checkout powered by Stripe",
-  checkout_terms: "By proceeding, you agree to our Terms of Service and Privacy Policy.",
-  checkout_loading: "Loading...",
-  checkout_setting_up: "Setting up your payment...",
-  checkout_moment: "This will only take a moment",
-  checkout_error: "Something went wrong",
-  checkout_try_again: "Try Again",
-  checkout_return_home: "Return to Homepage",
-
-  // Success
-  success_title: "Early Access Secured!",
-  success_message: "Thank you for securing early access to Nectic.",
-  success_return: "Return to Homepage",
 }

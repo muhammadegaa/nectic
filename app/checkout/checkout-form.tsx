@@ -268,7 +268,7 @@ export default function CheckoutForm({
         </div>
       </div>
 
-      {/* Payment summary - UPDATED WITH EARLY ADOPTER PRICES */}
+      {/* Payment summary */}
       <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
         <h3 className="font-medium text-gray-900 mb-2">Payment Summary</h3>
         <div className="flex justify-between mb-2">
@@ -279,7 +279,10 @@ export default function CheckoutForm({
           <span>Total today</span>
           <span>${plan === "premium" ? "399" : "199"}</span>
         </div>
-        <p className="text-xs text-gray-500 mt-2">Your card will be charged immediately.</p>
+        <p className="text-xs text-gray-500 mt-2">
+          How does billing work? Your card will be charged immediately when you subscribe. We offer a 30-day money-back
+          guarantee if you're not satisfied with our service.
+        </p>
       </div>
 
       <div className="pt-2">

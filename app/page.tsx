@@ -73,14 +73,14 @@ export default function LandingPage() {
             <div className="flex flex-col items-center text-center max-w-3xl mx-auto space-y-8">
               <div className="space-y-4">
                 <Badge variant="outline" className="text-primary border-primary px-3 py-1 animate-fade-in">
-                  <Clock className="mr-1 h-3 w-3" /> {isLoading ? "Limited Spots Available" : t("hero_badge")}
+                  <Clock className="mr-1 h-3 w-3" /> {isLoading ? "Launching Soon" : t("hero_badge")}
                 </Badge>
                 <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl bg-clip-text text-transparent bg-gradient-to-b from-gray-900 to-gray-700 animate-slide-up">
-                  {isLoading ? "Unlock AI's ROI Without The Tech Headache" : t("hero_title")}
+                  {isLoading ? "Find Your Next AI Advantage" : t("hero_title")}
                 </h1>
                 <p className="text-gray-500 md:text-xl max-w-[700px] mx-auto animate-slide-up [animation-delay:200ms]">
                   {isLoading
-                    ? "Nectic identifies your highest-impact AI opportunities and provides automated implementation roadmaps, saving you thousands in consulting fees."
+                    ? "Nectic helps mid-market businesses identify practical AI opportunities and implement them without technical expertise."
                     : t("hero_subtitle")}
                 </p>
               </div>
@@ -92,19 +92,19 @@ export default function LandingPage() {
                     <div className="flex-shrink-0 rounded-full p-1 bg-primary/10">
                       <CheckCircle2 className="h-5 w-5 text-primary" />
                     </div>
-                    <div>{isLoading ? "Save 15+ hours of research per AI solution" : t("hero_feature_1")}</div>
+                    <div>Spot inefficiencies in your workflows</div>
                   </div>
                   <div className="flex items-center gap-4 text-sm">
                     <div className="flex-shrink-0 rounded-full p-1 bg-primary/10">
                       <CheckCircle2 className="h-5 w-5 text-primary" />
                     </div>
-                    <div>{isLoading ? "Avoid $10K+ in wasted implementation costs" : t("hero_feature_2")}</div>
+                    <div>Find practical AI solutions</div>
                   </div>
                   <div className="flex items-center gap-4 text-sm">
                     <div className="flex-shrink-0 rounded-full p-1 bg-primary/10">
                       <CheckCircle2 className="h-5 w-5 text-primary" />
                     </div>
-                    <div>{isLoading ? "Get results in weeks, not months" : t("hero_feature_3")}</div>
+                    <div>Get clear implementation roadmaps</div>
                   </div>
                 </div>
 
@@ -116,7 +116,7 @@ export default function LandingPage() {
                       document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" })
                     }}
                   >
-                    <span className="relative z-10">{isLoading ? "Secure Your Early Access Spot" : t("hero_cta")}</span>
+                    <span className="relative z-10">{isLoading ? "Secure Early Access" : t("hero_cta")}</span>
                     <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1 relative z-10" />
                     <div className="absolute inset-0 bg-gradient-to-r from-amber-500 to-amber-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                   </Button>
@@ -132,10 +132,13 @@ export default function LandingPage() {
           <div className="container px-4 md:px-6">
             <div className="flex flex-col items-center justify-center space-y-4 text-center mb-12">
               <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
-                Why Business Leaders Choose Nectic
+                {t("value_title", "Make AI Work For Your Business")}
               </h2>
               <p className="max-w-[700px] text-gray-500 md:text-xl/relaxed">
-                Stop wasting time and money on AI initiatives that don't deliver
+                {t(
+                  "value_subtitle",
+                  "Many businesses struggle with AI adoption. Nectic helps you find practical applications and guides you through implementation.",
+                )}
               </p>
             </div>
 
@@ -154,12 +157,12 @@ export default function LandingPage() {
                     strokeLinejoin="round"
                     className="text-primary"
                   >
-                    <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                    <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
                   </svg>
                 </div>
-                <h3 className="text-xl font-bold mb-2">ROI-Focused Approach</h3>
+                <h3 className="text-xl font-bold mb-2">{t("value_card_1_title", "Identify Opportunities")}</h3>
                 <p className="text-gray-500">
-                  We identify AI opportunities with the highest ROI potential for your specific business context.
+                  {t("value_card_1_desc", "Find where AI can have the most impact in your specific business context.")}
                 </p>
               </div>
 
@@ -177,14 +180,14 @@ export default function LandingPage() {
                     strokeLinejoin="round"
                     className="text-primary"
                   >
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"></path>
-                    <path d="M12 18V6"></path>
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                    <path d="M13 15v4"></path>
+                    <path d="M11 15v4"></path>
                   </svg>
                 </div>
-                <h3 className="text-xl font-bold mb-2">Cost-Effective</h3>
+                <h3 className="text-xl font-bold mb-2">{t("value_card_2_title", "Navigate Implementation")}</h3>
                 <p className="text-gray-500">
-                  Save thousands on consultants and avoid costly implementation mistakes with our automated guidance.
+                  {t("value_card_2_desc", "Get practical guides and vendor comparisons tailored to your needs.")}
                 </p>
               </div>
 
@@ -202,12 +205,17 @@ export default function LandingPage() {
                     strokeLinejoin="round"
                     className="text-primary"
                   >
-                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+                    <path d="M12 20v-6"></path>
+                    <path d="M6 20V10"></path>
+                    <path d="M18 20V4"></path>
                   </svg>
                 </div>
-                <h3 className="text-xl font-bold mb-2">No Technical Expertise Needed</h3>
+                <h3 className="text-xl font-bold mb-2">{t("value_card_3_title", "Measure Results")}</h3>
                 <p className="text-gray-500">
-                  Our platform translates complex AI concepts into plain language anyone can understand and implement.
+                  {t(
+                    "value_card_3_desc",
+                    "Track time and cost savings with our ROI calculator for each AI initiative.",
+                  )}
                 </p>
               </div>
             </div>
@@ -224,27 +232,23 @@ export default function LandingPage() {
             <div className="flex flex-col items-center justify-center space-y-4 text-center">
               <div className="space-y-2 max-w-3xl">
                 <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
-                  {isLoading ? "How Nectic Works" : t("how_title")}
+                  {isLoading ? "How It Works" : t("how_title")}
                 </h2>
                 <p className="max-w-[700px] text-gray-500 md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed dark:text-gray-400">
-                  {isLoading
-                    ? "A simple, automated process to find and implement the right AI solutions for your business."
-                    : t("how_subtitle")}
+                  {isLoading ? "A simple process to help you find and implement AI solutions." : t("how_subtitle")}
                 </p>
               </div>
             </div>
-            <div className="mx-auto grid max-w-5xl items-start gap-8 py-12 md:grid-cols-2 lg:grid-cols-3">
+            <div className="mx-auto grid max-w-5xl items-start gap-8 py-12 md:grid-cols-2 lg:grid-cols-4">
               <div className="group relative">
                 <div className="absolute -inset-0.5 rounded-lg bg-gradient-to-r from-amber-300 to-amber-500 opacity-30 blur-sm transition-all duration-300 group-hover:opacity-100 group-hover:blur"></div>
                 <div className="relative flex flex-col items-center p-6 bg-white rounded-lg shadow-sm">
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground mb-4">
                     1
                   </div>
-                  <h3 className="text-xl font-bold mb-2">{isLoading ? "Connect & Scan" : t("how_step_1_title")}</h3>
+                  <h3 className="text-xl font-bold mb-2">{isLoading ? "Connect" : t("how_step_1_title")}</h3>
                   <p className="text-gray-500 dark:text-gray-400 text-center">
-                    {isLoading
-                      ? "Our AI scans your business systems to identify inefficiencies and opportunities."
-                      : t("how_step_1_desc")}
+                    {isLoading ? "Link your business systems with secure, read-only access." : t("how_step_1_desc")}
                   </p>
                 </div>
               </div>
@@ -254,13 +258,11 @@ export default function LandingPage() {
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground mb-4">
                     2
                   </div>
-                  <h3 className="text-xl font-bold mb-2">
-                    {isLoading ? "Prioritize Opportunities" : t("how_step_3_title")}
-                  </h3>
+                  <h3 className="text-xl font-bold mb-2">{isLoading ? "Analyze" : t("how_step_2_title")}</h3>
                   <p className="text-gray-500 dark:text-gray-400 text-center">
                     {isLoading
-                      ? "Get a personalized dashboard of AI opportunities ranked by ROI and implementation ease."
-                      : t("how_step_3_desc")}
+                      ? "We identify inefficiencies and AI opportunities in your workflows."
+                      : t("how_step_2_desc")}
                   </p>
                 </div>
               </div>
@@ -270,12 +272,24 @@ export default function LandingPage() {
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground mb-4">
                     3
                   </div>
-                  <h3 className="text-xl font-bold mb-2">
-                    {isLoading ? "Automated Implementation" : t("how_step_4_title")}
-                  </h3>
+                  <h3 className="text-xl font-bold mb-2">{isLoading ? "Discover" : t("how_step_3_title")}</h3>
                   <p className="text-gray-500 dark:text-gray-400 text-center">
                     {isLoading
-                      ? "Follow our step-by-step implementation guides with vendor comparisons and ROI calculators."
+                      ? "Get a personalized dashboard of AI opportunities ranked by impact."
+                      : t("how_step_3_desc")}
+                  </p>
+                </div>
+              </div>
+              <div className="group relative">
+                <div className="absolute -inset-0.5 rounded-lg bg-gradient-to-r from-amber-300 to-amber-500 opacity-30 blur-sm transition-all duration-300 group-hover:opacity-100 group-hover:blur"></div>
+                <div className="relative flex flex-col items-center p-6 bg-white rounded-lg shadow-sm">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground mb-4">
+                    4
+                  </div>
+                  <h3 className="text-xl font-bold mb-2">{isLoading ? "Implement" : t("how_step_4_title")}</h3>
+                  <p className="text-gray-500 dark:text-gray-400 text-center">
+                    {isLoading
+                      ? "Follow clear implementation guides with vendor recommendations."
                       : t("how_step_4_desc")}
                   </p>
                 </div>
@@ -290,14 +304,16 @@ export default function LandingPage() {
             <div className="flex flex-col items-center justify-center space-y-4 text-center">
               <div className="space-y-2 max-w-3xl">
                 <Badge variant="outline" className="mb-2 bg-white">
-                  <span className="text-primary animate-pulse">🔥 Early Adopter Pricing</span>
+                  <span className="text-primary animate-pulse">
+                    {isLoading ? "Limited Time Offer" : t("pricing_badge")}
+                  </span>
                 </Badge>
                 <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
                   {isLoading ? "Early Access Pricing" : t("pricing_title")}
                 </h2>
                 <p className="max-w-[700px] text-gray-500 md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed dark:text-gray-400">
                   {isLoading
-                    ? "Join our early adopters and be the first to experience Nectic as we develop."
+                    ? "Secure your spot now. Your card won't be charged until we launch."
                     : t("pricing_subtitle")}
                 </p>
               </div>
@@ -312,7 +328,7 @@ export default function LandingPage() {
                   "AI opportunity assessment",
                   "Top 3 implementation guides",
                   "Basic vendor comparisons",
-                  "AI solution vendor recommendations",
+                  "30-day implementation support",
                 ]}
                 plan="standard"
                 popular={false}
@@ -327,7 +343,7 @@ export default function LandingPage() {
                   "<strong>Complete</strong> AI opportunity assessment",
                   "<strong>Unlimited</strong> implementation guides",
                   "Advanced vendor comparisons with ROI calculators",
-                  "<strong>Priority</strong> access to new features",
+                  "<strong>90-day</strong> implementation support",
                 ]}
                 plan="premium"
                 popular={true}
@@ -372,26 +388,24 @@ export default function LandingPage() {
                 <AccordionItem value="item-1" className="border rounded-lg px-6 mb-4 shadow-sm">
                   <AccordionTrigger className="text-lg font-medium">When will my card be charged?</AccordionTrigger>
                   <AccordionContent className="text-gray-600">
-                    Your card will be charged immediately upon completing your purchase. You'll receive an email receipt
-                    confirming your payment and subscription details.
+                    Your card won't be charged until Nectic launches. We'll notify you 7 days before any charges occur,
+                    giving you time to cancel if you wish.
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="item-2" className="border rounded-lg px-6 mb-4 shadow-sm">
                   <AccordionTrigger className="text-lg font-medium">
-                    What exactly am I getting as an early adopter?
+                    How does Nectic identify AI opportunities?
                   </AccordionTrigger>
                   <AccordionContent className="text-gray-600">
-                    As an early adopter, you're getting priority access to Nectic as we develop and refine our platform.
-                    You'll receive access to our initial assessment tools, implementation guides, and vendor
-                    recommendations. You'll also have the opportunity to provide feedback that will directly shape the
-                    development of Nectic, and you'll lock in our lowest pricing for the lifetime of your subscription.
+                    Nectic connects to your business systems through secure, read-only integrations. We analyze your
+                    workflows and processes to find areas where AI can improve efficiency or outcomes.
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="item-3" className="border rounded-lg px-6 mb-4 shadow-sm">
                   <AccordionTrigger className="text-lg font-medium">Is my business data secure?</AccordionTrigger>
                   <AccordionContent className="text-gray-600">
                     Yes. All connections to your systems are secure and read-only. We use industry-standard encryption
-                    for all data in transit and at rest, and we follow best practices for data security and privacy.
+                    for all data in transit and at rest.
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="item-4" className="border rounded-lg px-6 mb-4 shadow-sm">
@@ -401,38 +415,6 @@ export default function LandingPage() {
                   <AccordionContent className="text-gray-600">
                     Nectic is designed for businesses without technical AI expertise. Our platform handles the analysis,
                     and our implementation guides use plain language with step-by-step instructions.
-                  </AccordionContent>
-                </AccordionItem>
-                <AccordionItem value="item-5" className="border rounded-lg px-6 mb-4 shadow-sm">
-                  <AccordionTrigger className="text-lg font-medium">
-                    How does the 30-day money-back guarantee work?
-                  </AccordionTrigger>
-                  <AccordionContent className="text-gray-600">
-                    We stand behind our platform. If you're not satisfied with Nectic for any reason within the first 30
-                    days, simply contact our support team at support@nectic.com, and we'll process a full refund of your
-                    purchase. No questions asked.
-                  </AccordionContent>
-                </AccordionItem>
-
-                <AccordionItem value="item-6" className="border rounded-lg px-6 mb-4 shadow-sm">
-                  <AccordionTrigger className="text-lg font-medium">
-                    What is the current development status?
-                  </AccordionTrigger>
-                  <AccordionContent className="text-gray-600">
-                    Nectic is currently in early development. As an early adopter, you'll have access to our core
-                    features as they're developed and released. We're actively working on enhancing our AI assessment
-                    tools, expanding our implementation guides, and refining our vendor recommendation engine. Your
-                    feedback during this phase will be invaluable in shaping the platform.
-                  </AccordionContent>
-                </AccordionItem>
-
-                <AccordionItem value="item-7" className="border rounded-lg px-6 shadow-sm">
-                  <AccordionTrigger className="text-lg font-medium">What happens after I subscribe?</AccordionTrigger>
-                  <AccordionContent className="text-gray-600">
-                    After subscribing, you'll receive a welcome email with instructions on how to access your Nectic
-                    account. You'll be among the first to experience new features as they're released, and you'll have
-                    direct channels to provide feedback to our development team. We'll keep you updated on our progress
-                    and new feature releases through regular email updates.
                   </AccordionContent>
                 </AccordionItem>
               </Accordion>
@@ -458,7 +440,7 @@ export default function LandingPage() {
                     document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" })
                   }}
                 >
-                  Become an Early Adopter
+                  Secure Early Access
                 </Button>
                 <Button
                   variant="outline"

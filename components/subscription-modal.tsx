@@ -115,7 +115,7 @@ export function SubscriptionModal({ isOpen, onClose, featureType }: Subscription
                     <span className="text-2xl font-bold">$399</span>
                     <span className="text-sm text-gray-600">/month</span>
                   </div>
-                  <span className="text-sm text-green-600">Early adopter pricing</span>
+                  <span className="text-sm text-green-600">Current pricing</span>
                 </div>
               </div>
 
