@@ -1,76 +1,49 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
-import { en } from "@/lib/translations/en"
-import { id } from "@/lib/translations/id"
+import { en } from "./translations/en"
+import { id } from "./translations/id"
 
-type SupportedLanguage = "en" | "id"
-
-interface LanguageContextType {
-  language: SupportedLanguage
-  setLanguage: (lang: SupportedLanguage) => void
-  t: (key: string, params?: Record<string, string | number>) => string
+type LanguageContextType = {
+  language: string
+  setLanguage: (lang: string) => void
+  t: (key: string, fallback?: string) => string
   isLoading: boolean
-}
-
-const translations = {
-  en,
-  id,
 }
 
 const LanguageContext = createContext<LanguageContextType>({
   language: "en",
   setLanguage: () => {},
-  t: (key) => key,
-  isLoading: false,
+  t: () => "",
+  isLoading: true,
 })
 
-export const useLanguage = () => useContext(LanguageContext)
-
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguageState] = useState<SupportedLanguage>("en")
+  const [language, setLanguage] = useState("en")
   const [isLoading, setIsLoading] = useState(true)
-  const [isMounted, setIsMounted] = useState(false)
 
   useEffect(() => {
-    setIsMounted(true)
-    // Check for saved language preference
+    // Check if we're in the browser
     if (typeof window !== "undefined") {
-      const savedLanguage = localStorage.getItem("language") as SupportedLanguage
-      if (savedLanguage === "en" || savedLanguage === "id") {
-        setLanguageState(savedLanguage)
-      }
+      const savedLanguage = localStorage.getItem("language") || "en"
+      setLanguage(savedLanguage)
+      setIsLoading(false)
     }
-    setIsLoading(false)
   }, [])
 
-  const setLanguage = (lang: SupportedLanguage) => {
-    setLanguageState(lang)
-    // Save preference to localStorage
-    if (typeof window !== "undefined") {
-      localStorage.setItem("language", lang)
+  useEffect(() => {
+    // Save language preference
+    if (!isLoading) {
+      localStorage.setItem("language", language)
     }
-  }
+  }, [language, isLoading])
 
-  const t = (key: string, params?: Record<string, string | number>) => {
-    // Make sure the key exists in the translations
-    const translation = translations[language][key] || key
-
-    if (params) {
-      return Object.entries(params).reduce((acc, [paramKey, value]) => {
-        return acc.replace(`{${paramKey}}`, String(value))
-      }, translation)
-    }
-
-    return translation
-  }
-
-  // If not mounted yet, provide a minimal context to avoid hydration issues
-  if (!isMounted) {
-    return (
-      <LanguageContext.Provider value={{ language, setLanguage, t, isLoading }}>{children}</LanguageContext.Provider>
-    )
+  const t = (key: string, fallback?: string): string => {
+    const translations = language === "en" ? en : id
+    return translations[key as keyof typeof translations] || fallback || key
   }
 
   return <LanguageContext.Provider value={{ language, setLanguage, t, isLoading }}>{children}</LanguageContext.Provider>
 }
+
+export const useLanguage = () => useContext(LanguageContext)
