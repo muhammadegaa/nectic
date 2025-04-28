@@ -14,7 +14,6 @@ export function PricingSection() {
             <p className="max-w-[700px] text-gray-500 md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed dark:text-gray-400">
               Choose the plan that best fits your business needs
             </p>
-            {/* Remove the misleading text that was here */}
           </div>
         </div>
         <div className="mx-auto grid max-w-5xl gap-6 py-12 lg:grid-cols-2">
@@ -27,7 +26,7 @@ export function PricingSection() {
               "AI opportunity assessment",
               "Top 3 implementation guides",
               "Basic vendor comparisons",
-              "AI solution vendor recommendations",
+              "AI solution recommendations",
             ]}
             plan="standard"
             popular={false}

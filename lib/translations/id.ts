@@ -52,7 +52,7 @@ export const id = {
   pricing_standard_feature1: "Penilaian peluang AI",
   pricing_standard_feature2: "3 panduan implementasi teratas",
   pricing_standard_feature3: "Perbandingan vendor dasar",
-  pricing_standard_feature4: "Dukungan implementasi 30 hari",
+  pricing_standard_feature4: "Rekomendasi solusi AI",
   pricing_premium_title: "Paket Premium",
   pricing_premium_desc: "Untuk bisnis yang serius tentang transformasi AI",
   pricing_premium_price: "/ bulan",
@@ -62,7 +62,7 @@ export const id = {
   pricing_premium_feature1: "Penilaian peluang AI lengkap",
   pricing_premium_feature2: "Panduan implementasi tak terbatas",
   pricing_premium_feature3: "Perbandingan vendor lanjutan dengan kalkulator ROI",
-  pricing_premium_feature4: "Dukungan implementasi 90 hari",
+  pricing_premium_feature4: "Akses prioritas ke fitur baru",
   pricing_popular: "Paling Populer",
   pricing_cta: "Berlangganan Sekarang",
   pricing_guarantee: "Jaminan uang kembali 30 hari",
@@ -71,7 +71,7 @@ export const id = {
   faq_title: "Pertanyaan Umum",
   faq_q1: "Kapan saya akan ditagih?",
   faq_a1:
-    "Kartu Anda akan ditagih segera setelah berlangganan. Kami menawarkan jaminan uang kembali 30 hari jika Anda tidak puas dengan layanan kami.",
+    "Kartu Anda akan ditagih segera setelah Anda berlangganan. Kami menawarkan jaminan uang kembali 30 hari jika Anda tidak puas dengan layanan kami.",
   faq_q2: "Bagaimana Nectic mengidentifikasi peluang AI?",
   faq_a2:
     "Nectic terhubung ke sistem bisnis Anda melalui integrasi hanya-baca yang aman. Kami menganalisis alur kerja dan proses Anda untuk menemukan area di mana AI dapat meningkatkan efisiensi atau hasil.",
