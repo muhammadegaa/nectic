@@ -5,43 +5,72 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2023-10-16",
 })
 
-// Hardcoded price IDs as provided
+// Price IDs for all plan and period combinations
 const PRICE_IDS = {
-  standard: "price_1RHRdLDARABW0ktm7fe2Xppc",
-  premium: "price_1RHQiODARABW0ktmrw5Ens3A",
+  standard: {
+    "6month": "price_1RJXTFDARABW0ktmtFsZKae6",
+    "12month": "price_1RJXUkDARABW0ktm39r1XKWu",
+  },
+  premium: {
+    "6month": "price_1RJXTeDARABW0ktm3nXbzKsu",
+    "12month": "price_1RJXTqDARABW0ktmZdMOhtq8",
+  },
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    // Verify the standard price ID
-    const standardPrice = await stripe.prices.retrieve(PRICE_IDS.standard)
+    const url = new URL(request.url)
+    const plan = url.searchParams.get("plan") || "standard"
+    const period = url.searchParams.get("period") || "6month"
 
-    // Verify the premium price ID
-    const premiumPrice = await stripe.prices.retrieve(PRICE_IDS.premium)
+    if (!["standard", "premium"].includes(plan)) {
+      return NextResponse.json({ success: false, error: "Invalid plan" }, { status: 400 })
+    }
+
+    if (!["6month", "12month"].includes(period)) {
+      return NextResponse.json({ success: false, error: "Invalid period" }, { status: 400 })
+    }
+
+    // Get the correct price ID
+    const priceId = PRICE_IDS[plan as keyof typeof PRICE_IDS][period as keyof typeof PRICE_IDS.standard]
+
+    // Retrieve the price from Stripe to verify its configuration
+    const price = await stripe.prices.retrieve(priceId)
+
+    // Verify the price has the correct billing interval
+    const isCorrectInterval =
+      price.recurring?.interval === "month" &&
+      ((period === "6month" && price.recurring.interval_count === 6) ||
+        (period === "12month" && price.recurring.interval_count === 12))
+
+    if (!isCorrectInterval) {
+      console.error(`Price ${priceId} does not have the correct billing interval for ${period}`)
+
+      // Return the price details for debugging
+      return NextResponse.json({
+        success: false,
+        error: "Price does not have the correct billing interval",
+        priceDetails: {
+          id: price.id,
+          interval: price.recurring?.interval,
+          interval_count: price.recurring?.interval_count,
+          unit_amount: price.unit_amount,
+        },
+      })
+    }
 
     return NextResponse.json({
       success: true,
-      standard: {
-        id: standardPrice.id,
-        amount: standardPrice.unit_amount ? standardPrice.unit_amount / 100 : 0,
-        currency: standardPrice.currency,
-        product: standardPrice.product,
-      },
-      premium: {
-        id: premiumPrice.id,
-        amount: premiumPrice.unit_amount ? premiumPrice.unit_amount / 100 : 0,
-        currency: premiumPrice.currency,
-        product: premiumPrice.product,
+      priceId,
+      priceDetails: {
+        id: price.id,
+        interval: price.recurring?.interval,
+        interval_count: price.recurring?.interval_count,
+        unit_amount: price.unit_amount,
       },
     })
   } catch (error) {
     console.error("Error verifying price IDs:", error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : "Failed to verify price IDs",
-      },
-      { status: 500 },
-    )
+    return NextResponse.json({ success: false, error: "Failed to verify price IDs" }, { status: 500 })
   }
 }

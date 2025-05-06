@@ -1,13 +1,13 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, useRouter } from "next/navigation"
 import { loadStripe } from "@stripe/stripe-js"
 import { Elements } from "@stripe/react-stripe-js"
 import CheckoutForm from "../checkout/checkout-form"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Loader2, AlertCircle, ArrowLeft } from "lucide-react"
+import { AlertCircle, ArrowLeft, Loader2 } from "lucide-react"
 import Link from "next/link"
 
 // Initialize Stripe
@@ -15,16 +15,43 @@ const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
 
 export default function PaymentPage() {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const plan = searchParams.get("plan") || "standard"
+  const period = searchParams.get("period") || "6month"
 
   const [clientSecret, setClientSecret] = useState("")
   const [customerId, setCustomerId] = useState("")
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [planPrice, setPlanPrice] = useState(plan === "premium" ? 399 : 199) // Early adopter prices
   const [retryCount, setRetryCount] = useState(0)
 
+  // Get the monthly price based on the plan
+  const getMonthlyPrice = () => {
+    return plan === "premium" ? 399 : 199
+  }
+
+  // Calculate the total price based on the period
+  const getTotalPrice = () => {
+    const monthlyPrice = getMonthlyPrice()
+    const months = period === "12month" ? 12 : 6
+    return monthlyPrice * months
+  }
+
+  const monthlyPrice = getMonthlyPrice()
+  const totalPrice = getTotalPrice()
+
   useEffect(() => {
+    // Validate plan and period
+    if (!plan || !["standard", "premium"].includes(plan)) {
+      router.push("/pricing")
+      return
+    }
+
+    if (!period || !["6month", "12month"].includes(period)) {
+      router.push(`/payment?plan=${plan}&period=6month`)
+      return
+    }
+
     // Create a temporary customer and setup intent without authentication
     const setupPayment = async () => {
       try {
@@ -40,6 +67,8 @@ export default function PaymentPage() {
           body: JSON.stringify({
             email: "",
             name: "",
+            plan,
+            period,
           }),
         })
 
@@ -51,26 +80,24 @@ export default function PaymentPage() {
         const customerData = await customerResponse.json()
         setCustomerId(customerData.customerId)
 
-        // Create a payment intent
-        const paymentResponse = await fetch("/api/create-payment-intent", {
+        // Create a setup intent
+        const setupResponse = await fetch("/api/create-setup-intent", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
             customerId: customerData.customerId,
-            plan: plan,
           }),
         })
 
-        if (!paymentResponse.ok) {
-          const errorData = await paymentResponse.json()
-          throw new Error(errorData.error || "Failed to create payment intent")
+        if (!setupResponse.ok) {
+          const errorData = await setupResponse.json()
+          throw new Error(errorData.error || "Failed to create setup intent")
         }
 
-        const paymentData = await paymentResponse.json()
-        setClientSecret(paymentData.clientSecret)
-        setPlanPrice(paymentData.planPrice || (plan === "premium" ? 399 : 199)) // Early adopter prices
+        const setupData = await setupResponse.json()
+        setClientSecret(setupData.clientSecret)
       } catch (err) {
         console.error("Error setting up payment:", err)
         setError(err instanceof Error ? err.message : "Failed to set up payment")
@@ -80,13 +107,14 @@ export default function PaymentPage() {
     }
 
     setupPayment()
-  }, [plan, retryCount])
+  }, [plan, period, retryCount, router])
 
   const handleRetry = () => {
     setRetryCount((prev) => prev + 1)
   }
 
   const planTitle = plan === "premium" ? "Premium Plan" : "Standard Plan"
+  const periodTitle = period === "6month" ? "6 Months" : "12 Months"
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-amber-50/30 flex flex-col">
@@ -105,7 +133,9 @@ export default function PaymentPage() {
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle>Complete Your Purchase</CardTitle>
-            <CardDescription>{planTitle} - Current Pricing</CardDescription>
+            <CardDescription>
+              {planTitle} - ${monthlyPrice}/month for {periodTitle}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -142,18 +172,10 @@ export default function PaymentPage() {
                     },
                   },
                   loader: "auto",
-                  business: { name: "NECTIC" },
-                  paymentMethodCreation: "manual", // Add this line to fix the error
+                  paymentMethodCreation: "manual",
                 }}
               >
-                <CheckoutForm
-                  clientSecret={clientSecret}
-                  customerId={customerId}
-                  plan={plan}
-                  initialEmail=""
-                  initialName=""
-                  planPrice={planPrice}
-                />
+                <CheckoutForm clientSecret={clientSecret} customerId={customerId} plan={plan} period={period} />
               </Elements>
             ) : null}
           </CardContent>

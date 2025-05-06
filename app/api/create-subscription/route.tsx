@@ -5,40 +5,48 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2023-10-16",
 })
 
-// Hardcoded price IDs as provided
-const PRICE_IDS = {
-  standard: "price_1RHRdLDARABW0ktm7fe2Xppc",
-  premium: "price_1RHQiODARABW0ktmrw5Ens3A",
-}
-
 export async function POST(request: Request) {
   try {
-    const { customerId, plan, paymentMethodId, userId } = await request.json()
+    const { customerId, paymentMethodId, plan, period, email, name, company } = await request.json()
 
-    if (!customerId || !plan || !paymentMethodId) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
+    if (!customerId || !paymentMethodId) {
+      return NextResponse.json({ error: "Missing required parameters" }, { status: 400 })
     }
-
-    // Use the hardcoded price IDs instead of environment variables
-    const priceId = plan === "premium" ? PRICE_IDS.premium : PRICE_IDS.standard
-
-    console.log(`Using price ID: ${priceId} for plan: ${plan}`)
 
     // Attach the payment method to the customer
     await stripe.paymentMethods.attach(paymentMethodId, {
       customer: customerId,
     })
 
-    // Set the payment method as the default for the customer
+    // Set the payment method as the default
     await stripe.customers.update(customerId, {
       invoice_settings: {
         default_payment_method: paymentMethodId,
       },
+      email: email || undefined,
+      name: name || undefined,
       metadata: {
-        userId: userId || "",
-        company: "NECTIC",
+        company: company || "",
+        plan: plan || "standard",
+        period: period || "6month",
       },
     })
+
+    // Determine which price ID to use based on plan and period
+    let priceId
+    if (plan === "premium") {
+      priceId =
+        period === "12month"
+          ? process.env.NEXT_PUBLIC_STRIPE_PREMIUM_12MONTH_PRICE_ID
+          : process.env.NEXT_PUBLIC_STRIPE_PREMIUM_6MONTH_PRICE_ID
+    } else {
+      priceId =
+        period === "12month"
+          ? process.env.NEXT_PUBLIC_STRIPE_STANDARD_12MONTH_PRICE_ID
+          : process.env.NEXT_PUBLIC_STRIPE_STANDARD_6MONTH_PRICE_ID
+    }
+
+    console.log(`Using price ID: ${priceId} for plan: ${plan}, period: ${period}`)
 
     // Create the subscription
     const subscription = await stripe.subscriptions.create({
@@ -55,21 +63,23 @@ export async function POST(request: Request) {
       },
       expand: ["latest_invoice.payment_intent"],
       metadata: {
-        userId: userId || "",
-        plan: plan,
-        company: "NECTIC",
+        plan: plan || "standard",
+        period: period || "6month",
       },
     })
 
-    // @ts-ignore - Stripe types are not accurate for this nested expansion
-    const clientSecret = subscription.latest_invoice?.payment_intent?.client_secret
+    const invoice = subscription.latest_invoice as Stripe.Invoice
+    const paymentIntent = invoice.payment_intent as Stripe.PaymentIntent
 
     return NextResponse.json({
       subscriptionId: subscription.id,
-      clientSecret: clientSecret,
+      clientSecret: paymentIntent.client_secret,
     })
   } catch (error) {
     console.error("Error creating subscription:", error)
-    return NextResponse.json({ error: "Failed to create subscription" }, { status: 500 })
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "An unexpected error occurred" },
+      { status: 500 },
+    )
   }
 }

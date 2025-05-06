@@ -3,6 +3,7 @@
 import type React from "react"
 import { createContext, useContext, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import { useFirebase } from "../lib/firebase"
 
 export interface User {
   uid: string
@@ -82,6 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [bypassAuth, setBypassAuth] = useState<boolean>(false)
+  const { initialized: firebaseInitialized, auth } = useFirebase()
   const router = useRouter()
 
   // Check for bypass mode on initial load
@@ -96,18 +98,63 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setBypassAuth(true)
             setUser(createMockUser())
             console.log("Bypass user set:", createMockUser())
+            setLoading(false)
+            return true
           }
-
-          setLoading(false)
         }
+        return false
       } catch (error) {
         console.error("Error checking bypass mode:", error)
-        setLoading(false)
+        return false
       }
     }
 
-    checkBypassMode()
-  }, [])
+    const bypassEnabled = checkBypassMode()
+
+    // Only set up Firebase auth listener if not in bypass mode and Firebase is initialized
+    if (!bypassEnabled && firebaseInitialized && auth) {
+      console.log("Setting up Firebase auth state listener")
+      try {
+        const unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
+          if (firebaseUser) {
+            // User is signed in
+            console.log("Firebase user signed in:", firebaseUser.email)
+            // Here you would normally fetch additional user data from Firestore
+            // For now, we'll just create a basic user object
+            setUser({
+              uid: firebaseUser.uid,
+              email: firebaseUser.email || "unknown@example.com",
+              displayName: firebaseUser.displayName || undefined,
+              createdAt: createTimestamp(),
+              lastLogin: createTimestamp(),
+              systemsConnected: {
+                salesforce: false,
+                microsoft365: false,
+                quickbooks: false,
+              },
+              subscription: {
+                tier: "free",
+              },
+            })
+          } else {
+            // User is signed out
+            console.log("Firebase user signed out")
+            setUser(null)
+          }
+          setLoading(false)
+        })
+
+        // Clean up the listener when the component unmounts
+        return () => unsubscribe()
+      } catch (error) {
+        console.error("Error setting up auth state listener:", error)
+        setLoading(false)
+      }
+    } else if (!bypassEnabled) {
+      // If Firebase isn't initialized yet but we're not in bypass mode
+      setLoading(false)
+    }
+  }, [firebaseInitialized, auth])
 
   // This function would normally create a timestamp
   const createTimestamp = () => {

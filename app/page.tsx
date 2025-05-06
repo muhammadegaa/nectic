@@ -1,11 +1,14 @@
 "use client"
 
+import { useState } from "react"
 import { useLanguage } from "@/lib/language-context"
 import { useBypassAuth } from "@/lib/bypass-auth"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { PricingCard } from "@/components/pricing-card"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
 import { ArrowRight, CheckCircle2, Clock, Droplet } from "lucide-react"
 import Link from "next/link"
 import { LanguageSwitcher } from "@/components/language-switcher"
@@ -13,6 +16,7 @@ import { LanguageSwitcher } from "@/components/language-switcher"
 export default function LandingPage() {
   const { language, t, isLoading } = useLanguage()
   const { doubleClicked, secretCode, handleDoubleClick, handleKeyDown } = useBypassAuth()
+  const [annualBilling, setAnnualBilling] = useState(false)
 
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-b from-white to-amber-50/30">
@@ -329,6 +333,28 @@ export default function LandingPage() {
                 </p>
               </div>
             </div>
+
+            {/* Billing period toggle */}
+            <div className="flex items-center justify-center my-8 space-x-4">
+              <span className={`text-sm font-medium ${!annualBilling ? "text-primary" : "text-gray-500"}`}>
+                {language === "id" ? "6 Bulan" : "6 Months"}
+              </span>
+              <div className="flex items-center space-x-2">
+                <Switch id="billing-toggle" checked={annualBilling} onCheckedChange={setAnnualBilling} />
+                <Label htmlFor="billing-toggle" className="sr-only">
+                  Toggle billing period
+                </Label>
+              </div>
+              <span className={`text-sm font-medium ${annualBilling ? "text-primary" : "text-gray-500"}`}>
+                {language === "id" ? "12 Bulan" : "12 Months"}
+              </span>
+              {annualBilling && (
+                <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200">
+                  {language === "id" ? "Hemat 20%" : "Save 20%"}
+                </Badge>
+              )}
+            </div>
+
             <div className="mx-auto grid max-w-5xl gap-6 py-12 lg:grid-cols-2">
               <PricingCard
                 title="Standard Plan"
@@ -343,6 +369,7 @@ export default function LandingPage() {
                 ]}
                 plan="standard"
                 popular={false}
+                billingPeriod={annualBilling ? "12month" : "6month"}
               />
 
               <PricingCard
@@ -358,6 +385,7 @@ export default function LandingPage() {
                 ]}
                 plan="premium"
                 popular={true}
+                billingPeriod={annualBilling ? "12month" : "6month"}
               />
             </div>
 

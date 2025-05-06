@@ -9,6 +9,7 @@ import { CheckCircle2, ShieldCheck, AlertCircle } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useCurrency } from "@/lib/currency-context"
 import { formatCurrency } from "@/lib/currency-utils"
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
 
 // Simple email validation function
 function isValidEmail(email: string): boolean {
@@ -20,16 +21,16 @@ export default function CheckoutForm({
   clientSecret,
   customerId,
   plan,
+  period = "6month",
   initialEmail = "",
   initialName = "",
-  planPrice,
 }: {
   clientSecret: string
   customerId: string
   plan: string | null
+  period?: string
   initialEmail?: string
   initialName?: string
-  planPrice?: number
 }) {
   const stripe = useStripe()
   const elements = useElements()
@@ -39,6 +40,7 @@ export default function CheckoutForm({
 
   const [name, setName] = useState(initialName)
   const [email, setEmail] = useState(initialEmail)
+  const [company, setCompany] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | undefined>()
   const [isSuccess, setIsSuccess] = useState(false)
@@ -47,11 +49,24 @@ export default function CheckoutForm({
   const [elementsReady, setElementsReady] = useState(false)
   const [paymentMethodSelected, setPaymentMethodSelected] = useState(false)
 
-  // Use the correct prices based on the plan - EARLY ADOPTER PRICING
-  const actualPlanPrice = plan === "premium" ? 399 : 199
+  // Get the monthly price based on the plan
+  const getMonthlyPrice = () => {
+    return plan === "premium" ? 399 : 199
+  }
 
-  // Format the plan price based on the selected currency
-  const formattedPrice = formatCurrency(actualPlanPrice, currency)
+  // Calculate the total price based on the period
+  const getTotalPrice = () => {
+    const monthlyPrice = getMonthlyPrice()
+    const months = period === "12month" ? 12 : 6
+    return monthlyPrice * months
+  }
+
+  const monthlyPrice = getMonthlyPrice()
+  const totalPrice = getTotalPrice()
+
+  // Format the prices based on the selected currency
+  const formattedMonthlyPrice = formatCurrency(monthlyPrice, currency)
+  const formattedTotalPrice = formatCurrency(totalPrice, currency)
 
   // Check if Elements are ready
   useEffect(() => {
@@ -87,7 +102,9 @@ export default function CheckoutForm({
               customerId,
               email: email || initialEmail,
               name: name || initialName,
+              company,
               plan,
+              period,
               userId: user?.uid,
             }),
           })
@@ -104,7 +121,7 @@ export default function CheckoutForm({
     if (customerId && (isValidEmail(initialEmail) || formTouched)) {
       saveCustomerData()
     }
-  }, [customerId, email, name, plan, formTouched, initialEmail, initialName, user])
+  }, [customerId, email, name, company, plan, period, formTouched, initialEmail, initialName, user])
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setName(e.target.value)
@@ -113,6 +130,11 @@ export default function CheckoutForm({
 
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEmail(e.target.value)
+    setFormTouched(true)
+  }
+
+  const handleCompanyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCompany(e.target.value)
     setFormTouched(true)
   }
 
@@ -154,7 +176,7 @@ export default function CheckoutForm({
         throw new Error(submitError.message)
       }
 
-      // 2. Create a payment method - this now works with paymentMethodCreation: 'manual'
+      // 2. Create a payment method
       const { error: paymentMethodError, paymentMethod } = await stripe.createPaymentMethod({
         elements,
         params: {
@@ -169,8 +191,13 @@ export default function CheckoutForm({
         throw new Error(paymentMethodError.message)
       }
 
-      // 3. Create the subscription with the payment method
-      const subscriptionResponse = await fetch("/api/create-subscription", {
+      console.log("Payment method created:", paymentMethod.id)
+
+      // Generate the return URL
+      const returnUrl = `${window.location.origin}/success?plan=${plan}&period=${period}&email=${encodeURIComponent(email)}`
+
+      // 3. Create a one-time payment
+      const paymentResponse = await fetch("/api/create-one-time-payment", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -178,40 +205,58 @@ export default function CheckoutForm({
         body: JSON.stringify({
           userId: user?.uid,
           plan,
+          period,
           customerId,
           paymentMethodId: paymentMethod.id,
+          email,
+          name,
+          company,
+          returnUrl, // Add the return URL
         }),
       })
 
-      if (!subscriptionResponse.ok) {
-        const errorData = await subscriptionResponse.json()
-        throw new Error(errorData.error || "Failed to create subscription")
+      if (!paymentResponse.ok) {
+        const errorData = await paymentResponse.json()
+        throw new Error(errorData.error || "Failed to process payment")
       }
 
-      const subscriptionData = await subscriptionResponse.json()
+      const paymentData = await paymentResponse.json()
+      console.log("Payment created:", paymentData)
 
-      // 4. Handle any required actions (like 3D Secure)
-      if (subscriptionData.clientSecret) {
-        const { error: confirmError } = await stripe.confirmPayment({
-          clientSecret: subscriptionData.clientSecret,
-          elements,
-          confirmParams: {
-            return_url: `${window.location.origin}/success?subscription_id=${subscriptionData.subscriptionId}&plan=${plan}`,
-          },
-          redirect: "if_required",
-        })
-
-        if (confirmError) {
-          throw new Error(confirmError.message)
+      // 4. Check if we need to handle any next actions
+      if (paymentData.status === "requires_action" && paymentData.nextAction) {
+        // Handle the redirect flow
+        if (paymentData.nextAction.type === "redirect_to_url") {
+          window.location.href = paymentData.nextAction.redirect_to_url.url
+          return
         }
       }
 
-      // 5. If no redirect happened, subscription was successful
+      // 5. If no actions required, payment was successful
       setIsSuccess(true)
 
-      // 6. Redirect to success page after a short delay
+      // 6. Save the customer details
+      await fetch("/api/save-customer", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          customerId,
+          paymentIntentId: paymentData.paymentIntentId,
+          email,
+          name,
+          company,
+          plan,
+          period,
+        }),
+      })
+
+      // 7. Redirect to success page after a short delay
       setTimeout(() => {
-        router.push(`/success?subscription_id=${subscriptionData.subscriptionId}&plan=${plan}`)
+        router.push(
+          `/success?payment_id=${paymentData.paymentIntentId}&plan=${plan}&period=${period}&email=${encodeURIComponent(email)}`,
+        )
       }, 2000)
     } catch (error) {
       console.error("Payment error:", error)
@@ -229,10 +274,20 @@ export default function CheckoutForm({
           <CheckCircle2 className="h-10 w-10 text-green-600" />
         </div>
         <h1 className="text-2xl font-bold mb-4">Payment Successful!</h1>
-        <p className="text-gray-600 mb-8">Thank you for your subscription. Redirecting to your account...</p>
+        <p className="text-gray-600 mb-8">Thank you for your purchase. Redirecting to your account...</p>
         <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
       </div>
     )
+  }
+
+  // Get the billing period label
+  const getPeriodLabel = () => {
+    return period === "6month" ? "6 months" : "12 months"
+  }
+
+  // Get the number of months
+  const getMonths = () => {
+    return period === "6month" ? 6 : 12
   }
 
   return (
@@ -240,7 +295,7 @@ export default function CheckoutForm({
       <div className="space-y-4">
         <div className="space-y-2">
           <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-            Name
+            Full Name
           </label>
           <input
             id="name"
@@ -254,7 +309,7 @@ export default function CheckoutForm({
         </div>
         <div className="space-y-2">
           <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-            Email
+            Email Address
           </label>
           <input
             id="email"
@@ -266,22 +321,42 @@ export default function CheckoutForm({
             placeholder="your@email.com"
           />
         </div>
+        <div className="space-y-2">
+          <label htmlFor="company" className="block text-sm font-medium text-gray-700">
+            Company Name
+          </label>
+          <input
+            id="company"
+            type="text"
+            value={company}
+            onChange={handleCompanyChange}
+            required
+            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors"
+            placeholder="Your Company"
+          />
+        </div>
       </div>
 
       {/* Payment summary */}
       <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
         <h3 className="font-medium text-gray-900 mb-2">Payment Summary</h3>
         <div className="flex justify-between mb-2">
-          <span className="text-gray-600">{plan === "premium" ? "Premium Plan" : "Standard Plan"}</span>
-          <span className="font-medium">${plan === "premium" ? "399" : "199"}</span>
+          <span className="text-gray-600">
+            {plan === "premium" ? "Premium Plan" : "Standard Plan"} (${monthlyPrice}/month)
+          </span>
+          <span className="font-medium">${monthlyPrice}/month</span>
+        </div>
+        <div className="flex justify-between mb-2">
+          <span className="text-gray-600">Billing period</span>
+          <span className="font-medium">{getPeriodLabel()}</span>
         </div>
         <div className="flex justify-between font-medium text-gray-900 pt-2 border-t border-gray-200">
-          <span>Total today</span>
-          <span>${plan === "premium" ? "399" : "199"}</span>
+          <span>Total today ({getMonths()} months)</span>
+          <span>${totalPrice}</span>
         </div>
         <p className="text-xs text-gray-500 mt-2">
-          How does billing work? Your card will be charged immediately when you subscribe. We offer a 30-day money-back
-          guarantee if you're not satisfied with our service.
+          <strong>This is a one-time payment</strong> for the full {getPeriodLabel()} period at ${monthlyPrice}/month.
+          We offer a 30-day money-back guarantee if you're not satisfied with our service.
         </p>
       </div>
 
@@ -323,23 +398,11 @@ export default function CheckoutForm({
         <span className="relative z-10">
           {isLoading ? (
             <span className="flex items-center justify-center">
-              <svg
-                className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
+              <LoadingSpinner size="sm" className="mr-2" />
               Processing Payment...
             </span>
           ) : (
-            `Pay $${plan === "premium" ? "399" : "199"}`
+            `Pay $${totalPrice}`
           )}
         </span>
         <div className="absolute inset-0 bg-gradient-to-r from-amber-500 to-amber-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>

@@ -1,11 +1,15 @@
 "use client"
 
+import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { PricingCard } from "@/components/pricing-card"
 import { useLanguage } from "@/lib/language-context"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
 
 export default function PricingPage() {
   const { t, isLoading } = useLanguage()
+  const [annualBilling, setAnnualBilling] = useState(false)
 
   return (
     <div className="container mx-auto px-4 py-16 md:py-24">
@@ -18,8 +22,24 @@ export default function PricingPage() {
           <p className="text-xl text-gray-500 mt-4 max-w-[700px] mx-auto">
             Choose the plan that best fits your business needs
           </p>
-          {/* Remove the misleading text */}
         </div>
+      </div>
+
+      {/* Billing period toggle */}
+      <div className="flex items-center justify-center mb-8 space-x-4">
+        <span className={`text-sm font-medium ${!annualBilling ? "text-primary" : "text-gray-500"}`}>6 Months</span>
+        <div className="flex items-center space-x-2">
+          <Switch id="billing-toggle" checked={annualBilling} onCheckedChange={setAnnualBilling} />
+          <Label htmlFor="billing-toggle" className="sr-only">
+            Toggle billing period
+          </Label>
+        </div>
+        <span className={`text-sm font-medium ${annualBilling ? "text-primary" : "text-gray-500"}`}>12 Months</span>
+        {annualBilling && (
+          <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200">
+            Save 20%
+          </Badge>
+        )}
       </div>
 
       <div className="mx-auto grid max-w-5xl gap-6 py-12 lg:grid-cols-2">
@@ -36,6 +56,7 @@ export default function PricingPage() {
           ]}
           plan="standard"
           popular={false}
+          billingPeriod={annualBilling ? "12month" : "6month"}
         />
 
         <PricingCard
@@ -51,6 +72,7 @@ export default function PricingPage() {
           ]}
           plan="premium"
           popular={true}
+          billingPeriod={annualBilling ? "12month" : "6month"}
         />
       </div>
 

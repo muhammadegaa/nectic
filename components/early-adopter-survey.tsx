@@ -1,16 +1,20 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { CheckCircle2, ChevronRight, ArrowLeft, Loader2 } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import confetti from "canvas-confetti"
 import { cn } from "@/lib/utils"
 
+// Import Firebase from our existing setup
+import { useFirebase } from "@/lib/firebase"
+import { collection, addDoc } from "firebase/firestore"
+
 type SurveyProps = {
-  email: string
+  email?: string // Make email optional
   subscriptionId?: string
-  plan: string
+  plan?: string // Make plan optional
   onComplete?: () => void
 }
 
@@ -146,16 +150,26 @@ const surveyData = [
   },
 ]
 
-export function EarlyAdopterSurvey({ email, subscriptionId, plan, onComplete }: SurveyProps) {
+export function EarlyAdopterSurvey({ email = "", subscriptionId = "", plan = "standard", onComplete }: SurveyProps) {
+  // Add default values for email, subscriptionId, and plan
   const [currentSection, setCurrentSection] = useState(0)
   const [responses, setResponses] = useState<Record<string, any>>({
-    follow_up_email: email, // Pre-fill with user's email
+    follow_up_email: email, // Pre-fill with user's email (if available)
+    user_email: email || "", // Store user email separately
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isCompleted, setIsCompleted] = useState(false)
   const [rankings, setRankings] = useState<Record<string, number>>({})
   const [animationDirection, setAnimationDirection] = useState<"forward" | "backward">("forward")
+  const [submissionStatus, setSubmissionStatus] = useState<"idle" | "success" | "error" | "partial">("idle")
+
+  // Add state for email input if not provided
+  const [userEmail, setUserEmail] = useState(email || "")
+  const [showEmailInput] = useState(!email)
+
+  // Reference to the survey container for scrolling
+  const surveyContainerRef = useRef<HTMLDivElement>(null)
 
   // Calculate progress percentage
   const totalSections = surveyData.length
@@ -163,12 +177,26 @@ export function EarlyAdopterSurvey({ email, subscriptionId, plan, onComplete }: 
 
   // Trigger confetti on completion
   const triggerConfetti = () => {
-    confetti({
-      particleCount: 100,
-      spread: 70,
-      origin: { y: 0.6 },
-      colors: ["#f59e0b", "#fbbf24", "#fcd34d"],
-    })
+    if (typeof window !== "undefined" && window.confetti) {
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ["#f59e0b", "#fbbf24", "#fcd34d"],
+      })
+    }
+  }
+
+  // Save to localStorage as a fallback
+  const saveToLocalStorage = (data: any) => {
+    try {
+      localStorage.setItem(`survey_${Date.now()}`, JSON.stringify(data))
+      console.log("Survey saved to localStorage")
+      return true
+    } catch (error) {
+      console.error("Failed to save to localStorage:", error)
+      return false
+    }
   }
 
   const handleTextChange = (questionId: string, value: string) => {
@@ -299,6 +327,13 @@ export function EarlyAdopterSurvey({ email, subscriptionId, plan, onComplete }: 
     const currentSectionData = surveyData[currentSection]
     const newErrors: Record<string, string> = {}
 
+    // If we're showing the email input and it's the first section, validate email
+    if (showEmailInput && currentSection === 0) {
+      if (!userEmail || !isValidEmail(userEmail)) {
+        newErrors.user_email = "Please enter a valid email address"
+      }
+    }
+
     currentSectionData.questions.forEach((question) => {
       const response = responses[question.id]
 
@@ -331,7 +366,11 @@ export function EarlyAdopterSurvey({ email, subscriptionId, plan, onComplete }: 
       if (currentSection < surveyData.length - 1) {
         setAnimationDirection("forward")
         setCurrentSection((prev) => prev + 1)
-        window.scrollTo(0, 0)
+
+        // Scroll to the survey container instead of the top of the page
+        if (surveyContainerRef.current) {
+          surveyContainerRef.current.scrollIntoView({ behavior: "smooth", block: "start" })
+        }
       } else {
         handleSubmit()
       }
@@ -342,81 +381,280 @@ export function EarlyAdopterSurvey({ email, subscriptionId, plan, onComplete }: 
     if (currentSection > 0) {
       setAnimationDirection("backward")
       setCurrentSection((prev) => prev - 1)
-      window.scrollTo(0, 0)
+
+      // Scroll to the survey container instead of the top of the page
+      if (surveyContainerRef.current) {
+        surveyContainerRef.current.scrollIntoView({ behavior: "smooth", block: "start" })
+      }
     }
   }
+
+  const [isSubmitted, setIsSubmitted] = useState(false)
+  const [submitError, setSubmitError] = useState("")
+
+  // Get Firebase instance
+  const firebase = useFirebase()
 
   const handleSubmit = async () => {
     setIsSubmitting(true)
 
     try {
-      // Log the survey submission attempt
-      console.log("Submitting survey for:", email)
-
-      // Submit the survey data
+      // First try the API route method which is more reliable
       const response = await fetch("/api/submit-survey", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          email,
-          responses,
+          email: userEmail || email,
           subscriptionId,
           plan,
+          responses,
+          submittedAt: new Date().toISOString(),
         }),
       })
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(`Failed to submit survey: ${errorData.message || response.statusText}`)
+      if (response.ok) {
+        setIsSubmitted(true)
+        setIsSubmitting(false)
+        return
       }
 
-      setIsCompleted(true)
-      triggerConfetti()
+      // If API route fails, try direct Firestore as fallback
+      const { db } = firebase
 
-      // Log that we're about to call onComplete
-      console.log("Survey completed, calling onComplete callback")
+      if (db) {
+        const surveysCollection = collection(db, "surveys")
+        const docRef = await addDoc(surveysCollection, {
+          email: userEmail || email,
+          subscriptionId,
+          plan,
+          responses,
+          submittedAt: new Date().toISOString(),
+        })
 
-      if (onComplete) {
-        setTimeout(() => {
-          onComplete()
-        }, 2000) // Give time for the completion animation
+        console.log("Survey submitted with ID: ", docRef.id)
+        setIsSubmitted(true)
+        setSubmissionStatus("success")
+      } else {
+        throw new Error("Firestore not available")
       }
-    } catch (err) {
-      console.error("Survey submission error:", err)
-      setErrors({
-        submit: `There was an error submitting your responses: ${err instanceof Error ? err.message : "Unknown error"}. Please try again.`,
-      })
+    } catch (error) {
+      console.error("Error submitting survey:", error)
+      setSubmitError("Failed to submit survey. Please try again later.")
+
+      // Last resort: save to localStorage
+      try {
+        localStorage.setItem(
+          "pendingSurvey",
+          JSON.stringify({
+            email: userEmail || email,
+            subscriptionId,
+            plan,
+            responses,
+            submittedAt: new Date().toISOString(),
+          }),
+        )
+        console.log("Survey saved to localStorage for later submission")
+        setIsSubmitted(true) // Still mark as submitted for UX purposes
+        setSubmissionStatus("partial")
+      } catch (localStorageError) {
+        console.error("Failed to save to localStorage:", localStorageError)
+        setSubmissionStatus("error")
+      }
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  if (isCompleted) {
+  // Initialize Firebase outside of conditional block
+  const { db } = useFirebase()
+
+  useEffect(() => {
+    if (isSubmitted) {
+      triggerConfetti()
+      if (onComplete) {
+        onComplete()
+      }
+    }
+  }, [isSubmitted, onComplete])
+
+  if (isCompleted || isSubmitted) {
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="text-center py-12 px-4"
-      >
-        <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-100 mb-6 animate-bounce">
-          <CheckCircle2 className="h-10 w-10 text-green-600" />
-        </div>
-        <h3 className="text-2xl font-bold mb-4">You're All Set!</h3>
-        <p className="text-gray-600 mb-6 max-w-md mx-auto">
-          Thank you for completing your onboarding. We'll use this information to tailor Nectic to your specific needs.
-        </p>
-        <p className="text-sm text-gray-500">Our team will reach out shortly with next steps.</p>
-      </motion.div>
+      <div className="flex items-center justify-center min-h-[80vh] px-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="max-w-md w-full overflow-hidden rounded-2xl shadow-xl border border-gray-100"
+        >
+          {/* Top gradient banner */}
+          <div className="h-3 bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600" />
+
+          <div className="px-8 pt-10 pb-8 bg-white">
+            {/* Success icon with animated ring */}
+            <motion.div
+              className="mx-auto relative"
+              initial={{ scale: 0.8 }}
+              animate={{ scale: 1 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              <div className="w-20 h-20 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-6">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.5, duration: 0.5 }}
+                >
+                  <CheckCircle2 className="h-10 w-10 text-green-600" />
+                </motion.div>
+              </div>
+              <motion.div
+                className="absolute inset-0 rounded-full border-4 border-green-200"
+                initial={{ opacity: 0, scale: 0.6 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.3, duration: 0.5 }}
+              />
+            </motion.div>
+
+            {/* Success message */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4, duration: 0.5 }}
+            >
+              <h2 className="text-2xl font-bold text-center text-gray-900 mb-2">Onboarding Complete</h2>
+              <p className="text-gray-600 text-center mb-8">
+                Thank you for sharing your insights. We're tailoring Nectic to your specific needs.
+              </p>
+            </motion.div>
+
+            {/* Status messages with appropriate styling */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6, duration: 0.5 }}
+            >
+              {submissionStatus === "error" && (
+                <div className="bg-amber-50 border border-amber-100 rounded-lg p-4 mb-6">
+                  <p className="text-amber-800 text-sm flex items-start">
+                    <svg
+                      className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                      />
+                    </svg>
+                    <span>
+                      We've stored your responses locally. Our team will follow up to ensure your information is
+                      properly recorded.
+                    </span>
+                  </p>
+                </div>
+              )}
+
+              {submissionStatus === "partial" && (
+                <div className="bg-amber-50 border border-amber-100 rounded-lg p-4 mb-6">
+                  <p className="text-amber-800 text-sm flex items-start">
+                    <svg
+                      className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    <span>
+                      Your responses have been saved locally and will sync with our database when connectivity is
+                      restored.
+                    </span>
+                  </p>
+                </div>
+              )}
+
+              {submissionStatus === "success" && (
+                <div className="bg-green-50 border border-green-100 rounded-lg p-4 mb-6">
+                  <p className="text-green-800 text-sm flex items-start">
+                    <svg
+                      className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span>
+                      Your responses have been successfully saved. Thank you for completing the onboarding process.
+                    </span>
+                  </p>
+                </div>
+              )}
+            </motion.div>
+
+            {/* Next steps section */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.8, duration: 0.5 }}
+              className="mb-8"
+            >
+              <h3 className="text-sm font-medium text-gray-700 mb-3">What happens next?</h3>
+              <ul className="space-y-3">
+                <li className="flex items-start">
+                  <div className="flex-shrink-0 w-5 h-5 rounded-full bg-amber-100 flex items-center justify-center mr-3 mt-0.5">
+                    <span className="text-amber-600 text-xs font-medium">1</span>
+                  </div>
+                  <p className="text-sm text-gray-600">We'll reach out to you with important updates</p>
+                </li>
+                <li className="flex items-start">
+                  <div className="flex-shrink-0 w-5 h-5 rounded-full bg-amber-100 flex items-center justify-center mr-3 mt-0.5">
+                    <span className="text-amber-600 text-xs font-medium">2</span>
+                  </div>
+                  <p className="text-sm text-gray-600">Contact us if you have any questions or need assistance</p>
+                </li>
+              </ul>
+            </motion.div>
+
+            {/* CTA button */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 1, duration: 0.5 }}
+              className="text-center"
+            >
+              <Button
+                onClick={() => (window.location.href = "/")}
+                className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white px-8 py-2.5 rounded-lg shadow-sm hover:shadow transition-all duration-200 w-full"
+              >
+                Go to Dashboard
+              </Button>
+              <p className="text-xs text-gray-500 mt-4">
+                Questions? Contact{" "}
+                <a href="mailto:helloegglabs@gmail.com" className="text-amber-600 hover:underline">
+                  helloegglabs@gmail.com
+                </a>
+              </p>
+            </motion.div>
+          </div>
+        </motion.div>
+      </div>
     )
   }
 
   const currentSectionData = surveyData[currentSection]
 
   return (
-    <div className="w-full max-w-2xl mx-auto">
+    <div ref={surveyContainerRef} className="w-full max-w-2xl mx-auto my-8">
       {/* Progress bar and section indicator */}
       <div className="mb-8">
         <div className="flex justify-between items-center mb-4">
@@ -459,6 +697,32 @@ export function EarlyAdopterSurvey({ email, subscriptionId, plan, onComplete }: 
           ))}
         </div>
       </div>
+
+      {/* Email input if not provided */}
+      {showEmailInput && currentSection === 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 bg-white p-6 rounded-xl shadow-sm border border-gray-100"
+        >
+          <label className="block text-base font-medium mb-2">Please enter your email address to continue</label>
+          <input
+            type="email"
+            value={userEmail}
+            onChange={(e) => {
+              setUserEmail(e.target.value)
+              setResponses((prev) => ({
+                ...prev,
+                user_email: e.target.value,
+                follow_up_email: e.target.value,
+              }))
+            }}
+            className="w-full px-4 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+            placeholder="your.email@example.com"
+          />
+          {errors.user_email && <p className="mt-1 text-sm text-red-600">{errors.user_email}</p>}
+        </motion.div>
+      )}
 
       {/* Questions */}
       <AnimatePresence mode="wait">

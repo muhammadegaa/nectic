@@ -7,22 +7,24 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function POST(request: Request) {
   try {
-    const { email, name } = await request.json()
+    const { email, name, plan, period } = await request.json()
 
     // Create a customer in Stripe
     const customer = await stripe.customers.create({
       email: email || undefined,
       name: name || undefined,
       metadata: {
-        source: "nectic_platform",
-        company: "NECTIC",
+        plan: plan || "standard",
+        period: period || "6month",
       },
-      description: "NECTIC Platform Customer",
     })
 
     return NextResponse.json({ customerId: customer.id })
   } catch (error) {
     console.error("Error creating customer:", error)
-    return NextResponse.json({ error: "Failed to create customer" }, { status: 500 })
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "An unexpected error occurred" },
+      { status: 500 },
+    )
   }
 }

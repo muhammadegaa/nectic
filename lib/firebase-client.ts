@@ -1,109 +1,110 @@
 "use client"
 
-// Simple in-memory mock for development
-console.log("Using mock Firebase implementation")
+import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app"
+import { getAuth, GoogleAuthProvider, type Auth } from "firebase/auth"
+import { getFirestore, serverTimestamp as firestoreServerTimestamp, type Firestore } from "firebase/firestore"
 
-// Simple timestamp implementation
-const mockTimestamp = {
-  now: () => ({
-    toDate: () => new Date(),
-    seconds: Math.floor(Date.now() / 1000),
-    nanoseconds: 0,
-    isEqual: () => false,
-    valueOf: () => Date.now(),
-  }),
-  fromDate: (date) => ({
-    toDate: () => date,
-    seconds: Math.floor(date.getTime() / 1000),
-    nanoseconds: 0,
-  }),
+// Firebase configuration
+const firebaseConfig = {
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 }
 
-// Export simplified versions that don't try to mimic Firebase
-export const Timestamp = mockTimestamp
+// Create a lazy initialization pattern
+let firebaseApp: FirebaseApp | undefined
+let firebaseAuth: Auth | undefined
+let firebaseDb: Firestore | undefined
+let googleAuthProvider: GoogleAuthProvider | undefined
+let isInitializing = false
 
-// Mock Firebase app
-const mockApp = {
-  name: "nectic-app",
-  options: {},
-  automaticDataCollectionEnabled: false,
+// Function to initialize Firebase
+function initializeFirebase() {
+  // Skip initialization on server-side
+  if (typeof window === "undefined") {
+    return { app: undefined, auth: undefined, db: undefined, googleProvider: undefined }
+  }
+
+  // Prevent concurrent initialization attempts
+  if (isInitializing) {
+    return {
+      app: firebaseApp,
+      auth: firebaseAuth,
+      db: firebaseDb,
+      googleProvider: googleAuthProvider,
+    }
+  }
+
+  try {
+    isInitializing = true
+
+    // Initialize Firebase app if it hasn't been initialized yet
+    if (!firebaseApp) {
+      if (getApps().length === 0) {
+        firebaseApp = initializeApp(firebaseConfig)
+      } else {
+        firebaseApp = getApp()
+      }
+    }
+
+    // Only initialize auth if app is available and not already initialized
+    if (firebaseApp && !firebaseAuth) {
+      try {
+        firebaseAuth = getAuth(firebaseApp)
+        googleAuthProvider = new GoogleAuthProvider()
+      } catch (authError) {
+        // Silently handle auth initialization errors
+        // This prevents console errors when auth service isn't ready
+      }
+    }
+
+    // Only initialize Firestore if app is available and not already initialized
+    if (firebaseApp && !firebaseDb) {
+      try {
+        firebaseDb = getFirestore(firebaseApp)
+      } catch (dbError) {
+        // Silently handle Firestore initialization errors
+        // This prevents console errors when Firestore service isn't ready
+      }
+    }
+
+    return {
+      app: firebaseApp,
+      auth: firebaseAuth,
+      db: firebaseDb,
+      googleProvider: googleAuthProvider,
+    }
+  } catch (error) {
+    // Silently handle general initialization errors
+    return { app: firebaseApp, auth: firebaseAuth, db: firebaseDb, googleProvider: googleAuthProvider }
+  } finally {
+    isInitializing = false
+  }
 }
 
-// Simplified auth implementation
-const mockAuth = {
-  currentUser: null,
-  onAuthStateChanged: (callback) => {
-    setTimeout(() => callback(null), 0)
-    return () => {}
-  },
-  signInWithEmailAndPassword: async (email, password) => {
-    console.log(`Mock sign in with email: ${email}`)
-    return { user: { uid: "mock-user", email } }
-  },
-  createUserWithEmailAndPassword: async (email, password) => {
-    console.log(`Mock create user with email: ${email}`)
-    return { user: { uid: "mock-user", email } }
-  },
-  signInWithPopup: async (provider) => {
-    console.log(`Mock sign in with popup`)
-    return { user: { uid: "mock-user", email: "test@example.com" } }
-  },
-  signOut: async () => {
-    console.log(`Mock sign out`)
-  },
-  updateProfile: async (user, profile) => {
-    console.log(`Mock update profile`)
-  },
+// Initialize Firebase when this module is imported
+const { app, auth, db, googleProvider } = initializeFirebase()
+
+// Export Firebase instances
+export { app, auth, db, googleProvider }
+
+// Export Firebase utilities
+export const serverTimestamp = firestoreServerTimestamp
+
+// Export Timestamp type
+import { Timestamp } from "firebase/firestore"
+export { Timestamp }
+
+// Create a function to get Firebase services (ensures they're initialized)
+export function getFirebaseServices() {
+  // Return existing instances if they're already initialized
+  if (app && auth && db) {
+    return { app, auth, db, googleProvider }
+  }
+
+  // Otherwise try to initialize again
+  return initializeFirebase()
 }
-
-// Simplified Firestore implementation
-const mockDb = {
-  // Get a user by ID
-  getUser: async (userId) => {
-    return null
-  },
-
-  // Create or update a user
-  setUser: async (userId, userData) => {
-    return null
-  },
-
-  // Get opportunities
-  getOpportunities: async () => {
-    return []
-  },
-
-  // Get opportunity by ID
-  getOpportunity: async (id) => {
-    return null
-  },
-
-  // Get recommended opportunities
-  getRecommendedOpportunities: async () => {
-    return []
-  },
-
-  // Save assessment
-  saveAssessment: async (userId, assessmentId, data) => {
-    return null
-  },
-
-  // Get assessment
-  getAssessment: async (userId, assessmentId) => {
-    return null
-  },
-
-  // Add opportunity
-  addOpportunity: async (opportunity) => {
-    return null
-  },
-}
-
-// Mock Google provider
-const mockGoogleProvider = {
-  addScope: () => {},
-}
-
-// Export for compatibility with existing code
-export const auth = mockAuth
-export const db = mockDb

@@ -5,10 +5,10 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2023-10-16",
 })
 
-// Hardcoded price IDs as provided
+// Use the original price IDs to create real transactions
 const PRICE_IDS = {
-  standard: "price_1RHRdLDARABW0ktm7fe2Xppc",
-  premium: "price_1RHQiODARABW0ktmrw5Ens3A",
+  standard: process.env.STRIPE_STANDARD_PRICE_ID || "price_1RHQhvDARABW0ktmXYbDQEAP",
+  premium: process.env.STRIPE_PREMIUM_PRICE_ID || "price_1RHQiODARABW0ktmrw5Ens3A",
 }
 
 export async function POST(request: Request) {
@@ -20,7 +20,9 @@ export async function POST(request: Request) {
     }
 
     // Determine price based on plan
-    const planPrice = plan === "premium" ? 399 : 199
+    const priceId = plan === "premium" ? PRICE_IDS.premium : PRICE_IDS.standard
+
+    console.log(`Using price ID: ${priceId} for plan: ${plan}`)
 
     // Create a SetupIntent instead of a PaymentIntent for subscriptions
     const setupIntent = await stripe.setupIntents.create({
@@ -28,9 +30,13 @@ export async function POST(request: Request) {
       payment_method_types: ["card"],
       metadata: {
         plan: plan || "standard",
-        priceId: plan === "premium" ? PRICE_IDS.premium : PRICE_IDS.standard,
+        priceId: priceId,
+        test: "true", // Mark as test intent
       },
     })
+
+    // Use the real prices for UI display but we'll add a trial period to avoid charges
+    const planPrice = plan === "premium" ? 399 : 199
 
     return NextResponse.json({
       clientSecret: setupIntent.client_secret,

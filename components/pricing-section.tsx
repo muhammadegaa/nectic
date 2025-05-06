@@ -1,7 +1,14 @@
+"use client"
+
+import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { PricingCard } from "@/components/pricing-card"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
 
 export function PricingSection() {
+  const [annualBilling, setAnnualBilling] = useState(false)
+
   return (
     <section id="pricing" className="w-full py-12 md:py-24 lg:py-32 bg-gradient-to-b from-white to-amber-50/30">
       <div className="container px-4 md:px-6">
@@ -16,6 +23,24 @@ export function PricingSection() {
             </p>
           </div>
         </div>
+
+        {/* Billing period toggle */}
+        <div className="flex items-center justify-center my-8 space-x-4">
+          <span className={`text-sm font-medium ${!annualBilling ? "text-primary" : "text-gray-500"}`}>6 Months</span>
+          <div className="flex items-center space-x-2">
+            <Switch id="billing-toggle" checked={annualBilling} onCheckedChange={setAnnualBilling} />
+            <Label htmlFor="billing-toggle" className="sr-only">
+              Toggle billing period
+            </Label>
+          </div>
+          <span className={`text-sm font-medium ${annualBilling ? "text-primary" : "text-gray-500"}`}>12 Months</span>
+          {annualBilling && (
+            <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200">
+              Save 20%
+            </Badge>
+          )}
+        </div>
+
         <div className="mx-auto grid max-w-5xl gap-6 py-12 lg:grid-cols-2">
           <PricingCard
             title="Standard Plan"
@@ -30,6 +55,7 @@ export function PricingSection() {
             ]}
             plan="standard"
             popular={false}
+            billingPeriod={annualBilling ? "12month" : "6month"}
           />
 
           <PricingCard
@@ -45,6 +71,7 @@ export function PricingSection() {
             ]}
             plan="premium"
             popular={true}
+            billingPeriod={annualBilling ? "12month" : "6month"}
           />
         </div>
 

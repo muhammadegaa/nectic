@@ -14,9 +14,17 @@ interface PricingCardProps {
   features: string[]
   plan: "standard" | "premium"
   popular?: boolean
+  billingPeriod?: "6month" | "12month"
 }
 
-export function PricingCard({ title, description, features, plan, popular = false }: PricingCardProps) {
+export function PricingCard({
+  title,
+  description,
+  features,
+  plan,
+  popular = false,
+  billingPeriod = "6month",
+}: PricingCardProps) {
   const { currency } = useCurrency()
   const { language, t } = useLanguage()
 
@@ -38,6 +46,27 @@ export function PricingCard({ title, description, features, plan, popular = fals
     plan === "standard" ? "pricing_standard_feature4" : "pricing_premium_feature4",
   ]
 
+  // Calculate prices based on billing period
+  const getDisplayPrice = () => {
+    if (plan === "standard") {
+      return billingPeriod === "6month" ? "$199" : "$159"
+    } else {
+      return billingPeriod === "6month" ? "$399" : "$319"
+    }
+  }
+
+  const getRegularPrice = () => {
+    if (plan === "standard") {
+      return billingPeriod === "6month" ? "$249" : "$199"
+    } else {
+      return billingPeriod === "6month" ? "$499" : "$399"
+    }
+  }
+
+  const getPeriodLabel = () => {
+    return billingPeriod === "6month" ? "/ 6 months" : "/ year"
+  }
+
   return (
     <div
       className={`relative flex flex-col p-6 bg-white shadow-lg rounded-lg border ${
@@ -57,11 +86,11 @@ export function PricingCard({ title, description, features, plan, popular = fals
       </div>
       <div className="text-center mb-6">
         <div className="flex items-center justify-center">
-          <span className="text-4xl font-bold">{t(earlyPriceKey, "$199")}</span>
-          <span className="text-gray-500 ml-2">{t(priceKey, "/ month")}</span>
+          <span className="text-4xl font-bold">{getDisplayPrice()}</span>
+          <span className="text-gray-500 ml-2">{getPeriodLabel()}</span>
         </div>
         <div className="flex items-center justify-center mt-2">
-          <span className="text-sm text-gray-500 line-through">{t(regularPriceKey, "$249")}</span>
+          <span className="text-sm text-gray-500 line-through">{getRegularPrice()}</span>
           <span className="text-xs text-primary ml-2">{t(currentKey, "Current Price")}</span>
         </div>
       </div>
@@ -83,7 +112,7 @@ export function PricingCard({ title, description, features, plan, popular = fals
           }`}
           variant={popular ? "default" : "outline"}
         >
-          <Link href={`/payment?plan=${plan}`}>{t("pricing_cta", "Subscribe Now")}</Link>
+          <Link href={`/payment?plan=${plan}&period=${billingPeriod}`}>{t("pricing_cta", "Subscribe Now")}</Link>
         </Button>
       </div>
     </div>
