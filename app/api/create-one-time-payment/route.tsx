@@ -10,7 +10,7 @@ export async function POST(request: Request) {
     const { customerId, paymentMethodId, plan, period, email, name, company, successUrl, cancelUrl } =
       await request.json()
 
-    if (!customerId || !paymentMethodId || !successUrl || !cancelUrl) {
+    if (!customerId || !paymentMethodId || !successUrl) {
       return NextResponse.json({ error: "Missing required parameters" }, { status: 400 })
     }
 
@@ -47,8 +47,9 @@ export async function POST(request: Request) {
       customer: customerId,
       payment_method: paymentMethodId,
       confirm: true,
-      return_url: successUrl,
-      cancel_url: cancelUrl,
+      statement_descriptor: "NECTIC",
+      statement_descriptor_suffix: plan === "premium" ? "PREMIUM" : "STANDARD",
+      return_url: successUrl, // Include the return URL for redirect flows
       automatic_payment_methods: {
         enabled: true,
         allow_redirects: "always",
@@ -58,6 +59,7 @@ export async function POST(request: Request) {
         period: period || "6month",
         months: months.toString(),
         monthly_price: monthlyPrice.toString(),
+        cancelUrl: cancelUrl, // Store the cancel URL in metadata instead
       },
       description: `${plan === "premium" ? "Premium" : "Standard"} Plan - ${months} Months ($${monthlyPrice}/month)`,
     })

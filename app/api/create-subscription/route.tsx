@@ -60,6 +60,7 @@ export async function POST(request: Request) {
       payment_settings: {
         payment_method_types: ["card"],
         save_default_payment_method: "on_subscription",
+        statement_descriptor: "NECTIC",
       },
       expand: ["latest_invoice.payment_intent"],
       metadata: {

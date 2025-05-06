@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js"
 import { Button } from "@/components/ui/button"
 import { CheckCircle2, ShieldCheck, AlertCircle, XCircle } from "lucide-react"
@@ -35,6 +35,7 @@ export default function CheckoutForm({
   const stripe = useStripe()
   const elements = useElements()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { user } = useAuth()
   const { currency } = useCurrency()
 
@@ -71,20 +72,42 @@ export default function CheckoutForm({
 
   // Check URL parameters for payment status on component mount
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const urlParams = new URLSearchParams(window.location.search)
-      const paymentStatus = urlParams.get("payment_status")
+    const paymentStatus = searchParams.get("payment_status")
+    const paymentIntent = searchParams.get("payment_intent")
+    const redirectStatus = searchParams.get("redirect_status")
 
-      if (paymentStatus === "failed" || paymentStatus === "canceled") {
-        setIsPaymentFailed(true)
-        setErrorMessage(
-          paymentStatus === "failed"
-            ? "Your payment was declined. Please try again with a different payment method."
-            : "Your payment was canceled. You can try again when you're ready.",
-        )
-      }
+    // Handle various payment statuses from URL parameters
+    if (paymentStatus === "failed" || redirectStatus === "failed") {
+      setIsPaymentFailed(true)
+      setErrorMessage("Your payment was declined. Please try again with a different payment method.")
+    } else if (paymentStatus === "canceled" || redirectStatus === "canceled") {
+      setIsPaymentFailed(true)
+      setErrorMessage("Your payment was canceled. You can try again when you're ready.")
     }
-  }, [])
+
+    // If we have a payment intent but no success status, check the payment status
+    if (paymentIntent && !paymentStatus && stripe) {
+      const checkPaymentStatus = async () => {
+        try {
+          const { paymentIntent: retrievedIntent } = await stripe.retrievePaymentIntent(clientSecret)
+          if (retrievedIntent?.status === "succeeded") {
+            setIsSuccess(true)
+            setTimeout(() => {
+              const successUrl = `/success?payment_status=succeeded&plan=${plan}&period=${period}&email=${encodeURIComponent(email || initialEmail)}`
+              router.push(successUrl)
+            }, 2000)
+          } else if (retrievedIntent?.status === "requires_payment_method" || retrievedIntent?.status === "canceled") {
+            setIsPaymentFailed(true)
+            setErrorMessage("Your payment was not completed. Please try again.")
+          }
+        } catch (error) {
+          console.error("Error checking payment status:", error)
+        }
+      }
+
+      checkPaymentStatus()
+    }
+  }, [searchParams, stripe, clientSecret, router, plan, period, email, initialEmail])
 
   // Check if Elements are ready
   useEffect(() => {
@@ -455,7 +478,7 @@ export default function CheckoutForm({
 
       <div className="flex items-center justify-center space-x-2 text-xs text-gray-500">
         <ShieldCheck className="h-4 w-4 text-gray-400" />
-        <p>Secure checkout powered by Stripe</p>
+        <p>Secure checkout by Nectic</p>
       </div>
 
       <p className="text-xs text-center text-gray-500">
