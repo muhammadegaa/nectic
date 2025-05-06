@@ -7,9 +7,10 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function POST(request: Request) {
   try {
-    const { customerId, paymentMethodId, plan, period, email, name, company, returnUrl } = await request.json()
+    const { customerId, paymentMethodId, plan, period, email, name, company, successUrl, cancelUrl } =
+      await request.json()
 
-    if (!customerId || !paymentMethodId || !returnUrl) {
+    if (!customerId || !paymentMethodId || !successUrl || !cancelUrl) {
       return NextResponse.json({ error: "Missing required parameters" }, { status: 400 })
     }
 
@@ -46,7 +47,8 @@ export async function POST(request: Request) {
       customer: customerId,
       payment_method: paymentMethodId,
       confirm: true,
-      return_url: returnUrl, // Include the return URL for redirect flows
+      return_url: successUrl,
+      cancel_url: cancelUrl,
       automatic_payment_methods: {
         enabled: true,
         allow_redirects: "always",

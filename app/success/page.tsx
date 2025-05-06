@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, useRouter } from "next/navigation"
 import { CheckCircle2, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { EarlyAdopterSurvey } from "@/components/early-adopter-survey"
@@ -9,13 +9,23 @@ import { motion } from "framer-motion"
 
 export default function SuccessPage() {
   const searchParams = useSearchParams()
+  const router = useRouter()
+  const paymentStatus = searchParams.get("payment_status")
   const subscriptionId = searchParams.get("subscription_id")
+  const paymentId = searchParams.get("payment_id")
   const plan = searchParams.get("plan")
-  const email = searchParams.get("email") // Get email from URL params
+  const email = searchParams.get("email")
 
   const [showSurvey, setShowSurvey] = useState(false)
   const [customerEmail, setCustomerEmail] = useState("")
   const [surveyError, setSurveyError] = useState<string | null>(null)
+
+  // Redirect if payment was not successful
+  useEffect(() => {
+    if (paymentStatus !== "succeeded" && !subscriptionId && !paymentId) {
+      router.push("/payment")
+    }
+  }, [paymentStatus, subscriptionId, paymentId, router])
 
   useEffect(() => {
     // If email is in URL params, use it
@@ -62,7 +72,7 @@ export default function SuccessPage() {
         )}
         <EarlyAdopterSurvey
           email={customerEmail}
-          subscriptionId={subscriptionId || ""}
+          subscriptionId={subscriptionId || paymentId || ""}
           plan={plan || ""}
           onError={handleSurveyError}
         />
@@ -87,8 +97,10 @@ export default function SuccessPage() {
 
           <p className="text-gray-600 mb-6 max-w-sm">
             Thank you for subscribing to Nectic. Your payment has been processed successfully.
-            {subscriptionId && (
-              <span className="block mt-2 text-xs text-gray-500">Subscription ID: {subscriptionId}</span>
+            {(subscriptionId || paymentId) && (
+              <span className="block mt-2 text-xs text-gray-500">
+                {subscriptionId ? `Subscription ID: ${subscriptionId}` : `Payment ID: ${paymentId}`}
+              </span>
             )}
           </p>
 

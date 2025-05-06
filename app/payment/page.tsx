@@ -119,21 +119,22 @@ export default function PaymentPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-amber-50/30 flex flex-col">
       <header className="w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 shadow-sm">
-        <div className="container flex h-16 items-center">
+        <div className="container flex h-16 items-center px-4 md:px-6">
           <Link href="/" className="flex items-center space-x-2">
             <Button variant="ghost" size="sm" className="flex items-center gap-1">
               <ArrowLeft className="h-4 w-4" />
-              Back to Home
+              <span className="hidden sm:inline">Back to Home</span>
+              <span className="sm:hidden">Back</span>
             </Button>
           </Link>
         </div>
       </header>
 
-      <div className="flex-1 container max-w-4xl mx-auto py-12 px-4 flex items-center justify-center">
+      <div className="flex-1 container max-w-4xl mx-auto py-6 md:py-12 px-4 flex items-center justify-center">
         <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle>Complete Your Purchase</CardTitle>
-            <CardDescription>
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-xl md:text-2xl">Complete Your Purchase</CardTitle>
+            <CardDescription className="text-sm md:text-base">
               {planTitle} - ${monthlyPrice}/month for {periodTitle}
             </CardDescription>
           </CardHeader>

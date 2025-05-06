@@ -36,6 +36,21 @@ html {
   .mobile-gap-2 {
     gap: 0.5rem !important;
   }
+
+  /* Payment form specific mobile styles */
+  .mobile-payment-form input,
+  .mobile-payment-form button {
+    font-size: 16px !important; /* Prevent zoom on iOS */
+  }
+
+  .mobile-payment-summary {
+    font-size: 0.875rem !important;
+  }
+
+  .mobile-payment-total {
+    font-size: 1.125rem !important;
+    font-weight: 600 !important;
+  }
 }
 
 /* Medium screens (tablets) */
@@ -118,4 +133,16 @@ html {
 
 .responsive-gap {
   gap: clamp(0.5rem, 2vw, 1rem);
+}
+
+/* Fix for iOS input zoom */
+@media screen and (max-width: 640px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
 }

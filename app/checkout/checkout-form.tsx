@@ -5,7 +5,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js"
 import { Button } from "@/components/ui/button"
-import { CheckCircle2, ShieldCheck, AlertCircle } from "lucide-react"
+import { CheckCircle2, ShieldCheck, AlertCircle, XCircle } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useCurrency } from "@/lib/currency-context"
 import { formatCurrency } from "@/lib/currency-utils"
@@ -44,6 +44,7 @@ export default function CheckoutForm({
   const [isLoading, setIsLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | undefined>()
   const [isSuccess, setIsSuccess] = useState(false)
+  const [isPaymentFailed, setIsPaymentFailed] = useState(false)
   const [formTouched, setFormTouched] = useState(false)
   const [paymentProcessing, setPaymentProcessing] = useState(false)
   const [elementsReady, setElementsReady] = useState(false)
@@ -67,6 +68,23 @@ export default function CheckoutForm({
   // Format the prices based on the selected currency
   const formattedMonthlyPrice = formatCurrency(monthlyPrice, currency)
   const formattedTotalPrice = formatCurrency(totalPrice, currency)
+
+  // Check URL parameters for payment status on component mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search)
+      const paymentStatus = urlParams.get("payment_status")
+
+      if (paymentStatus === "failed" || paymentStatus === "canceled") {
+        setIsPaymentFailed(true)
+        setErrorMessage(
+          paymentStatus === "failed"
+            ? "Your payment was declined. Please try again with a different payment method."
+            : "Your payment was canceled. You can try again when you're ready.",
+        )
+      }
+    }
+  }, [])
 
   // Check if Elements are ready
   useEffect(() => {
@@ -168,6 +186,7 @@ export default function CheckoutForm({
     setIsLoading(true)
     setPaymentProcessing(true)
     setErrorMessage(undefined)
+    setIsPaymentFailed(false)
 
     try {
       // 1. Submit the form to get payment details
@@ -193,8 +212,11 @@ export default function CheckoutForm({
 
       console.log("Payment method created:", paymentMethod.id)
 
-      // Generate the return URL
-      const returnUrl = `${window.location.origin}/success?plan=${plan}&period=${period}&email=${encodeURIComponent(email)}`
+      // Generate the return URL - include a success parameter
+      const successUrl = `${window.location.origin}/success?payment_status=succeeded&plan=${plan}&period=${period}&email=${encodeURIComponent(email)}`
+
+      // Generate the cancel URL - return to payment page with status
+      const cancelUrl = `${window.location.origin}/payment?payment_status=canceled&plan=${plan}&period=${period}`
 
       // 3. Create a one-time payment
       const paymentResponse = await fetch("/api/create-one-time-payment", {
@@ -211,7 +233,8 @@ export default function CheckoutForm({
           email,
           name,
           company,
-          returnUrl, // Add the return URL
+          successUrl,
+          cancelUrl,
         }),
       })
 
@@ -230,41 +253,48 @@ export default function CheckoutForm({
           window.location.href = paymentData.nextAction.redirect_to_url.url
           return
         }
+      } else if (paymentData.status === "succeeded") {
+        // 5. If payment succeeded immediately, show success state
+        setIsSuccess(true)
+
+        // 6. Save the customer details
+        await fetch("/api/save-customer", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            customerId,
+            paymentIntentId: paymentData.paymentIntentId,
+            email,
+            name,
+            company,
+            plan,
+            period,
+          }),
+        })
+
+        // 7. Redirect to success page after a short delay
+        setTimeout(() => {
+          router.push(successUrl)
+        }, 2000)
+      } else {
+        // Handle other payment statuses
+        throw new Error(`Payment status: ${paymentData.status}. Please try again.`)
       }
-
-      // 5. If no actions required, payment was successful
-      setIsSuccess(true)
-
-      // 6. Save the customer details
-      await fetch("/api/save-customer", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          customerId,
-          paymentIntentId: paymentData.paymentIntentId,
-          email,
-          name,
-          company,
-          plan,
-          period,
-        }),
-      })
-
-      // 7. Redirect to success page after a short delay
-      setTimeout(() => {
-        router.push(
-          `/success?payment_id=${paymentData.paymentIntentId}&plan=${plan}&period=${period}&email=${encodeURIComponent(email)}`,
-        )
-      }, 2000)
     } catch (error) {
       console.error("Payment error:", error)
       setErrorMessage(error instanceof Error ? error.message : "An unexpected error occurred.")
+      setIsPaymentFailed(true)
     } finally {
       setIsLoading(false)
       setPaymentProcessing(false)
     }
+  }
+
+  const handleRetry = () => {
+    setIsPaymentFailed(false)
+    setErrorMessage(undefined)
   }
 
   if (isSuccess) {
@@ -276,6 +306,21 @@ export default function CheckoutForm({
         <h1 className="text-2xl font-bold mb-4">Payment Successful!</h1>
         <p className="text-gray-600 mb-8">Thank you for your purchase. Redirecting to your account...</p>
         <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
+      </div>
+    )
+  }
+
+  if (isPaymentFailed) {
+    return (
+      <div className="text-center py-6 animate-fade-in">
+        <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-red-100 mb-6">
+          <XCircle className="h-10 w-10 text-red-600" />
+        </div>
+        <h1 className="text-2xl font-bold mb-4">Payment Failed</h1>
+        <p className="text-gray-600 mb-6">{errorMessage || "There was an issue processing your payment."}</p>
+        <Button onClick={handleRetry} className="bg-amber-500 hover:bg-amber-600">
+          Try Again
+        </Button>
       </div>
     )
   }
@@ -383,7 +428,7 @@ export default function CheckoutForm({
         </p>
       </div>
 
-      {errorMessage && (
+      {errorMessage && !isPaymentFailed && (
         <div className="bg-red-50 p-4 rounded-md border border-red-100 flex items-start">
           <AlertCircle className="h-5 w-5 text-red-500 mr-2 flex-shrink-0 mt-0.5" />
           <p className="text-sm text-red-600">{errorMessage}</p>
