@@ -1,144 +1,174 @@
 "use client"
 
-import type React from "react"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-
-const industries = [
-  "Financial Services",
-  "Healthcare",
-  "Retail",
-  "Manufacturing",
-  "Technology",
-  "Education",
-  "Government",
-  "Other",
-]
-
-const companySizes = [
-  "1-10 employees",
-  "11-50 employees",
-  "51-200 employees",
-  "201-500 employees",
-  "501-1000 employees",
-  "1000+ employees",
-]
-
-const roles = [
-  "CEO/Executive",
-  "IT Manager",
-  "Operations Manager",
-  "Finance Manager",
-  "Marketing Manager",
-  "HR Manager",
-  "Other",
-]
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import { doc, setDoc, getDoc } from "firebase/firestore"
+import { db } from "@/lib/firebase-client"
 
 export default function OnboardingPage() {
-  const { user, updateUserProfile } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const router = useRouter()
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [formData, setFormData] = useState({
+    companyName: "",
+    industry: "",
+    role: "",
+    teamSize: "",
+    goals: [],
+  })
 
-  const [industry, setIndustry] = useState("")
-  const [companySize, setCompanySize] = useState("")
-  const [role, setRole] = useState("")
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  useEffect(() => {
+    async function checkUserData() {
+      if (!authLoading && !user) {
+        router.push("/login")
+        return
+      }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+      if (user) {
+        try {
+          const userDocRef = doc(db, "users", user.uid)
+          const userDoc = await getDoc(userDocRef)
+
+          if (userDoc.exists() && userDoc.data().onboardingCompleted) {
+            router.push("/")
+          } else {
+            setLoading(false)
+          }
+        } catch (error) {
+          console.error("Error checking user data:", error)
+          setLoading(false)
+        }
+      }
+    }
+
+    checkUserData()
+  }, [user, authLoading, router])
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target
+    setFormData((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const handleSelectChange = (name, value) => {
+    setFormData((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const handleSubmit = async (e) => {
     e.preventDefault()
 
     if (!user) return
 
-    setIsSubmitting(true)
-    try {
-      await updateUserProfile({
-        industry: industry.toLowerCase().replace(/\s+/g, "-"),
-        companySize,
-        role,
-      })
+    setSaving(true)
 
-      router.push("/app")
+    try {
+      const userDocRef = doc(db, "users", user.uid)
+      await setDoc(
+        userDocRef,
+        {
+          ...formData,
+          onboardingCompleted: true,
+          updatedAt: new Date(),
+        },
+        { merge: true },
+      )
+
+      router.push("/")
     } catch (error) {
-      console.error("Error updating profile:", error)
-      alert("Failed to save your information. Please try again.")
-    } finally {
-      setIsSubmitting(false)
+      console.error("Error saving onboarding data:", error)
+      setSaving(false)
     }
   }
 
-  if (!user) {
-    return <div className="p-8 text-center">Please log in to continue</div>
+  if (loading || authLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <LoadingSpinner size="lg" />
+      </div>
+    )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-amber-50/30 flex flex-col items-center justify-center p-6">
-      <Card className="max-w-md w-full">
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
+      <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Tell us about your business</CardTitle>
+          <CardTitle className="text-2xl">Welcome to Nectic!</CardTitle>
+          <CardDescription>Tell us a bit about yourself to get started.</CardDescription>
         </CardHeader>
-        <CardContent>
-          <p className="text-gray-600 mb-6">
-            This information helps us personalize AI opportunities for your business.
-          </p>
-
-          <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit}>
+          <CardContent className="space-y-4">
             <div className="space-y-2">
-              <label className="block text-sm font-medium">Industry</label>
-              <Select value={industry} onValueChange={setIndustry} required>
-                <SelectTrigger>
+              <Label htmlFor="companyName">Company Name</Label>
+              <Input
+                id="companyName"
+                name="companyName"
+                value={formData.companyName}
+                onChange={handleInputChange}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="industry">Industry</Label>
+              <Select
+                value={formData.industry}
+                onValueChange={(value) => handleSelectChange("industry", value)}
+                required
+              >
+                <SelectTrigger id="industry">
                   <SelectValue placeholder="Select your industry" />
                 </SelectTrigger>
                 <SelectContent>
-                  {industries.map((ind) => (
-                    <SelectItem key={ind} value={ind}>
-                      {ind}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="technology">Technology</SelectItem>
+                  <SelectItem value="finance">Finance</SelectItem>
+                  <SelectItem value="healthcare">Healthcare</SelectItem>
+                  <SelectItem value="education">Education</SelectItem>
+                  <SelectItem value="retail">Retail</SelectItem>
+                  <SelectItem value="manufacturing">Manufacturing</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <label className="block text-sm font-medium">Company Size</label>
-              <Select value={companySize} onValueChange={setCompanySize} required>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select company size" />
-                </SelectTrigger>
-                <SelectContent>
-                  {companySizes.map((size) => (
-                    <SelectItem key={size} value={size}>
-                      {size}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="role">Your Role</Label>
+              <Input id="role" name="role" value={formData.role} onChange={handleInputChange} required />
             </div>
 
             <div className="space-y-2">
-              <label className="block text-sm font-medium">Your Role</label>
-              <Select value={role} onValueChange={setRole} required>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select your role" />
+              <Label htmlFor="teamSize">Team Size</Label>
+              <Select
+                value={formData.teamSize}
+                onValueChange={(value) => handleSelectChange("teamSize", value)}
+                required
+              >
+                <SelectTrigger id="teamSize">
+                  <SelectValue placeholder="Select team size" />
                 </SelectTrigger>
                 <SelectContent>
-                  {roles.map((r) => (
-                    <SelectItem key={r} value={r}>
-                      {r}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="1-10">1-10 employees</SelectItem>
+                  <SelectItem value="11-50">11-50 employees</SelectItem>
+                  <SelectItem value="51-200">51-200 employees</SelectItem>
+                  <SelectItem value="201-500">201-500 employees</SelectItem>
+                  <SelectItem value="501+">501+ employees</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-
-            <Button type="submit" disabled={isSubmitting} className="w-full">
-              {isSubmitting ? "Saving..." : "Continue"}
+          </CardContent>
+          <CardFooter>
+            <Button type="submit" className="w-full" disabled={saving}>
+              {saving ? <LoadingSpinner className="mr-2" /> : null}
+              {saving ? "Saving..." : "Complete Setup"}
             </Button>
-          </form>
-        </CardContent>
+          </CardFooter>
+        </form>
       </Card>
     </div>
   )

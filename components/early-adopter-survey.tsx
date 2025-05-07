@@ -464,6 +464,7 @@ export function EarlyAdopterSurvey({ email = "", subscriptionId = "", plan = "st
       }
     } finally {
       setIsSubmitting(false)
+      window.location.href = "/"
     }
   }
 

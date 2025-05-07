@@ -1,67 +1,32 @@
 import type React from "react"
 import "./globals.css"
 import "./responsive.css"
-import type { Metadata } from "next"
 import { Inter } from "next/font/google"
-import { ThemeProvider } from "@/components/theme-provider"
-import { CurrencyProvider } from "@/lib/currency-context"
 import { LanguageProvider } from "@/lib/language-context"
-import { LanguageSwitcher } from "@/components/language-switcher"
+import { CurrencyProvider } from "@/lib/currency-context"
 import { AuthProvider } from "@/contexts/auth-context"
 import { FeatureFlagProvider } from "@/contexts/feature-flag-context"
+import { ThemeProvider } from "@/components/theme-provider"
 
-const inter = Inter({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-inter",
-})
+const inter = Inter({ subsets: ["latin"] })
 
-export const metadata: Metadata = {
-  title: "Nectic - Find Your Next AI Advantage",
-  description:
-    "Nectic helps mid-market businesses identify practical AI opportunities and implement them without technical expertise.",
-  icons: {
-    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
-  },
-  viewport: "width=device-width, initial-scale=1, maximum-scale=1",
+export const metadata = {
+  title: "Nectic - AI for Slack",
+  description: "Enhance your Slack communication with AI-powered assistance",
     generator: 'v0.dev'
 }
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode
-}>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="bg-white">
-      <head>
-        <script src="https://js.stripe.com/v3/" async></script>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              try {
-                const savedLanguage = localStorage.getItem('language');
-                if (savedLanguage === 'id') {
-                  document.documentElement.lang = 'id';
-                }
-              } catch (e) {
-                console.error('Error setting language:', e);
-              }
-            `,
-          }}
-        />
-      </head>
-      <body className={`${inter.className} bg-white`}>
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+    <html lang="en">
+      <body className={inter.className}>
+        <ThemeProvider attribute="class" defaultTheme="light">
           <AuthProvider>
-            <FeatureFlagProvider>
+            <LanguageProvider>
               <CurrencyProvider>
-                <LanguageProvider>
-                  {children}
-                  <LanguageSwitcher />
-                </LanguageProvider>
+                <FeatureFlagProvider>{children}</FeatureFlagProvider>
               </CurrencyProvider>
-            </FeatureFlagProvider>
+            </LanguageProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

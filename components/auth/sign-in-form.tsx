@@ -39,7 +39,7 @@ export function SignInForm({ onSuccess }: SignInFormProps) {
       if (onSuccess) {
         onSuccess()
       } else {
-        router.push("/dashboard")
+        router.push("/")
       }
     } catch (err: any) {
       console.error("Login error:", err)

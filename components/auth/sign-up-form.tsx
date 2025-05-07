@@ -44,7 +44,7 @@ export function SignUpForm({ onSuccess }: SignUpFormProps) {
       if (onSuccess) {
         onSuccess()
       } else {
-        router.push("/welcome")
+        router.push("/onboarding")
       }
     } catch (err: any) {
       console.error("Signup error:", err)

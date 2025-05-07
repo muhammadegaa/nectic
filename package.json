@@ -64,8 +64,8 @@
     "framer-motion": "latest",
     "firebase": "latest",
     "nodemailer": "latest",
-    "canvas-confetti": "latest",
-    "@stripe/react-stripe-js": "latest"
+    "@stripe/react-stripe-js": "latest",
+    "canvas-confetti": "latest"
   },
   "devDependencies": {
     "@types/node": "^22",
