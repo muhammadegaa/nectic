@@ -79,12 +79,12 @@ export default function LandingPage() {
                   <Clock className="mr-1 h-3 w-3" /> {language === "id" ? "Segera" : "Launching Soon"}
                 </Badge>
                 <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl bg-clip-text text-transparent bg-gradient-to-b from-gray-900 to-gray-700 animate-slide-up">
-                  {language === "id" ? "Temukan Keunggulan AI Anda" : "Find Your Next AI Advantage"}
+                  {language === "id" ? "Berhenti Menulis Ulang Pesan yang Sama" : "Stop Rewriting the Same Messages."}
                 </h1>
                 <p className="text-gray-500 md:text-xl max-w-[700px] mx-auto animate-slide-up [animation-delay:200ms]">
                   {language === "id"
-                    ? "Nectic membantu bisnis menengah mengidentifikasi peluang AI praktis dan mengimplementasikannya tanpa keahlian teknis."
-                    : "Nectic helps mid-market businesses identify practical AI opportunities and implement them without technical expertise."}
+                    ? "Nectic membantu tim Anda menghemat waktu dengan mengubah pesan Slack yang berulang menjadi playbook AI yang cerdas. Tanpa integrasi. Tanpa setup. Hanya kecepatan."
+                    : "Nectic helps your team save hours by turning repetitive Slack messages into smart, AI-powered playbooks. No integrations. No setup. Just speed."}
                 </p>
               </div>
 
@@ -97,15 +97,9 @@ export default function LandingPage() {
                     </div>
                     <div>
                       {language === "id"
-                        ? "Temukan inefisiensi dalam alur kerja Anda"
-                        : "Spot inefficiencies in your workflows"}
+                        ? "Menyarankan respons sempurna, disesuaikan dengan nada dan konteks"
+                        : "Suggests the perfect response, tailored to tone and context"}
                     </div>
-                  </div>
-                  <div className="flex items-center gap-4 text-sm">
-                    <div className="flex-shrink-0 rounded-full p-1 bg-primary/10">
-                      <CheckCircle2 className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>{language === "id" ? "Temukan solusi AI praktis" : "Find practical AI solutions"}</div>
                   </div>
                   <div className="flex items-center gap-4 text-sm">
                     <div className="flex-shrink-0 rounded-full p-1 bg-primary/10">
@@ -113,8 +107,16 @@ export default function LandingPage() {
                     </div>
                     <div>
                       {language === "id"
-                        ? "Dapatkan roadmap implementasi yang jelas"
-                        : "Get clear implementation roadmaps"}
+                        ? "Bekerja di dalam Slack dengan satu klik"
+                        : "Works inside Slack with one click"}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 text-sm">
+                    <div className="flex-shrink-0 rounded-full p-1 bg-primary/10">
+                      <CheckCircle2 className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      {language === "id" ? "Menghemat 5+ jam/minggu per anggota tim" : "Saves 5+ hours/week per rep"}
                     </div>
                   </div>
                 </div>
@@ -128,7 +130,7 @@ export default function LandingPage() {
                     }}
                   >
                     <span className="relative z-10">
-                      {language === "id" ? "Amankan Early Access" : "Secure Early Access"}
+                      {language === "id" ? "Dapatkan 3 Playbook AI Gratis" : "Get 3 Free AI Playbooks"}
                     </span>
                     <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1 relative z-10" />
                     <div className="absolute inset-0 bg-gradient-to-r from-amber-500 to-amber-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
@@ -147,13 +149,15 @@ export default function LandingPage() {
           <div className="container px-4 md:px-6">
             <div className="flex flex-col items-center justify-center space-y-4 text-center mb-12">
               <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
-                {t("value_title", "Make AI Work For Your Business")}
+                {language === "id" ? "Mengapa Nectic?" : "Why Nectic?"}
               </h2>
               <p className="max-w-[700px] text-gray-500 md:text-xl/relaxed">
-                {t(
-                  "value_subtitle",
-                  "Many businesses struggle with AI adoption. Nectic helps you find practical applications and guides you through implementation.",
-                )}
+                {language === "id"
+                  ? "Tim Anda mengulang dirinya sendiri. Banyak. Baik itu tindak lanjut, jawaban harga, atau bantuan onboarding—sebagian besar pesan di Slack hanyalah versi yang sedikit diedit dari yang terakhir."
+                  : "Your team repeats itself. A lot. Whether it's follow-ups, pricing answers, or onboarding help—most messages in Slack are just slightly edited versions of the last."}
+              </p>
+              <p className="max-w-[700px] text-gray-700 font-medium md:text-xl/relaxed">
+                {language === "id" ? "Nectic mengotomatisasi itu." : "Nectic automates that."}
               </p>
             </div>
 
@@ -172,12 +176,16 @@ export default function LandingPage() {
                     strokeLinejoin="round"
                     className="text-primary"
                   >
-                    <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                   </svg>
                 </div>
-                <h3 className="text-xl font-bold mb-2">{t("value_card_1_title", "Identify Opportunities")}</h3>
+                <h3 className="text-xl font-bold mb-2">
+                  {language === "id" ? "Respons Sempurna" : "Perfect Responses"}
+                </h3>
                 <p className="text-gray-500">
-                  {t("value_card_1_desc", "Find where AI can have the most impact in your specific business context.")}
+                  {language === "id"
+                    ? "Menyarankan respons yang sempurna, disesuaikan dengan nada dan konteks percakapan Anda."
+                    : "Suggests the perfect response, tailored to tone and context of your conversation."}
                 </p>
               </div>
 
@@ -195,14 +203,16 @@ export default function LandingPage() {
                     strokeLinejoin="round"
                     className="text-primary"
                   >
-                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                    <path d="M13 15v4"></path>
-                    <path d="M11 15v4"></path>
+                    <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                    <path d="M2 17l10 5 10-5"></path>
+                    <path d="M2 12l10 5 10-5"></path>
                   </svg>
                 </div>
-                <h3 className="text-xl font-bold mb-2">{t("value_card_2_title", "Navigate Implementation")}</h3>
+                <h3 className="text-xl font-bold mb-2">{language === "id" ? "Bekerja di Slack" : "Works in Slack"}</h3>
                 <p className="text-gray-500">
-                  {t("value_card_2_desc", "Get practical guides and vendor comparisons tailored to your needs.")}
+                  {language === "id"
+                    ? "Bekerja langsung di dalam Slack dengan satu klik. Tidak perlu beralih antar aplikasi."
+                    : "Works directly inside Slack with one click. No need to switch between apps."}
                 </p>
               </div>
 
@@ -225,12 +235,11 @@ export default function LandingPage() {
                     <path d="M18 20V4"></path>
                   </svg>
                 </div>
-                <h3 className="text-xl font-bold mb-2">{t("value_card_3_title", "Measure Results")}</h3>
+                <h3 className="text-xl font-bold mb-2">{language === "id" ? "Hemat Waktu" : "Save Time"}</h3>
                 <p className="text-gray-500">
-                  {t(
-                    "value_card_3_desc",
-                    "Track time and cost savings with our ROI calculator for each AI initiative.",
-                  )}
+                  {language === "id"
+                    ? "Menghemat 5+ jam/minggu per anggota tim dengan mengotomatisasi pesan yang berulang."
+                    : "Saves 5+ hours/week per team member by automating repetitive messaging."}
                 </p>
               </div>
             </div>
@@ -247,10 +256,12 @@ export default function LandingPage() {
             <div className="flex flex-col items-center justify-center space-y-4 text-center">
               <div className="space-y-2 max-w-3xl">
                 <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
-                  {isLoading ? "How It Works" : t("how_title")}
+                  {language === "id" ? "Cara Kerjanya" : "How It Works"}
                 </h2>
                 <p className="max-w-[700px] text-gray-500 md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed dark:text-gray-400">
-                  {isLoading ? "A simple process to help you find and implement AI solutions." : t("how_subtitle")}
+                  {language === "id"
+                    ? "Proses sederhana untuk menghemat waktu tim Anda dengan playbook AI."
+                    : "A simple process to save your team time with AI playbooks."}
                 </p>
               </div>
             </div>
@@ -261,9 +272,11 @@ export default function LandingPage() {
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground mb-4">
                     1
                   </div>
-                  <h3 className="text-xl font-bold mb-2">{isLoading ? "Connect" : t("how_step_1_title")}</h3>
+                  <h3 className="text-xl font-bold mb-2">{language === "id" ? "Hubungkan Slack" : "Connect Slack"}</h3>
                   <p className="text-gray-500 dark:text-gray-400 text-center">
-                    {isLoading ? "Link your business systems with secure, read-only access." : t("how_step_1_desc")}
+                    {language === "id"
+                      ? "Kami membaca pesan terbaru (hanya-baca). Tidak perlu CRM atau setup."
+                      : "We read recent messages (read-only). No CRM or setup needed."}
                   </p>
                 </div>
               </div>
@@ -273,11 +286,11 @@ export default function LandingPage() {
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground mb-4">
                     2
                   </div>
-                  <h3 className="text-xl font-bold mb-2">{isLoading ? "Analyze" : t("how_step_2_title")}</h3>
+                  <h3 className="text-xl font-bold mb-2">{language === "id" ? "Analisis Pola" : "Analyze Patterns"}</h3>
                   <p className="text-gray-500 dark:text-gray-400 text-center">
-                    {isLoading
-                      ? "We identify inefficiencies and AI opportunities in your workflows."
-                      : t("how_step_2_desc")}
+                    {language === "id"
+                      ? "Kami menemukan 3 pesan berulang teratas dalam perilaku Slack tim Anda."
+                      : "We find the top 3 repetitive messages in your team's Slack behavior."}
                   </p>
                 </div>
               </div>
@@ -287,11 +300,13 @@ export default function LandingPage() {
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground mb-4">
                     3
                   </div>
-                  <h3 className="text-xl font-bold mb-2">{isLoading ? "Discover" : t("how_step_3_title")}</h3>
+                  <h3 className="text-xl font-bold mb-2">
+                    {language === "id" ? "Playbook AI Lahir" : "AI Playbooks Born"}
+                  </h3>
                   <p className="text-gray-500 dark:text-gray-400 text-center">
-                    {isLoading
-                      ? "Get a personalized dashboard of AI opportunities ranked by impact."
-                      : t("how_step_3_desc")}
+                    {language === "id"
+                      ? "Buat template respons otomatis—sadar konteks, selaras dengan brand, dan cepat."
+                      : "Auto-generate response templates—context-aware, brand-aligned, and fast."}
                   </p>
                 </div>
               </div>
@@ -301,13 +316,233 @@ export default function LandingPage() {
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground mb-4">
                     4
                   </div>
-                  <h3 className="text-xl font-bold mb-2">{isLoading ? "Implement" : t("how_step_4_title")}</h3>
+                  <h3 className="text-xl font-bold mb-2">
+                    {language === "id" ? "Gunakan dengan Sekali Klik" : "Use with One Click"}
+                  </h3>
                   <p className="text-gray-500 dark:text-gray-400 text-center">
-                    {isLoading
-                      ? "Follow clear implementation guides with vendor recommendations."
-                      : t("how_step_4_desc")}
+                    {language === "id"
+                      ? "Masukkan balasan ke Slack dalam hitungan detik. Tim Anda langsung menghemat waktu."
+                      : "Drop replies into Slack in seconds. Your team saves hours immediately."}
                   </p>
                 </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Who It's For section */}
+        <section className="w-full py-12 md:py-24 lg:py-32 bg-white">
+          <div className="container px-4 md:px-6">
+            <div className="flex flex-col items-center justify-center space-y-4 text-center mb-12">
+              <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
+                {language === "id" ? "Untuk Siapa Ini" : "Who It's For"}
+              </h2>
+              <p className="max-w-[700px] text-gray-500 md:text-xl/relaxed">
+                {language === "id"
+                  ? "Nectic dirancang untuk tim yang menghabiskan banyak waktu di Slack."
+                  : "Nectic is designed for teams that spend a lot of time in Slack."}
+              </p>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="border-b">
+                    <th className="py-4 px-6 text-left font-bold">{language === "id" ? "Peran" : "Role"}</th>
+                    <th className="py-4 px-6 text-left font-bold">
+                      {language === "id" ? "Kasus Penggunaan Umum" : "Common Use Case"}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b hover:bg-gray-50">
+                    <td className="py-4 px-6 font-medium">{language === "id" ? "Tim Penjualan" : "Sales Teams"}</td>
+                    <td className="py-4 px-6">
+                      {language === "id"
+                        ? "Tindak lanjut demo, outreach dingin, pengingat proposal"
+                        : "Demo follow-ups, cold outreach, proposal reminders"}
+                    </td>
+                  </tr>
+                  <tr className="border-b hover:bg-gray-50">
+                    <td className="py-4 px-6 font-medium">{language === "id" ? "Tim Dukungan" : "Support Teams"}</td>
+                    <td className="py-4 px-6">
+                      {language === "id"
+                        ? "Balasan onboarding, FAQ, pembaruan status"
+                        : "Onboarding replies, FAQs, status updates"}
+                    </td>
+                  </tr>
+                  <tr className="hover:bg-gray-50">
+                    <td className="py-4 px-6 font-medium">{language === "id" ? "Tim Ops/CS" : "Ops/CS Teams"}</td>
+                    <td className="py-4 px-6">
+                      {language === "id"
+                        ? "Pembaruan internal, dorongan klien, konfirmasi SOP"
+                        : "Internal updates, client nudges, SOP confirmations"}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        {/* The ROI section */}
+        <section className="w-full py-12 md:py-24 lg:py-32 bg-gradient-to-b from-amber-50/30 to-white">
+          <div className="container px-4 md:px-6">
+            <div className="flex flex-col items-center justify-center space-y-4 text-center mb-12">
+              <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
+                {language === "id" ? "ROI" : "The ROI"}
+              </h2>
+              <p className="max-w-[700px] text-gray-500 md:text-xl/relaxed">
+                {language === "id" ? "Nilai nyata untuk tim Anda." : "Real value for your team."}
+              </p>
+            </div>
+
+            <div className="grid gap-8 md:grid-cols-3">
+              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow text-center">
+                <div className="text-4xl font-bold text-primary mb-2">5–10</div>
+                <p className="text-gray-700">
+                  {language === "id" ? "jam/minggu dihemat per anggota tim" : "hours/week saved per team member"}
+                </p>
+              </div>
+
+              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow text-center">
+                <div className="text-4xl font-bold text-primary mb-2">30%</div>
+                <p className="text-gray-700">
+                  {language === "id"
+                    ? "waktu respons lebih cepat untuk alur kerja utama"
+                    : "faster response time for key workflows"}
+                </p>
+              </div>
+
+              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow text-center">
+                <div className="text-4xl font-bold text-primary mb-2">$29</div>
+                <p className="text-gray-700">
+                  {language === "id"
+                    ? "/bulan/pengguna – membayar dirinya sendiri dalam 1 jam"
+                    : "/mo/user – pays for itself in 1 hour"}
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Data Safety section */}
+        <section className="w-full py-12 md:py-24 lg:py-32 bg-white">
+          <div className="container px-4 md:px-6">
+            <div className="flex flex-col items-center justify-center space-y-4 text-center mb-12">
+              <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
+                {language === "id" ? "Data Anda Tetap Aman" : "Your Data Stays Safe"}
+              </h2>
+              <p className="max-w-[700px] text-gray-500 md:text-xl/relaxed">
+                {language === "id" ? "Keamanan adalah prioritas utama kami." : "Security is our top priority."}
+              </p>
+            </div>
+
+            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                <div className="rounded-full bg-primary/10 w-12 h-12 flex items-center justify-center mb-4">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="text-primary"
+                  >
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                  </svg>
+                </div>
+                <h3 className="text-xl font-bold mb-2">
+                  {language === "id" ? "Akses Hanya-Baca" : "Read-only Access"}
+                </h3>
+                <p className="text-gray-500">
+                  {language === "id" ? "Akses Slack hanya-baca yang aman." : "Secure, read-only Slack access."}
+                </p>
+              </div>
+
+              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                <div className="rounded-full bg-primary/10 w-12 h-12 flex items-center justify-center mb-4">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="text-primary"
+                  >
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                  </svg>
+                </div>
+                <h3 className="text-xl font-bold mb-2">
+                  {language === "id" ? "Tidak Ada Panggilan API" : "No API Calls"}
+                </h3>
+                <p className="text-gray-500">
+                  {language === "id"
+                    ? "Tidak ada panggilan API eksternal kecuali disetujui."
+                    : "No external API calls unless approved."}
+                </p>
+              </div>
+
+              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                <div className="rounded-full bg-primary/10 w-12 h-12 flex items-center justify-center mb-4">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="text-primary"
+                  >
+                    <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path>
+                  </svg>
+                </div>
+                <h3 className="text-xl font-bold mb-2">{language === "id" ? "Kontrol Penuh" : "Full Control"}</h3>
+                <p className="text-gray-500">
+                  {language === "id"
+                    ? "Anda mengontrol apa yang disertakan dalam konteks pelatihan."
+                    : "You control what's included in training context."}
+                </p>
+              </div>
+
+              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                <div className="rounded-full bg-primary/10 w-12 h-12 flex items-center justify-center mb-4">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="text-primary"
+                  >
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M12 6v6l4 2"></path>
+                  </svg>
+                </div>
+                <h3 className="text-xl font-bold mb-2">
+                  {language === "id" ? "Protokol Konteks Model" : "Model Context Protocol"}
+                </h3>
+                <p className="text-gray-500">
+                  {language === "id"
+                    ? "Dibangun dengan Protokol Konteks Model untuk memori persisten tanpa biaya tinggi."
+                    : "Built with Model Context Protocol for persistent memory without high costs."}
+                </p>
               </div>
             </div>
           </div>
@@ -426,46 +661,44 @@ export default function LandingPage() {
               <Accordion type="single" collapsible className="w-full">
                 <AccordionItem value="item-1" className="border rounded-lg px-6 mb-4 shadow-sm">
                   <AccordionTrigger className="text-lg font-medium">
-                    {language === "id" ? "Kapan saya akan ditagih?" : "When will my card be charged?"}
+                    {language === "id" ? "Bagaimana Nectic bekerja dengan Slack?" : "How does Nectic work with Slack?"}
                   </AccordionTrigger>
                   <AccordionContent className="text-gray-600">
                     {language === "id"
-                      ? "Kartu Anda akan ditagih segera setelah berlangganan. Kami menawarkan jaminan uang kembali 30 hari jika Anda tidak puas dengan layanan kami."
-                      : "Your card will be charged immediately upon subscription. We offer a 30-day money-back guarantee if you're not satisfied with our service."}
+                      ? "Nectic terhubung ke Slack Anda melalui integrasi hanya-baca yang aman. Kami menganalisis pesan untuk menemukan pola berulang dan membuat playbook AI yang dapat Anda gunakan dengan satu klik."
+                      : "Nectic connects to your Slack through a secure, read-only integration. We analyze messages to find repetitive patterns and create AI playbooks that you can use with one click."}
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="item-2" className="border rounded-lg px-6 mb-4 shadow-sm">
                   <AccordionTrigger className="text-lg font-medium">
                     {language === "id"
-                      ? "Bagaimana Nectic mengidentifikasi peluang AI?"
-                      : "How does Nectic identify AI opportunities?"}
+                      ? "Apakah saya perlu mengintegrasikan CRM atau alat lain?"
+                      : "Do I need to integrate my CRM or other tools?"}
                   </AccordionTrigger>
                   <AccordionContent className="text-gray-600">
                     {language === "id"
-                      ? "Nectic terhubung ke sistem bisnis Anda melalui integrasi hanya-baca yang aman. Kami menganalisis alur kerja dan proses Anda untuk menemukan area di mana AI dapat meningkatkan efisiensi atau hasil."
-                      : "Nectic connects to your business systems through secure, read-only integrations. We analyze your workflows and processes to find areas where AI can improve efficiency or outcomes."}
+                      ? "Tidak. Nectic bekerja langsung dengan Slack Anda. Tidak diperlukan integrasi tambahan atau pengaturan yang rumit."
+                      : "No. Nectic works directly with your Slack. No additional integrations or complicated setup required."}
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="item-3" className="border rounded-lg px-6 mb-4 shadow-sm">
                   <AccordionTrigger className="text-lg font-medium">
-                    {language === "id" ? "Apakah data bisnis saya aman?" : "Is my business data secure?"}
+                    {language === "id" ? "Apakah data Slack saya aman?" : "Is my Slack data secure?"}
                   </AccordionTrigger>
                   <AccordionContent className="text-gray-600">
                     {language === "id"
-                      ? "Ya. Semua koneksi ke sistem Anda aman dan hanya-baca. Kami menggunakan enkripsi standar industri untuk semua data dalam perjalanan dan saat istirahat."
-                      : "Yes. All connections to your systems are secure and read-only. We use industry-standard encryption for all data in transit and at rest."}
+                      ? "Ya. Semua koneksi ke Slack Anda aman dan hanya-baca. Kami menggunakan enkripsi standar industri dan Anda mengontrol data mana yang digunakan untuk pelatihan."
+                      : "Yes. All connections to your Slack are secure and read-only. We use industry-standard encryption and you control which data is used for training."}
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="item-4" className="border rounded-lg px-6 mb-4 shadow-sm">
                   <AccordionTrigger className="text-lg font-medium">
-                    {language === "id"
-                      ? "Bagaimana jika saya tidak memiliki keahlian teknis?"
-                      : "What if I don't have technical expertise?"}
+                    {language === "id" ? "Berapa banyak waktu yang bisa saya hemat?" : "How much time can I save?"}
                   </AccordionTrigger>
                   <AccordionContent className="text-gray-600">
                     {language === "id"
-                      ? "Nectic dirancang untuk bisnis tanpa keahlian teknis AI. Platform kami menangani analisis, dan panduan implementasi kami menggunakan bahasa yang sederhana dengan instruksi langkah demi langkah."
-                      : "Nectic is designed for businesses without technical AI expertise. Our platform handles the analysis, and our implementation guides use plain language with step-by-step instructions."}
+                      ? "Tim biasanya menghemat 5-10 jam per minggu per anggota tim. Untuk tim penjualan dan dukungan yang aktif di Slack, penghematan bisa lebih tinggi."
+                      : "Teams typically save 5-10 hours per week per team member. For sales and support teams active in Slack, savings can be even higher."}
                   </AccordionContent>
                 </AccordionItem>
               </Accordion>
@@ -473,20 +706,38 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Final CTA Section */}
+        {/* Early Access Bonus section */}
         <section className="w-full py-12 md:py-24 bg-primary/5">
           <div className="container px-4 md:px-6">
             <div className="flex flex-col items-center text-center space-y-4 max-w-3xl mx-auto">
               <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">
-                {language === "id"
-                  ? "Siap Mentransformasi Bisnis Anda dengan AI?"
-                  : "Ready to Transform Your Business with AI?"}
+                {language === "id" ? "Bonus Akses Awal" : "Early Access Bonus"}
               </h2>
               <p className="text-xl text-gray-600">
-                {language === "id"
-                  ? "Bergabunglah dengan program early adopter kami hari ini dan bantu membentuk masa depan implementasi AI."
-                  : "Join our early adopter program today and help shape the future of AI implementation."}
+                {language === "id" ? "Bergabunglah sekarang dan dapatkan:" : "Join now and get:"}
               </p>
+
+              <div className="space-y-4 mt-4">
+                <div className="flex items-center gap-2 justify-center">
+                  <CheckCircle2 className="h-5 w-5 text-primary" />
+                  <span className="text-gray-700">
+                    {language === "id" ? "3 Playbook AI kustom (gratis)" : "3 custom AI Playbooks (free)"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 justify-center">
+                  <CheckCircle2 className="h-5 w-5 text-primary" />
+                  <span className="text-gray-700">
+                    {language === "id" ? "Input fitur prioritas" : "Priority feature input"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 justify-center">
+                  <CheckCircle2 className="h-5 w-5 text-primary" />
+                  <span className="text-gray-700">
+                    {language === "id" ? "Harga diskon seumur hidup" : "Lifetime discount pricing"}
+                  </span>
+                </div>
+              </div>
+
               <div className="flex flex-col sm:flex-row gap-4 mt-6">
                 <Button
                   size="lg"
@@ -495,7 +746,7 @@ export default function LandingPage() {
                     document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" })
                   }}
                 >
-                  {language === "id" ? "Amankan Early Access" : "Secure Early Access"}
+                  {language === "id" ? "Gabung Akses Awal" : "Join Early Access"}
                 </Button>
                 <Button
                   variant="outline"
@@ -509,8 +760,11 @@ export default function LandingPage() {
               </div>
               <p className="text-sm text-gray-500 mt-4">
                 {language === "id"
-                  ? "Slot terbatas. Early adopter mendapatkan harga diskon seumur hidup."
-                  : "Limited spots available. Early adopters get lifetime discounted pricing."}
+                  ? "Jaminan uang kembali 30 hari. Tanpa risiko, hanya alur kerja yang lebih cepat."
+                  : "30-day money-back guarantee. No risk, just faster workflows."}
+              </p>
+              <p className="text-sm text-gray-500">
+                {language === "id" ? "Hanya 25 kursi tersedia." : "Only 25 seats available."}
               </p>
             </div>
           </div>
