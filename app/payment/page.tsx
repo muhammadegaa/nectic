@@ -25,12 +25,12 @@ export default function PaymentPage() {
   const [error, setError] = useState<string | null>(null)
   const [retryCount, setRetryCount] = useState(0)
 
-  // Get the monthly price based on the plan
+  // Update the monthly price explanation to be clearer
   const getMonthlyPrice = () => {
     return plan === "premium" ? 399 : 199
   }
 
-  // Calculate the total price based on the period
+  // Update the total price calculation explanation
   const getTotalPrice = () => {
     const monthlyPrice = getMonthlyPrice()
     const months = period === "12month" ? 12 : 6
@@ -135,7 +135,8 @@ export default function PaymentPage() {
           <CardHeader className="space-y-1">
             <CardTitle className="text-xl md:text-2xl">Complete Your Purchase</CardTitle>
             <CardDescription className="text-sm md:text-base">
-              {planTitle} - ${monthlyPrice}/month for {periodTitle}
+              {planTitle} - ${monthlyPrice}/month × {period === "12month" ? "12" : "6"} months = ${getTotalPrice()}{" "}
+              total
             </CardDescription>
           </CardHeader>
           <CardContent>

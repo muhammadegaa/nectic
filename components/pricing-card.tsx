@@ -5,6 +5,7 @@ import { CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useCurrency } from "@/lib/currency-context"
 import { useLanguage } from "@/lib/language-context"
+import { usePathname } from "next/navigation"
 
 interface PricingCardProps {
   title: string
@@ -27,6 +28,8 @@ export function PricingCard({
 }: PricingCardProps) {
   const { currency } = useCurrency()
   const { language, t } = useLanguage()
+  const pathname = usePathname()
+  const isHomepage = pathname === "/"
 
   // Get the price keys based on the plan
   const regularPriceKey = plan === "standard" ? "pricing_standard_regular_price" : "pricing_premium_regular_price"
@@ -46,8 +49,8 @@ export function PricingCard({
     plan === "standard" ? "pricing_standard_feature4" : "pricing_premium_feature4",
   ]
 
-  // Calculate prices based on billing period
-  const getDisplayPrice = () => {
+  // Get monthly prices
+  const getMonthlyPrice = () => {
     if (plan === "standard") {
       return billingPeriod === "6month" ? "$199" : "$159"
     } else {
@@ -55,7 +58,7 @@ export function PricingCard({
     }
   }
 
-  const getRegularPrice = () => {
+  const getMonthlyRegularPrice = () => {
     if (plan === "standard") {
       return billingPeriod === "6month" ? "$249" : "$199"
     } else {
@@ -63,8 +66,40 @@ export function PricingCard({
     }
   }
 
+  // Calculate total prices based on billing period
+  const getTotalPrice = () => {
+    if (plan === "standard") {
+      return billingPeriod === "6month" ? "$1,194" : "$1,908"
+    } else {
+      return billingPeriod === "6month" ? "$2,394" : "$3,828"
+    }
+  }
+
+  const getTotalRegularPrice = () => {
+    if (plan === "standard") {
+      return billingPeriod === "6month" ? "$1,494" : "$2,388"
+    } else {
+      return billingPeriod === "6month" ? "$2,994" : "$4,788"
+    }
+  }
+
+  // Display price based on page
+  const getDisplayPrice = () => {
+    return isHomepage ? getMonthlyPrice() : getTotalPrice()
+  }
+
+  const getRegularPrice = () => {
+    return isHomepage ? getMonthlyRegularPrice() : getTotalRegularPrice()
+  }
+
   const getPeriodLabel = () => {
-    return billingPeriod === "6month" ? "/ 6 months" : "/ year"
+    if (isHomepage) {
+      return billingPeriod === "6month"
+        ? "/ month (billed as " + getTotalPrice() + " for 6 months)"
+        : "/ month (billed as " + getTotalPrice() + " for 12 months)"
+    } else {
+      return billingPeriod === "6month" ? "/ 6 months" : "/ year"
+    }
   }
 
   return (
@@ -87,12 +122,30 @@ export function PricingCard({
       <div className="text-center mb-6">
         <div className="flex items-center justify-center">
           <span className="text-4xl font-bold">{getDisplayPrice()}</span>
-          <span className="text-gray-500 ml-2">{getPeriodLabel()}</span>
+          <span className="text-gray-500 ml-2">{isHomepage ? "/ month" : "total"}</span>
         </div>
         <div className="flex items-center justify-center mt-2">
           <span className="text-sm text-gray-500 line-through">{getRegularPrice()}</span>
           <span className="text-xs text-primary ml-2">{t(currentKey, "Current Price")}</span>
         </div>
+        {isHomepage && (
+          <div className="text-sm text-gray-500 mt-1">
+            Billed as {getTotalPrice()} for {billingPeriod === "6month" ? "6" : "12"} months
+          </div>
+        )}
+        {!isHomepage && (
+          <div className="text-sm text-gray-500 mt-1">
+            ($
+            {plan === "standard"
+              ? billingPeriod === "6month"
+                ? "199"
+                : "159"
+              : billingPeriod === "6month"
+                ? "399"
+                : "319"}
+            /month for {billingPeriod === "6month" ? "6" : "12"} months)
+          </div>
+        )}
       </div>
       <ul className="space-y-3 mb-6">
         {features.map((feature, index) => (

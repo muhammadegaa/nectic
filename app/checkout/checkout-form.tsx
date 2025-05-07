@@ -409,22 +409,27 @@ export default function CheckoutForm({
       <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
         <h3 className="font-medium text-gray-900 mb-2">Payment Summary</h3>
         <div className="flex justify-between mb-2">
-          <span className="text-gray-600">
-            {plan === "premium" ? "Premium Plan" : "Standard Plan"} (${monthlyPrice}/month)
-          </span>
+          <span className="text-gray-600">{plan === "premium" ? "Premium Plan" : "Standard Plan"}</span>
           <span className="font-medium">${monthlyPrice}/month</span>
         </div>
         <div className="flex justify-between mb-2">
           <span className="text-gray-600">Billing period</span>
           <span className="font-medium">{getPeriodLabel()}</span>
         </div>
+        <div className="flex justify-between mb-2">
+          <span className="text-gray-600">Calculation</span>
+          <span className="font-medium">
+            ${monthlyPrice} × {getMonths()} months
+          </span>
+        </div>
         <div className="flex justify-between font-medium text-gray-900 pt-2 border-t border-gray-200">
-          <span>Total today ({getMonths()} months)</span>
+          <span>Total payment</span>
           <span>${totalPrice}</span>
         </div>
         <p className="text-xs text-gray-500 mt-2">
-          <strong>This is a one-time payment</strong> for the full {getPeriodLabel()} period at ${monthlyPrice}/month.
-          We offer a 30-day money-back guarantee if you're not satisfied with our service.
+          <strong>This is a one-time payment</strong> for the full {getPeriodLabel()} period at ${monthlyPrice}/month ($
+          {monthlyPrice} × {getMonths()} = ${totalPrice}). We offer a 30-day money-back guarantee if you're not
+          satisfied with our service.
         </p>
       </div>
 
@@ -470,7 +475,7 @@ export default function CheckoutForm({
               Processing Payment...
             </span>
           ) : (
-            `Pay $${totalPrice}`
+            `Pay $${totalPrice} for ${getMonths()} months`
           )}
         </span>
         <div className="absolute inset-0 bg-gradient-to-r from-amber-500 to-amber-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
