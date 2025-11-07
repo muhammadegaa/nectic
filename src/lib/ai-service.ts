@@ -416,8 +416,9 @@ export async function generateOpportunitiesWithAI(context: AIAnalysisContext): P
 
     // Only use mock data if no API key is available
     if (!process.env.PERPLEXITY_API_KEY) {
-      console.log("No API key available, using mock opportunities")
-      return getDefaultOpportunities(context.assessment.scores)
+      console.warn("⚠️ PERPLEXITY_API_KEY not set - using personalized opportunities based on assessment answers")
+      // Use assessment answers to generate personalized opportunities even without API
+      return generatePersonalizedOpportunitiesFromAnswers(context)
     }
 
     // Create a detailed prompt for the AI

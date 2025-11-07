@@ -447,7 +447,7 @@ export async function generateOpportunitiesFromAssessment(userId: string): Promi
         answers: assessment.answers.map(answer => {
           const question = assessmentQuestions.find(q => q.id === answer.questionId)
           return {
-            question: question?.text || '',
+            question: question?.text || question?.id || '',
             answer: answer.value
           }
         })
