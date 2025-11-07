@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { getRecommendedOpportunities, type Opportunity } from "@/lib/opportunities-service"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
@@ -9,11 +10,16 @@ import Link from "next/link"
 import { MissionControl } from "@/components/dashboard/mission-control"
 import { InsightMetrics } from "@/components/dashboard/insight-metrics"
 import { FreeTrialBanner } from "@/components/free-trial-banner"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Loader2 } from "lucide-react"
 
 export default function DashboardPage() {
   const { user } = useAuth()
+  const searchParams = useSearchParams()
+  const isGenerating = searchParams.get("generating") === "true"
   const [opportunities, setOpportunities] = useState<Opportunity[]>([])
   const [loading, setLoading] = useState(true)
+  const [generatingOpportunities, setGeneratingOpportunities] = useState(isGenerating)
   const [error, setError] = useState<string | null>(null)
 
   const formatDate = (value: unknown): string | null => {
@@ -77,6 +83,13 @@ export default function DashboardPage() {
           // Get opportunities from Firestore
           const data = await getRecommendedOpportunities(user.uid)
           setOpportunities(data as Opportunity[])
+          
+          // If we were generating and now have opportunities, stop loading state
+          if (generatingOpportunities && data.length > 0) {
+            setGeneratingOpportunities(false)
+            // Remove ?generating=true from URL
+            window.history.replaceState({}, "", "/dashboard")
+          }
         } else {
           // No user - show empty state
           setOpportunities([])
@@ -85,13 +98,32 @@ export default function DashboardPage() {
         console.error("Failed to load recommended opportunities:", err)
         setError("Failed to load opportunities. Please try again.")
         setOpportunities([])
+        setGeneratingOpportunities(false)
       } finally {
         setLoading(false)
       }
     }
 
     loadRecommendedOpportunities()
-  }, [user])
+
+    // If generating, poll for opportunities every 3 seconds
+    if (generatingOpportunities && user?.uid) {
+      const pollInterval = setInterval(() => {
+        loadRecommendedOpportunities()
+      }, 3000)
+
+      // Stop polling after 60 seconds
+      const timeout = setTimeout(() => {
+        clearInterval(pollInterval)
+        setGeneratingOpportunities(false)
+      }, 60000)
+
+      return () => {
+        clearInterval(pollInterval)
+        clearTimeout(timeout)
+      }
+    }
+  }, [user, generatingOpportunities])
 
   if (loading) {
     return <LoadingSpinner />
@@ -109,6 +141,17 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8 p-6">
       <FreeTrialBanner />
+      
+      {generatingOpportunities && (
+        <Alert className="bg-amber-50 border-amber-200">
+          <Loader2 className="h-4 w-4 animate-spin text-amber-600" />
+          <AlertDescription className="text-amber-800">
+            Generating your personalized AI opportunities... This usually takes 30-60 seconds. 
+            Your dashboard will update automatically.
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="rounded-3xl border border-amber-100 bg-gradient-to-r from-amber-50 via-white to-amber-50/60 p-6 shadow-sm">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>

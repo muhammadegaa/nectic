@@ -137,8 +137,22 @@ export function AssessmentForm() {
         answersCount: answers.length,
       })
 
-      // Redirect to scanning page to generate opportunities
-      router.push("/dashboard/scanning")
+      // Start opportunity generation in background (don't wait)
+      fetch("/api/analyze", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: user.uid,
+        }),
+      }).catch((err) => {
+        console.error("Failed to start opportunity generation:", err)
+        // Don't block user flow if this fails
+      })
+
+      // Redirect directly to dashboard - it will show loading state
+      router.push("/dashboard?generating=true")
     } catch (error) {
       console.error("Error submitting assessment:", error)
       reportError(error, { context: "assessment-submit", userId: user?.uid })

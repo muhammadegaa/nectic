@@ -45,7 +45,8 @@ export default function SignupPage() {
   // Redirect if already authenticated
   useEffect(() => {
     if (user && !loading) {
-      router.push("/welcome")
+      // Go directly to dashboard - it will show onboarding if needed
+      router.push("/dashboard")
     }
   }, [user, loading, router])
 
@@ -58,7 +59,7 @@ export default function SignupPage() {
       if (signUp) {
         await signUp(data.email, data.password, data.name, "free")
         trackEvent("signup_completed", { method: "email", context: "auth" })
-        router.push("/welcome")
+        router.push("/dashboard")
       } else {
         throw new Error("Authentication service is not available")
       }
@@ -79,7 +80,7 @@ export default function SignupPage() {
     try {
       await signInWithGoogleProvider()
       trackEvent("signup_completed", { method: "google", context: "auth" })
-      router.push("/welcome")
+      router.push("/dashboard")
     } catch (err: any) {
       console.error("Google signup error:", err)
       trackEvent("signup_failed", { method: "google", context: "auth", message: err?.message })
