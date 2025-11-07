@@ -25,6 +25,8 @@ import { useMediaQuery } from "@/hooks/use-media-query"
 import { FeatureGate } from "@/components/feature-gate"
 import { SubscriptionModal } from "@/components/subscription-modal"
 import { getOpportunityById } from "@/lib/opportunities-service"
+import { trackEvent } from "@/lib/analytics"
+import { reportError } from "@/lib/error-reporting"
 import { useAuth } from "@/contexts/auth-context"
 
 // Import mobile-optimized components
@@ -74,10 +76,10 @@ export default function OpportunityDetailPage() {
 
   useEffect(() => {
     async function loadOpportunity() {
+      const opportunityId = Array.isArray(id) ? id[0] : id
+
       try {
         setLoading(true)
-        // Get the opportunity ID as string
-        const opportunityId = Array.isArray(id) ? id[0] : id
 
         // Fetch the opportunity data
         const data = await getOpportunityById(opportunityId, user?.uid || "anonymous")
@@ -182,8 +184,14 @@ export default function OpportunityDetailPage() {
         }
 
         setOpportunity(transformedOpportunity)
+        trackEvent("opportunity_viewed", {
+          opportunityId,
+          userId: user?.uid || "anonymous",
+          source: "dashboard",
+        })
       } catch (err) {
         console.error("Failed to load opportunity:", err)
+        reportError(err, { context: "load-opportunity", opportunityId, userId: user?.uid || "anonymous" })
         setError("Failed to load opportunity details. Please try again.")
       } finally {
         setLoading(false)
@@ -211,9 +219,15 @@ export default function OpportunityDetailPage() {
       // Transform and update the opportunity data
       // (Same transformation logic as above)
       setOpportunity(data)
+      trackEvent("opportunity_viewed", {
+        opportunityId: Array.isArray(id) ? id[0] : id,
+        userId: user?.uid || "anonymous",
+        source: "dashboard-refresh",
+      })
       setError(null)
     } catch (err) {
       console.error("Failed to refresh opportunity:", err)
+      reportError(err, { context: "refresh-opportunity", opportunityId: Array.isArray(id) ? id[0] : id, userId: user?.uid || "anonymous" })
       setError("Failed to refresh opportunity details. Please try again.")
     } finally {
       setIsRefreshing(false)

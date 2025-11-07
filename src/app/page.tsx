@@ -7,16 +7,92 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { PricingCard } from "@/components/pricing-card"
+import { CustomerLogo } from "@/components/customer-logo"
 import { useLanguage } from "@/lib/language-context"
-
-// Import the bypass auth hook
 import { useBypassAuth } from "@/lib/bypass-auth"
+
+const HERO_FALLBACK = {
+  badge: "Enterprise AI for operators",
+  title: "Ship AI wins your COO will sign off on",
+  subtitle:
+    "Designed for operations, finance, and transformation leaders who need executive-ready AI opportunities in weeks, not quarters.",
+  features: [
+    "Run the readiness diagnostic built for regulated teams",
+    "Get quantified opportunities with ROI and control coverage",
+    "Follow 90-day pilot playbooks with vendor shortlists",
+  ],
+  cta: "See your launch plan",
+  trustedBy: "Trusted by transformation teams modernizing operations",
+}
+
+const PERSONA_FALLBACK = {
+  badge: "Built for your operating rhythm",
+  title: "Who we move fastest for",
+  subtitle:
+    "Nectic is proven with mid-market companies (50–500 FTE) modernizing compliance-heavy workflows. We map data lineage, quantify ROI, and give your exec team the confidence to scale pilots.",
+  decisionTitle: "Decision criteria",
+  decisions: [
+    "• You run mission-critical processes across finance, customer operations, or risk.",
+    "• You need compliant, auditable AI playbooks for leadership and regulators.",
+    "• You measure success in reduced cycle time, lower cost-to-serve, and accuracy.",
+  ],
+  tiles: [
+    {
+      title: "Operations & Transformation",
+      description:
+        "Automate onboarding, claims, or underwriting without disrupting systems already in flight.",
+    },
+    {
+      title: "Finance & Shared Services",
+      description:
+        "Compress month-end close, invoice processing, and vendor onboarding while preserving controls.",
+    },
+    {
+      title: "Customer Experience & Support",
+      description:
+        "Resolve tickets faster with AI agents that follow your playbooks and escalation paths.",
+    },
+  ],
+}
+
+const PRICING_STANDARD_FEATURES = [
+  "Readiness diagnostic & executive briefing",
+  "Top 3 automation playbooks with ROI modeling",
+  "Baseline vendor shortlists with risk coverage",
+  "30-day pilot guidance & office hours",
+]
+
+const PRICING_PREMIUM_FEATURES = [
+  "Full diagnostic across every process area",
+  "Unlimited automation playbooks & ROI scenarios",
+  "Advanced vendor evaluations with compliance reporting",
+  "90-day pilot co-pilot and stakeholder comms",
+]
 
 export default function LandingPage() {
   const { t, isLoading } = useLanguage()
-
-  // Inside the LandingPage component, add the bypass auth hook
   const { doubleClicked, secretCode, handleDoubleClick, handleKeyDown } = useBypassAuth()
+
+  const heroBadge = isLoading ? HERO_FALLBACK.badge : t("hero_badge")
+  const heroTitle = isLoading ? HERO_FALLBACK.title : t("hero_title")
+  const heroSubtitle = isLoading ? HERO_FALLBACK.subtitle : t("hero_subtitle")
+  const heroFeatures = HERO_FALLBACK.features.map((fallback, index) =>
+    isLoading ? fallback : t(`hero_feature_${index + 1}`)
+  )
+  const heroCTA = isLoading ? HERO_FALLBACK.cta : t("hero_cta")
+  const heroTrustedBy = isLoading ? HERO_FALLBACK.trustedBy : t("hero_trusted_by")
+
+  const personaBadge = isLoading ? PERSONA_FALLBACK.badge : t("persona_badge")
+  const personaTitle = isLoading ? PERSONA_FALLBACK.title : t("persona_title")
+  const personaSubtitle = isLoading ? PERSONA_FALLBACK.subtitle : t("persona_subtitle")
+  const personaDecisionTitle = isLoading ? PERSONA_FALLBACK.decisionTitle : t("persona_decision_title")
+  const personaDecisions = PERSONA_FALLBACK.decisions.map((fallback, index) =>
+    isLoading ? fallback : t(`persona_decision_item_${index + 1}`)
+  )
+  const personaTiles = PERSONA_FALLBACK.tiles.map((fallback, index) => ({
+    title: isLoading ? fallback.title : t(`persona_tile_${index + 1}_title`),
+    description: isLoading ? fallback.description : t(`persona_tile_${index + 1}_desc`),
+  }))
 
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-b from-white to-amber-50/30">
@@ -61,7 +137,6 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* Secret code input display */}
         {doubleClicked && (
           <div className="absolute top-16 right-4 bg-white p-2 rounded shadow-md border text-xs">
             <span>Code: {secretCode}</span>
@@ -69,65 +144,92 @@ export default function LandingPage() {
         )}
       </header>
       <main className="flex-1">
-        {/* Hero Section */}
         <section className="w-full py-12 md:py-24 lg:py-32 overflow-hidden relative">
           <div className="absolute inset-0 -z-10 bg-[radial-gradient(#f59e0b_1px,transparent_1px)] [background-size:32px_32px] opacity-20"></div>
           <div className="container px-4 md:px-6 relative">
             <div className="flex flex-col items-center text-center max-w-3xl mx-auto space-y-8">
               <div className="space-y-4">
                 <Badge variant="outline" className="text-primary border-primary px-3 py-1 animate-fade-in">
-                  <Clock className="mr-1 h-3 w-3" /> {isLoading ? "Launching Soon" : t("hero_badge")}
+                  <Clock className="mr-1 h-3 w-3" /> {heroBadge}
                 </Badge>
                 <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl bg-clip-text text-transparent bg-gradient-to-b from-gray-900 to-gray-700 animate-slide-up">
-                  {isLoading ? "Find Your Next AI Advantage" : t("hero_title")}
+                  {heroTitle}
                 </h1>
                 <p className="text-gray-500 md:text-xl max-w-[700px] mx-auto animate-slide-up [animation-delay:200ms]">
-                  {isLoading
-                    ? "Nectic helps mid-market businesses identify practical AI opportunities and implement them without technical expertise."
-                    : t("hero_subtitle")}
+                  {heroSubtitle}
                 </p>
               </div>
 
-              {/* Features and CTA */}
               <div className="space-y-6 w-full max-w-md animate-slide-up [animation-delay:400ms]">
                 <div className="grid gap-4">
-                  <div className="flex items-center gap-4 text-sm">
-                    <div className="flex-shrink-0 rounded-full p-1 bg-primary/10">
-                      <CheckCircle2 className="h-5 w-5 text-primary" />
+                  {heroFeatures.map((feature, index) => (
+                    <div key={index} className="flex items-center gap-4 text-sm">
+                      <div className="flex-shrink-0 rounded-full p-1 bg-primary/10">
+                        <CheckCircle2 className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>{feature}</div>
                     </div>
-                    <div>{isLoading ? "Spot inefficiencies in your workflows" : t("hero_feature_1")}</div>
-                  </div>
-                  <div className="flex items-center gap-4 text-sm">
-                    <div className="flex-shrink-0 rounded-full p-1 bg-primary/10">
-                      <CheckCircle2 className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>{isLoading ? "Find practical AI solutions" : t("hero_feature_2")}</div>
-                  </div>
-                  <div className="flex items-center gap-4 text-sm">
-                    <div className="flex-shrink-0 rounded-full p-1 bg-primary/10">
-                      <CheckCircle2 className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>{isLoading ? "Get clear implementation roadmaps" : t("hero_feature_3")}</div>
-                  </div>
+                  ))}
                 </div>
 
-                {/* Single CTA button */}
                 <Button
                   className="w-full h-12 group relative overflow-hidden animate-pulse-subtle"
                   onClick={() => {
                     document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" })
                   }}
                 >
-                  <span className="relative z-10">{isLoading ? "Get Early Access" : t("hero_cta")}</span>
+                  <span className="relative z-10">{heroCTA}</span>
                   <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1 relative z-10" />
                   <div className="absolute inset-0 bg-gradient-to-r from-amber-500 to-amber-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 </Button>
+              </div>
+              <div className="mt-10 w-full">
+                <p className="text-xs uppercase tracking-[0.3em] text-slate-400 text-center mb-4">{heroTrustedBy}</p>
+                <div className="flex flex-wrap items-center justify-center gap-6 opacity-80">
+                  <CustomerLogo name="Northwind Capital" logoUrl="/placeholder-logo.svg" />
+                  <CustomerLogo name="Apex Health" logoUrl="/placeholder-logo.svg" />
+                  <CustomerLogo name="Summit Insurance" logoUrl="/placeholder-logo.svg" />
+                  <CustomerLogo name="Lumen Logistics" logoUrl="/placeholder-logo.svg" />
+                </div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* How It Works Section */}
+        <section className="w-full py-12 md:py-16 lg:py-20 bg-white">
+          <div className="container px-4 md:px-6">
+            <div className="grid gap-8 lg:grid-cols-[1.2fr_1fr] lg:items-center">
+              <div className="space-y-4">
+                <Badge className="bg-black text-white uppercase tracking-wide">{personaBadge}</Badge>
+                <h2 className="text-3xl font-bold text-slate-900 sm:text-4xl">{personaTitle}</h2>
+                <p className="text-slate-500 text-base sm:text-lg max-w-2xl">{personaSubtitle}</p>
+              </div>
+              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6 space-y-4 shadow-sm">
+                <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">{personaDecisionTitle}</p>
+                <ul className="space-y-3 text-sm text-slate-600">
+                  {personaDecisions.map((item, index) => (
+                    <li key={index}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+            <div className="mt-10 grid gap-6 md:grid-cols-3">
+              {personaTiles.map((tile, index) => (
+                <div
+                  key={tile.title}
+                  className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm transition hover:shadow-md"
+                >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-500/10 text-amber-600">
+                    0{index + 1}
+                  </div>
+                  <h3 className="mt-3 text-lg font-semibold text-slate-900">{tile.title}</h3>
+                  <p className="mt-2 text-sm text-slate-500">{tile.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
         <section id="how-it-works" className="w-full py-12 md:py-24 lg:py-32 relative">
           <div className="absolute inset-0 -z-10 bg-[radial-gradient(#f59e0b_1px,transparent_1px)] [background-size:32px_32px] opacity-10"></div>
           <div className="container px-4 md:px-6">
@@ -186,7 +288,6 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Pricing Section */}
         <section id="pricing" className="w-full py-12 md:py-24 lg:py-32 bg-gradient-to-b from-white to-amber-50/30">
           <div className="container px-4 md:px-6">
             <div className="flex flex-col items-center justify-center space-y-4 text-center">
@@ -199,7 +300,7 @@ export default function LandingPage() {
                 </h2>
                 <p className="max-w-[700px] text-gray-500 md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed dark:text-gray-400">
                   {isLoading
-                    ? "Secure your spot now. Your card won't be charged until we launch."
+                    ? "Launch with a diagnostic, opportunity brief, and pilot guidance."
                     : t("pricing_subtitle")}
                 </p>
               </div>
@@ -210,12 +311,9 @@ export default function LandingPage() {
                 description="For businesses starting their AI journey"
                 priceUSD={249}
                 earlyAdopterPriceUSD={199}
-                features={[
-                  "AI opportunity assessment",
-                  "Top 3 implementation guides",
-                  "Basic vendor comparisons",
-                  "30-day implementation support",
-                ]}
+                features={PRICING_STANDARD_FEATURES.map((fallback, index) =>
+                  isLoading ? fallback : t(`pricing_standard_feature_${index + 1}`)
+                )}
                 plan="standard"
                 popular={false}
               />
@@ -225,12 +323,9 @@ export default function LandingPage() {
                 description="For businesses serious about AI transformation"
                 priceUSD={499}
                 earlyAdopterPriceUSD={399}
-                features={[
-                  "<strong>Complete</strong> AI opportunity assessment",
-                  "<strong>Unlimited</strong> implementation guides",
-                  "Advanced vendor comparisons with ROI calculators",
-                  "<strong>90-day</strong> implementation support",
-                ]}
+                features={PRICING_PREMIUM_FEATURES.map((fallback, index) =>
+                  isLoading ? fallback : t(`pricing_premium_feature_${index + 1}`)
+                )}
                 plan="premium"
                 popular={true}
               />
@@ -238,7 +333,6 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* FAQ Section */}
         <section id="faq" className="w-full py-12 md:py-24 lg:py-32">
           <div className="container px-4 md:px-6">
             <div className="flex flex-col items-center justify-center space-y-4 text-center">
@@ -252,11 +346,11 @@ export default function LandingPage() {
               <Accordion type="single" collapsible className="w-full">
                 <AccordionItem value="item-1" className="border rounded-lg px-6 mb-4 shadow-sm">
                   <AccordionTrigger className="text-lg font-medium">
-                    {isLoading ? "When will my card be charged?" : t("faq_q1")}
+                    {isLoading ? "How do you run the diagnostic?" : t("faq_q1")}
                   </AccordionTrigger>
                   <AccordionContent className="text-gray-600">
                     {isLoading
-                      ? "Your card won't be charged until Nectic launches. We'll notify you 7 days before any charges occur, giving you time to cancel if you wish."
+                      ? "Our readiness diagnostic maps your processes, controls, and data fidelity to an enterprise AI scorecard so we only recommend projects you can execute."
                       : t("faq_a1")}
                   </AccordionContent>
                 </AccordionItem>
@@ -266,7 +360,7 @@ export default function LandingPage() {
                   </AccordionTrigger>
                   <AccordionContent className="text-gray-600">
                     {isLoading
-                      ? "Nectic connects to your business systems through secure, read-only integrations. We analyze your workflows and processes to find areas where AI can improve efficiency or outcomes."
+                      ? "We combine your diagnostic results with a vetted library of automation patterns to surface quantified opportunities with ROI, control coverage, and implementation guidance."
                       : t("faq_a2")}
                   </AccordionContent>
                 </AccordionItem>
@@ -276,7 +370,7 @@ export default function LandingPage() {
                   </AccordionTrigger>
                   <AccordionContent className="text-gray-600">
                     {isLoading
-                      ? "Yes. All connections to your systems are secure and read-only. We use industry-standard encryption for all data in transit and at rest."
+                      ? "Yes. All connections are optional, read-only, and encrypted. We also map every recommendation to the controls you already audit."
                       : t("faq_a3")}
                   </AccordionContent>
                 </AccordionItem>
@@ -286,7 +380,7 @@ export default function LandingPage() {
                   </AccordionTrigger>
                   <AccordionContent className="text-gray-600">
                     {isLoading
-                      ? "Nectic is designed for businesses without technical AI expertise. Our platform handles the analysis, and our implementation guides use plain language with step-by-step instructions."
+                      ? "Nectic is built for operators. We provide 90-day pilot playbooks, vendor shortlists, and mitigation guidance in plain language."
                       : t("faq_a4")}
                   </AccordionContent>
                 </AccordionItem>

@@ -3,11 +3,12 @@
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Droplet, ArrowRight, CheckCircle } from "lucide-react"
+import { Droplet, ArrowRight } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { ROUTES } from '@/lib/routes'
 
 import { Button } from "@/components/ui/button"
+import { MissionControl } from "@/components/dashboard/mission-control"
 import { Card, CardContent } from "@/components/ui/card"
 
 export default function WelcomePage() {
@@ -38,95 +39,65 @@ export default function WelcomePage() {
         </div>
       </header>
 
-      <div className="container max-w-4xl mx-auto py-12 px-4 flex-1">
-        <div className="mb-8 text-center">
-          <h1 className="text-4xl font-bold mb-4">Welcome to Nectic!</h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Let's discover AI opportunities that can transform your business processes and save you time and money.
+      <div className="container max-w-5xl mx-auto flex-1 space-y-8 py-12 px-4">
+        <div className="rounded-3xl border border-amber-100 bg-gradient-to-r from-amber-50 via-white to-amber-100/70 p-8 text-center shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-wide text-amber-600">Enterprise onboarding</p>
+          <h1 className="mt-2 text-4xl font-bold text-slate-900">Welcome to your AI command center</h1>
+          <p className="mt-3 text-lg text-slate-600 max-w-2xl mx-auto">
+            We built Nectic for operations, finance, and transformation leaders who need to prove AI value in weeks—not
+            quarters. Let’s get your first executive briefing live.
           </p>
         </div>
 
-        <Card className="mb-8">
-          <CardContent className="p-6">
-            <div className="grid gap-6 md:grid-cols-3">
-              <div className="flex flex-col items-center text-center p-4">
-                <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mb-4">
-                  <span className="text-2xl font-bold text-amber-600">1</span>
-                </div>
-                <h3 className="font-semibold mb-2">Complete Assessment</h3>
-                <p className="text-sm text-gray-600">
-                  Answer questions about your business processes to help us identify opportunities.
-                </p>
-              </div>
+        <MissionControl
+          hasCompletedAssessment={Boolean(user?.hasCompletedAssessment)}
+          hasOpportunities={Boolean(user?.hasCompletedAssessment)}
+          hasActiveSubscription={Boolean((user as any)?.subscription && ((user as any).subscription.tier ?? "free") !== "free")}
+        />
 
-              <div className="flex flex-col items-center text-center p-4">
-                <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mb-4">
-                  <span className="text-2xl font-bold text-amber-600">2</span>
+        <Card className="border border-slate-200/80 shadow-sm">
+          <CardContent className="grid gap-6 md:grid-cols-3">
+            {[
+              {
+                id: 1,
+                title: "Ops & Transformation",
+                description: "Surface automation gaps across onboarding, underwriting, finance, and service desks.",
+              },
+              {
+                id: 2,
+                title: "Regulated & complex environments",
+                description: "Map compliance checkpoints and data lineage so AI recommendations clear audits.",
+              },
+              {
+                id: 3,
+                title: "Executive stakeholders",
+                description: "Package ROI scenarios and pilot roadmaps for your COO, CFO, and IT leadership teams.",
+              },
+            ].map((item) => (
+              <div key={item.id} className="space-y-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-500/10 text-amber-600">
+                  0{item.id}
                 </div>
-                <h3 className="font-semibold mb-2">AI Analysis</h3>
-                <p className="text-sm text-gray-600">
-                  Our AI analyzes your responses to identify automation opportunities specific to your business.
-                </p>
+                <h3 className="text-lg font-semibold text-slate-900">{item.title}</h3>
+                <p className="text-sm text-slate-500">{item.description}</p>
               </div>
-
-              <div className="flex flex-col items-center text-center p-4">
-                <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mb-4">
-                  <span className="text-2xl font-bold text-amber-600">3</span>
-                </div>
-                <h3 className="font-semibold mb-2">Get Results</h3>
-                <p className="text-sm text-gray-600">
-                  Review personalized AI opportunities with estimated time and cost savings.
-                </p>
-              </div>
-            </div>
+            ))}
           </CardContent>
         </Card>
 
-        <div className="bg-white rounded-lg shadow-sm border p-6 mb-8">
-          <h2 className="text-xl font-bold mb-4">Why complete the assessment?</h2>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="flex items-start gap-3">
-              <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
-              <div>
-                <h4 className="font-medium">Personalized Recommendations</h4>
-                <p className="text-sm text-gray-600">
-                  Get AI opportunities tailored to your specific business processes and challenges.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
-              <div>
-                <h4 className="font-medium">Quantified Benefits</h4>
-                <p className="text-sm text-gray-600">See estimated time and cost savings for each opportunity.</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
-              <div>
-                <h4 className="font-medium">Implementation Guidance</h4>
-                <p className="text-sm text-gray-600">
-                  Get clear steps and requirements for implementing each AI solution.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
-              <div>
-                <h4 className="font-medium">Prioritized Opportunities</h4>
-                <p className="text-sm text-gray-600">
-                  Identify "quick wins" and high-impact opportunities to tackle first.
-                </p>
-              </div>
-            </div>
+        <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-8 text-center">
+          <h2 className="text-2xl font-semibold text-slate-900">First milestone: readiness diagnostic</h2>
+          <p className="mt-2 text-sm text-slate-500 max-w-2xl mx-auto">
+            Answer 20 enterprise readiness questions so we can benchmark processes, quantify potential ROI, and line up
+            pilot candidates for the next steering committee.
+          </p>
+          <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <Button onClick={() => router.push("/dashboard/assessment")} size="lg" className="group">
+              Launch diagnostic
+              <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+            </Button>
+            <Button variant="ghost" onClick={() => router.push("/dashboard")}>Skip for now</Button>
           </div>
-        </div>
-
-        <div className="text-center">
-          <Button onClick={() => router.push("/assessment")} size="lg" className="group">
-            Start Assessment
-            <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-          </Button>
         </div>
       </div>
     </div>

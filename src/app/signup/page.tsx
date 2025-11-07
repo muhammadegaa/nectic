@@ -18,6 +18,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useAuth } from "@/contexts/auth-context"
+import { trackEvent } from "@/lib/analytics"
 
 export default function SignupPage() {
   const router = useRouter()
@@ -43,6 +44,10 @@ export default function SignupPage() {
     },
   })
 
+  useEffect(() => {
+    trackEvent("signup_viewed", { context: "marketing" })
+  }, [])
+
   // Redirect if already authenticated
   useEffect(() => {
     if (user && !loading) {
@@ -58,6 +63,7 @@ export default function SignupPage() {
       // Try to sign up
       if (signUp) {
         await signUp(data.email, data.password, data.name, "free")
+        trackEvent("signup_completed", { method: "email", context: "marketing" })
         router.push("/welcome")
       } else {
         throw new Error("Authentication service is not available")
@@ -65,6 +71,7 @@ export default function SignupPage() {
     } catch (err: unknown) {
       console.error("Error during signup:", err)
       const message = err instanceof Error && err.message ? err.message : "An error occurred during signup. Please try again."
+      trackEvent("signup_failed", { method: "email", context: "marketing", message })
       setError(message)
     } finally {
       setIsLoading(false)
@@ -78,10 +85,12 @@ export default function SignupPage() {
 
     try {
       await signInWithGoogleProvider()
+      trackEvent("signup_completed", { method: "google", context: "marketing" })
       router.push("/welcome")
     } catch (err: unknown) {
       console.error("Google signup error:", err)
       const message = err instanceof Error && err.message ? err.message : "Failed to sign up with Google. Please try again."
+      trackEvent("signup_failed", { method: "google", context: "marketing", message })
       setError(message)
     } finally {
       setIsGoogleLoading(false)

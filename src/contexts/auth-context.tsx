@@ -14,6 +14,7 @@ import { useRouter } from 'next/navigation'
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth'
 import { getDoc, doc, setDoc, updateDoc, Timestamp } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
+import { identifyUser, resetUser, trackEvent } from '@/lib/analytics'
 
 // Extend the Firebase User type
 interface User extends FirebaseUser {
@@ -87,6 +88,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           } as User;
 
           setUser(userData);
+          identifyUser(firebaseUser.uid, {
+            email: userData.email,
+            role: userData.role,
+          });
           setLoading(false);
 
           // Check if user has completed assessment
@@ -111,6 +116,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } else {
         setUser(null);
+        resetUser();
         setLoading(false);
       }
     });
@@ -134,7 +140,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setError(null);
       await signInWithEmail(email, password);
+      trackEvent('login_completed', { method: 'password' });
     } catch (err) {
+      trackEvent('login_failed', { method: 'password', message: err instanceof Error ? err.message : String(err) });
       setError(err instanceof Error ? err.message : 'An error occurred during sign in');
       throw err;
     }
@@ -231,10 +239,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } as User);
 
+      trackEvent('login_completed', { method: 'google' });
       // Redirect to assessment page
       router.push('/dashboard/assessment');
     } catch (error) {
       console.error('Google sign in error:', error);
+      trackEvent('login_failed', { method: 'google', message: error instanceof Error ? error.message : String(error) });
       setError(error instanceof Error ? error.message : 'Failed to sign in with Google');
     } finally {
       setLoading(false);
@@ -247,11 +257,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (bypassAuth) {
         setBypassAuth(false);
         setUser(null);
+        resetUser();
+        trackEvent('logout_completed', { bypass: true });
       } else {
         await signOutUser();
         setUser(null);
+        resetUser();
+        trackEvent('logout_completed', { bypass: false });
       }
     } catch (err) {
+      trackEvent('logout_failed', { message: err instanceof Error ? err.message : String(err) });
       setError(err instanceof Error ? err.message : 'An error occurred during logout');
       throw err;
     }

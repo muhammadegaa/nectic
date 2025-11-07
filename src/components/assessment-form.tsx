@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
@@ -11,7 +11,9 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Slider } from "@/components/ui/slider"
 import { Switch } from "@/components/ui/switch"
 import { toast } from "@/components/ui/use-toast"
+import { trackEvent } from "@/lib/analytics"
 import { assessmentQuestions, type AssessmentAnswer, saveAssessmentResults } from "@/lib/assessment-service"
+import { reportError } from "@/lib/error-reporting"
 
 export function AssessmentForm() {
   const { user, updateUserProfile } = useAuth()
@@ -19,6 +21,10 @@ export function AssessmentForm() {
   const [currentStep, setCurrentStep] = useState(0)
   const [answers, setAnswers] = useState<AssessmentAnswer[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  useEffect(() => {
+    trackEvent("assessment_started")
+  }, [])
 
   // Get current question
   const currentQuestion = assessmentQuestions[currentStep]
@@ -69,6 +75,11 @@ export function AssessmentForm() {
       return
     }
 
+    trackEvent("assessment_question_completed", {
+      questionId: currentQuestion.id,
+      step: currentStep + 1,
+    })
+
     if (currentStep < assessmentQuestions.length - 1) {
       setCurrentStep((prev) => prev + 1)
     } else {
@@ -107,6 +118,7 @@ export function AssessmentForm() {
         })
       } catch (profileError) {
         console.error("Error updating user profile:", profileError)
+        reportError(profileError, { context: "assessment-profile-update", userId: user?.uid })
         // Continue with the flow even if profile update fails
         toast({
           title: "Profile update warning",
@@ -120,10 +132,19 @@ export function AssessmentForm() {
         description: "Your assessment has been submitted successfully.",
       })
 
+      trackEvent("assessment_completed", {
+        totalQuestions: assessmentQuestions.length,
+        answersCount: answers.length,
+      })
+
       // Redirect to scanning page
       router.push("/dashboard/scanning")
     } catch (error) {
       console.error("Error submitting assessment:", error)
+      reportError(error, { context: "assessment-submit", userId: user?.uid })
+      trackEvent("assessment_failed", {
+        message: error instanceof Error ? error.message : "unknown",
+      })
       toast({
         title: "Submission failed",
         description: "There was an error submitting your assessment. Please try again.",

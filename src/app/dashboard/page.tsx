@@ -6,6 +6,8 @@ import { getRecommendedOpportunities, type Opportunity } from "@/lib/opportuniti
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { Card, CardContent } from "@/components/ui/card"
 import Link from "next/link"
+import { MissionControl } from "@/components/dashboard/mission-control"
+import { InsightMetrics } from "@/components/dashboard/insight-metrics"
 
 export default function DashboardPage() {
   const { user } = useAuth()
@@ -73,7 +75,7 @@ export default function DashboardPage() {
         if (user?.uid) {
           // Get opportunities from Firestore
           const data = await getRecommendedOpportunities(user.uid)
-          setOpportunities(data as any)
+          setOpportunities(data as Opportunity[])
         } else {
           // No user - show empty state
           setOpportunities([])
@@ -104,69 +106,101 @@ export default function DashboardPage() {
     getFormattedDate(subscription?.currentPeriodEnd, subscription?.current_period_end) ?? "N/A"
 
   return (
-    <div className="p-6">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Welcome back, {userName}</h1>
-        <p className="text-gray-500">{userIndustry}</p>
+    <div className="space-y-8 p-6">
+      <div className="rounded-3xl border border-amber-100 bg-gradient-to-r from-amber-50 via-white to-amber-50/60 p-6 shadow-sm">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-amber-600">Nectic Command Center</p>
+            <h1 className="text-3xl font-semibold text-slate-900">Welcome back, {userName}</h1>
+            <p className="text-sm text-slate-500">{userIndustry}</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700 capitalize">
+                {subscriptionTier} plan
+              </span>
+              <span className="text-xs text-slate-500">Renews {subscriptionRenewal}</span>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Display subscription info */}
-      <Card className="mb-6">
-        <CardContent className="p-6">
-          <h2 className="font-medium mb-2">Your Subscription</h2>
-          <div className="flex items-center">
-            <div className="bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-sm font-medium capitalize">
-              {subscriptionTier} Plan
-            </div>
-            <span className="text-sm text-gray-500 ml-4">Renews: {subscriptionRenewal}</span>
-          </div>
-        </CardContent>
-      </Card>
+      {opportunities.length > 0 && <InsightMetrics opportunities={opportunities as any} />}
 
-      {/* Display recommended opportunities */}
-      <h2 className="text-xl font-semibold mb-4">Recommended Opportunities</h2>
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-          <p className="text-red-600">{error}</p>
+      <MissionControl
+        hasCompletedAssessment={Boolean(user?.hasCompletedAssessment)}
+        hasOpportunities={opportunities.length > 0}
+        hasActiveSubscription={subscriptionTier !== "free"}
+      />
+
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-slate-900">Recommended Opportunities</h2>
+          <Link href="/dashboard/opportunities" className="text-sm font-medium text-amber-600 hover:text-amber-700">
+            View full portfolio →
+          </Link>
         </div>
-      )}
-      {opportunities.length > 0 ? (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {opportunities.map((opportunity) => (
-            <Card key={opportunity.id}>
-              <CardContent className="p-6">
-                <h3 className="font-medium mb-1">{opportunity.title || opportunity.name}</h3>
-                <p className="text-sm text-gray-500 mb-3">{opportunity.description}</p>
-                <div className="flex justify-between items-center">
-                  <span className="text-amber-600 font-medium">{opportunity.impactScore}% Impact</span>
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+            <p className="text-red-600">{error}</p>
+          </div>
+        )}
+
+        {opportunities.length > 0 ? (
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+            {opportunities.map((opportunity) => (
+              <Card key={opportunity.id} className="border border-slate-200/80 shadow-sm">
+                <CardContent className="space-y-4 p-6">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                      Impact score {Math.round(opportunity.impactScore || 0)}%
+                    </p>
+                    <h3 className="text-lg font-semibold text-slate-900 mb-1">
+                      {opportunity.title || opportunity.name}
+                    </h3>
+                    <p className="text-sm text-slate-500 line-clamp-3">{opportunity.description}</p>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="space-y-1">
+                      <p className="text-slate-500">Monthly savings</p>
+                      <p className="font-semibold text-slate-900">
+                        ${Number(opportunity.monthlySavings || 0).toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="space-y-1 text-right">
+                      <p className="text-slate-500">Time saved</p>
+                      <p className="font-semibold text-slate-900">
+                        {Math.round(opportunity.timeSavedHours || 0)} hrs/mo
+                      </p>
+                    </div>
+                  </div>
                   <Link
                     href={`/dashboard/opportunities/${opportunity.id}`}
-                    className="text-sm text-blue-600 hover:underline"
+                    className="inline-flex items-center text-sm font-medium text-amber-600 hover:text-amber-700"
                   >
-                    View Details
+                    View playbook
+                    <span className="ml-1">→</span>
                   </Link>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : !loading ? (
-        <div className="bg-gray-50 rounded-lg p-6 text-center">
-          <p className="text-gray-600">
-            {user?.hasCompletedAssessment
-              ? "No opportunities found. Complete an assessment to get personalized recommendations."
-              : "Complete your AI readiness assessment to get personalized recommendations."}
-          </p>
-          {!user?.hasCompletedAssessment && (
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 p-8 text-center">
+            <h3 className="text-lg font-semibold text-slate-900">Build your AI portfolio</h3>
+            <p className="mt-2 text-sm text-slate-500 max-w-lg mx-auto">
+              Complete the readiness diagnostic to generate a board-ready briefing with quantified automation impact.
+            </p>
             <Link
               href="/dashboard/assessment"
-              className="mt-4 inline-block text-blue-600 hover:underline"
+              className="mt-4 inline-flex items-center justify-center rounded-full bg-amber-500 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-amber-600"
             >
-              Start Assessment →
+              Start diagnostic
             </Link>
-          )}
-        </div>
-      ) : null}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

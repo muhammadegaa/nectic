@@ -7,6 +7,8 @@ import Link from "next/link"
 import { useCurrency } from "@/lib/currency-context"
 import { useLanguage } from "@/lib/language-context"
 import { useAuth } from "@/contexts/auth-context"
+import { trackEvent } from "@/lib/analytics"
+import { reportError } from "@/lib/error-reporting"
 import { Button } from "@/components/ui/button"
 import { Elements } from "@stripe/react-stripe-js"
 import { loadStripe } from "@stripe/stripe-js"
@@ -32,6 +34,18 @@ export default function CheckoutPage() {
   const [clientSecret, setClientSecret] = useState("")
 
   const isLoading = currencyLoading || languageLoading || loading
+
+  useEffect(() => {
+    if (!plan) {
+      return
+    }
+
+    trackEvent("checkout_started", {
+      plan,
+      email: initialEmail || user?.email || undefined,
+      userId: user?.uid,
+    })
+  }, [plan, initialEmail, user?.uid])
 
   useEffect(() => {
     if (plan === "premium") {
@@ -69,6 +83,7 @@ export default function CheckoutPage() {
         })
         .catch((err) => {
           console.error("Error:", err)
+          reportError(err, { context: "create-payment-intent", plan, userId: user?.uid })
           setError("Failed to initialize payment. Please try again.")
           setLoading(false)
         })

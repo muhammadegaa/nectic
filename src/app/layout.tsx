@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { CurrencyProvider } from "@/lib/currency-context"
 import { LanguageProvider } from "@/lib/language-context"
 import { LanguageSwitcher } from "@/components/language-switcher"
+import { AnalyticsProvider } from "@/components/providers/analytics-provider"
 import { AuthProvider } from "@/contexts/auth-context"
 import { FeatureFlagProvider } from "@/contexts/feature-flag-context"
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -44,26 +45,28 @@ export default function RootLayout({
         <script src="https://js.stripe.com/v3/" async></script>
       </head>
       <body className={inter.className} suppressHydrationWarning>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <AuthProvider>
-            <FeatureFlagProvider>
-              <CurrencyProvider>
-                <LanguageProvider>
-                  {children}
-                  <div className="fixed bottom-4 right-4 flex items-center gap-2">
-                    <ThemeToggle />
-                    <LanguageSwitcher />
-                  </div>
-                </LanguageProvider>
-              </CurrencyProvider>
-            </FeatureFlagProvider>
-          </AuthProvider>
-        </ThemeProvider>
+        <AnalyticsProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <AuthProvider>
+              <FeatureFlagProvider>
+                <CurrencyProvider>
+                  <LanguageProvider>
+                    {children}
+                    <div className="fixed bottom-4 right-4 flex items-center gap-2">
+                      <ThemeToggle />
+                      <LanguageSwitcher />
+                    </div>
+                  </LanguageProvider>
+                </CurrencyProvider>
+              </FeatureFlagProvider>
+            </AuthProvider>
+          </ThemeProvider>
+        </AnalyticsProvider>
       </body>
     </html>
   )

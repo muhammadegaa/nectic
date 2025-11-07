@@ -8,6 +8,8 @@ import {
   useElements,
 } from "@stripe/react-stripe-js"
 import { Button } from "@/components/ui/button"
+import { trackEvent } from "@/lib/analytics"
+import { reportError } from "@/lib/error-reporting"
 import { Loader2 } from "lucide-react"
 
 interface CheckoutFormProps {
@@ -40,13 +42,24 @@ export default function CheckoutForm({
     setIsLoading(true)
     setError(null)
 
+    trackEvent("checkout_submit_clicked", {
+      plan,
+      hasClientSecret: Boolean(clientSecret),
+    })
+
     try {
       const { error: submitError } = await elements.submit()
       if (submitError) {
+        trackEvent("checkout_validation_failed", {
+          plan,
+          message: submitError.message,
+        })
         setError(submitError.message || "An error occurred")
         setIsLoading(false)
         return
       }
+
+      trackEvent("checkout_payment_confirmation", { plan })
 
       const { error: confirmError } = await stripe.confirmPayment({
         elements,
@@ -56,11 +69,17 @@ export default function CheckoutForm({
       })
 
       if (confirmError) {
+        trackEvent("checkout_confirmation_failed", {
+          plan,
+          message: confirmError.message,
+        })
         setError(confirmError.message || "An error occurred")
       }
     } catch (err) {
       setError("An unexpected error occurred")
       console.error("Payment error:", err)
+      reportError(err, { context: "checkout-confirm", plan })
+      trackEvent("checkout_unexpected_error", { plan, message: err instanceof Error ? err.message : String(err) })
     }
 
     setIsLoading(false)

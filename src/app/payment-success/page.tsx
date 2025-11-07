@@ -5,6 +5,8 @@ import { useSearchParams, useRouter } from "next/navigation"
 import { Droplet, CheckCircle2 } from "lucide-react"
 import Link from "next/link"
 import { useLanguage } from "@/lib/language-context"
+import { trackEvent } from "@/lib/analytics"
+import { reportError } from "@/lib/error-reporting"
 import { useAuth } from "@/contexts/auth-context"
 
 export default function PaymentSuccessPage() {
@@ -29,6 +31,10 @@ function PaymentSuccessContent() {
     status: "",
     nextBillingDate: ""
   })
+
+  useEffect(() => {
+    trackEvent("payment_success_viewed", { sessionId, userId: user?.uid })
+  }, [sessionId, user?.uid])
 
   useEffect(() => {
     const verifyPayment = async () => {
@@ -58,9 +64,18 @@ function PaymentSuccessContent() {
           nextBillingDate: data.nextBillingDate || "30 days from now"
         })
 
+        trackEvent("payment_verified", {
+          sessionId,
+          userId: user?.uid,
+          plan: data.plan || "Standard",
+          status: data.status || "active",
+        })
+
         setLoading(false)
       } catch (err) {
         console.error("Error verifying payment:", err)
+        reportError(err, { context: "payment-verification", sessionId, userId: user?.uid })
+        trackEvent("payment_verification_failed", { sessionId, userId: user?.uid, message: err instanceof Error ? err.message : String(err) })
         setError("We couldn't verify your payment. Please contact support if you believe this is an error.")
         setLoading(false)
       }
@@ -69,6 +84,7 @@ function PaymentSuccessContent() {
     if (sessionId) {
       verifyPayment()
     } else {
+      trackEvent("payment_success_missing_session")
       setLoading(false)
     }
   }, [sessionId, user])

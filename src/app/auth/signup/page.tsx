@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { trackEvent } from "@/lib/analytics"
 import { useAuth } from "@/contexts/auth-context"
 import { ROUTES } from '@/lib/routes'
 
@@ -37,6 +38,10 @@ export default function SignupPage() {
     },
   })
 
+  useEffect(() => {
+    trackEvent("signup_viewed", { context: "auth" })
+  }, [])
+
   // Redirect if already authenticated
   useEffect(() => {
     if (user && !loading) {
@@ -52,12 +57,14 @@ export default function SignupPage() {
       // Try to sign up
       if (signUp) {
         await signUp(data.email, data.password, data.name, "free")
+        trackEvent("signup_completed", { method: "email", context: "auth" })
         router.push("/welcome")
       } else {
         throw new Error("Authentication service is not available")
       }
     } catch (err: any) {
       console.error("Error during signup:", err)
+      trackEvent("signup_failed", { method: "email", context: "auth", message: err?.message })
       setError(err?.message || "An error occurred during signup. Please try again.")
     } finally {
       setIsLoading(false)
@@ -71,9 +78,11 @@ export default function SignupPage() {
 
     try {
       await signInWithGoogleProvider()
+      trackEvent("signup_completed", { method: "google", context: "auth" })
       router.push("/welcome")
     } catch (err: any) {
       console.error("Google signup error:", err)
+      trackEvent("signup_failed", { method: "google", context: "auth", message: err?.message })
       setError(err?.message || "Failed to sign up with Google. Please try again.")
     } finally {
       setIsGoogleLoading(false)
