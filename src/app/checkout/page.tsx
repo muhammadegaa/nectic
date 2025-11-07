@@ -1,8 +1,11 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
+
 import { Droplet, ArrowLeft, CheckCircle2, ShieldCheck, Loader2 } from "lucide-react"
+
+export const dynamic = 'force-dynamic'
 import Link from "next/link"
 import { useCurrency } from "@/lib/currency-context"
 import { useLanguage } from "@/lib/language-context"
@@ -20,7 +23,7 @@ import { DemoModeBanner } from "@/components/demo-mode-banner"
 // recreating the Stripe object on every render.
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
-export default function CheckoutPage() {
+function CheckoutContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const plan = searchParams.get("plan")

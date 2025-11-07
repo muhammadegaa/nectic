@@ -415,11 +415,32 @@ function generatePersonalizedOpportunitiesFromAnswers(context: AIAnalysisContext
   const answers = context.assessment.answers
   const scores = context.assessment.scores
 
-  // Extract specific answers for personalization using question IDs
-  const docVolume = answers.find(a => a.question.includes("doc-volume") || (a.question.includes("documents") && a.question.includes("monthly")))?.answer as number || 0
-  const csVolume = answers.find(a => a.question.includes("cs-volume") || (a.question.includes("customer inquiries") && a.question.includes("monthly")))?.answer as number || 0
-  const dataEntryHours = answers.find(a => a.question.includes("data-entry-volume") || (a.question.includes("data entry") && a.question.includes("hours")))?.answer as number || 0
-  const painPoint = answers.find(a => a.question.includes("pain-points") || a.question.includes("frustration") || a.question.includes("inefficiency"))?.answer as string || ""
+  // Extract specific answers for personalization
+  // Answers come with question text from assessment-service mapping
+  const docVolumeAnswer = answers.find(a => 
+    a.question.toLowerCase().includes("documents") && 
+    (a.question.toLowerCase().includes("monthly") || a.question.toLowerCase().includes("process"))
+  )
+  const docVolume = (docVolumeAnswer?.answer as number) || 0
+
+  const csVolumeAnswer = answers.find(a => 
+    a.question.toLowerCase().includes("customer inquiries") || 
+    (a.question.toLowerCase().includes("customer") && a.question.toLowerCase().includes("monthly"))
+  )
+  const csVolume = (csVolumeAnswer?.answer as number) || 0
+
+  const dataEntryAnswer = answers.find(a => 
+    a.question.toLowerCase().includes("data entry") && 
+    a.question.toLowerCase().includes("hours")
+  )
+  const dataEntryHours = (dataEntryAnswer?.answer as number) || 0
+
+  const painPointAnswer = answers.find(a => 
+    a.question.toLowerCase().includes("frustration") || 
+    a.question.toLowerCase().includes("inefficiency") ||
+    a.question.toLowerCase().includes("pain")
+  )
+  const painPoint = (painPointAnswer?.answer as string) || ""
   const industry = context.user.industry
 
   // Document Automation - based on actual document volume

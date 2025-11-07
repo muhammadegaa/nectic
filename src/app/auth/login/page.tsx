@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+
+export const dynamic = 'force-dynamic'
 import Link from "next/link"
 import { Droplet, ArrowLeft } from "lucide-react"
 import { useForm } from "react-hook-form"
