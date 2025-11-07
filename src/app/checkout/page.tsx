@@ -5,8 +5,9 @@ import { useSearchParams, useRouter } from "next/navigation"
 
 import { Droplet, ArrowLeft, CheckCircle2, ShieldCheck, Loader2 } from "lucide-react"
 
-export const dynamic = 'force-dynamic'
 import Link from "next/link"
+
+export const dynamic = 'force-dynamic'
 import { useCurrency } from "@/lib/currency-context"
 import { useLanguage } from "@/lib/language-context"
 import { useAuth } from "@/contexts/auth-context"
@@ -270,5 +271,17 @@ function CheckoutContent() {
         </div>
       </main>
     </div>
+  )
+}
+
+export default function CheckoutPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-amber-600" />
+      </div>
+    }>
+      <CheckoutContent />
+    </Suspense>
   )
 }
