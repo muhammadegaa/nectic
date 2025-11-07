@@ -85,6 +85,15 @@ function DashboardContent() {
           const data = await getRecommendedOpportunities(user.uid)
           setOpportunities(data as Opportunity[])
           
+          // Track opportunities shown
+          if (data.length > 0) {
+            trackEvent("opportunities_shown", {
+              count: data.length,
+              userId: user.uid,
+              generating: generatingOpportunities,
+            })
+          }
+          
           // If we were generating and now have opportunities, stop loading state
           if (generatingOpportunities && data.length > 0) {
             setGeneratingOpportunities(false)
