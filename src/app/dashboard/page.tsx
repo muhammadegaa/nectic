@@ -13,7 +13,7 @@ import { FreeTrialBanner } from "@/components/free-trial-banner"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2 } from "lucide-react"
 
-export default function DashboardPage() {
+function DashboardContent() {
   const { user } = useAuth()
   const searchParams = useSearchParams()
   const isGenerating = searchParams.get("generating") === "true"
