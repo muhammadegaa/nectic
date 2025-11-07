@@ -15,6 +15,7 @@ export interface AssessmentQuestion {
   max?: number
   category: "document-processing" | "customer-service" | "data-entry" | "general"
   weight: number // How important this question is for opportunity scoring
+  showIf?: (answers: AssessmentAnswer[]) => boolean // Conditional display logic
 }
 
 // Define the assessment answer interface
@@ -37,142 +38,160 @@ export interface AssessmentResult {
   completedAt: Date
 }
 
-// Assessment questions
+// Simplified assessment questions - validated pain points only
+// Based on market research: top pain points are document processing, customer service, data entry
 export const assessmentQuestions: AssessmentQuestion[] = [
+  // Question 1: Primary pain point (always shown first)
+  {
+    id: "pain-points",
+    text: "What's your biggest operational inefficiency?",
+    type: "multiple-choice",
+    options: [
+      "Document processing (invoices, forms, reports)",
+      "Customer service (repetitive inquiries, slow responses)",
+      "Data entry and management (manual data entry, errors)",
+      "Other",
+    ],
+    category: "general",
+    weight: 1.0,
+  },
+  // Question 2: Company size (always shown)
+  {
+    id: "company-size",
+    text: "How many employees does your company have?",
+    type: "multiple-choice",
+    options: [
+      "1-10",
+      "11-50",
+      "51-200",
+      "201-500",
+      "501-1000",
+      "1000+",
+    ],
+    category: "general",
+    weight: 0.7,
+  },
+  // Conditional questions based on pain point (shown only if relevant)
   {
     id: "doc-volume",
-    text: "How many documents (invoices, forms, reports, etc.) does your business process monthly?",
-    type: "numeric",
+    text: "How many documents do you process monthly?",
+    type: "multiple-choice",
+    options: [
+      "Less than 100",
+      "100-500",
+      "500-2,000",
+      "2,000-10,000",
+      "More than 10,000",
+    ],
     category: "document-processing",
     weight: 0.8,
-  },
-  {
-    id: "doc-errors",
-    text: "What percentage of document processing tasks contain errors that require correction?",
-    type: "numeric",
-    min: 0,
-    max: 100,
-    category: "document-processing",
-    weight: 0.7,
+    showIf: (answers: AssessmentAnswer[]) => {
+      const painPoint = answers.find(a => a.questionId === "pain-points")?.value
+      return painPoint === "Document processing (invoices, forms, reports)"
+    },
   },
   {
     id: "doc-time",
-    text: "On average, how many hours per week does your team spend on manual document processing?",
-    type: "numeric",
+    text: "How many hours per week spent on manual document processing?",
+    type: "multiple-choice",
+    options: [
+      "Less than 5 hours",
+      "5-20 hours",
+      "20-40 hours",
+      "40+ hours",
+    ],
     category: "document-processing",
     weight: 0.9,
+    showIf: (answers: AssessmentAnswer[]) => {
+      const painPoint = answers.find(a => a.questionId === "pain-points")?.value
+      return painPoint === "Document processing (invoices, forms, reports)"
+    },
   },
   {
     id: "cs-volume",
-    text: "How many customer inquiries does your business handle monthly?",
-    type: "numeric",
+    text: "How many customer inquiries do you handle monthly?",
+    type: "multiple-choice",
+    options: [
+      "Less than 100",
+      "100-500",
+      "500-2,000",
+      "2,000-10,000",
+      "More than 10,000",
+    ],
     category: "customer-service",
     weight: 0.8,
+    showIf: (answers: AssessmentAnswer[]) => {
+      const painPoint = answers.find(a => a.questionId === "pain-points")?.value
+      return painPoint === "Customer service (repetitive inquiries, slow responses)"
+    },
   },
   {
     id: "cs-repetitive",
-    text: "What percentage of customer inquiries are repetitive or frequently asked questions?",
-    type: "numeric",
-    min: 0,
-    max: 100,
+    text: "What percentage of inquiries are repetitive?",
+    type: "multiple-choice",
+    options: [
+      "Less than 25%",
+      "25-50%",
+      "50-75%",
+      "75%+",
+    ],
     category: "customer-service",
     weight: 0.9,
-  },
-  {
-    id: "cs-response-time",
-    text: "What is your average response time to customer inquiries (in hours)?",
-    type: "numeric",
-    category: "customer-service",
-    weight: 0.7,
+    showIf: (answers: AssessmentAnswer[]) => {
+      const painPoint = answers.find(a => a.questionId === "pain-points")?.value
+      return painPoint === "Customer service (repetitive inquiries, slow responses)"
+    },
   },
   {
     id: "data-entry-volume",
-    text: "How many hours per week does your team spend on manual data entry tasks?",
-    type: "numeric",
+    text: "How many hours per week spent on manual data entry?",
+    type: "multiple-choice",
+    options: [
+      "Less than 5 hours",
+      "5-20 hours",
+      "20-40 hours",
+      "40+ hours",
+    ],
     category: "data-entry",
     weight: 0.9,
-  },
-  {
-    id: "data-sources",
-    text: "From how many different sources or systems do you regularly need to gather data?",
-    type: "numeric",
-    category: "data-entry",
-    weight: 0.6,
+    showIf: (answers: AssessmentAnswer[]) => {
+      const painPoint = answers.find(a => a.questionId === "pain-points")?.value
+      return painPoint === "Data entry and management (manual data entry, errors)"
+    },
   },
   {
     id: "data-errors",
-    text: "What percentage of data entries contain errors that require correction?",
-    type: "numeric",
-    min: 0,
-    max: 100,
-    category: "data-entry",
-    weight: 0.7,
-  },
-  {
-    id: "process-standardization",
-    text: "How standardized are your business processes?",
-    type: "scale",
-    min: 1,
-    max: 5,
-    options: [
-      "Not standardized at all",
-      "Slightly standardized",
-      "Moderately standardized",
-      "Highly standardized",
-      "Completely standardized and documented",
-    ],
-    category: "general",
-    weight: 0.8,
-  },
-  {
-    id: "tech-adoption",
-    text: "How would you rate your organization's willingness to adopt new technologies?",
-    type: "scale",
-    min: 1,
-    max: 5,
-    options: ["Very resistant", "Somewhat resistant", "Neutral", "Somewhat eager", "Very eager"],
-    category: "general",
-    weight: 0.7,
-  },
-  {
-    id: "current-ai",
-    text: "Is your organization currently using any AI or automation tools?",
-    type: "boolean",
-    category: "general",
-    weight: 0.6,
-  },
-  {
-    id: "decision-speed",
-    text: "How quickly can your organization typically implement new technology solutions?",
+    text: "What percentage of data entries have errors?",
     type: "multiple-choice",
-    options: ["Less than 1 month", "1-3 months", "3-6 months", "6-12 months", "More than 12 months"],
-    category: "general",
-    weight: 0.5,
+    options: [
+      "Less than 5%",
+      "5-15%",
+      "15-30%",
+      "30%+",
+    ],
+    category: "data-entry",
+    weight: 0.8,
+    showIf: (answers: AssessmentAnswer[]) => {
+      const painPoint = answers.find(a => a.questionId === "pain-points")?.value
+      return painPoint === "Data entry and management (manual data entry, errors)"
+    },
   },
+  // Always shown questions
   {
     id: "budget",
-    text: "What is your estimated monthly budget for AI and automation solutions?",
+    text: "What's your monthly budget for automation solutions?",
     type: "multiple-choice",
     options: ["Less than $500", "$500-$2,000", "$2,000-$5,000", "$5,000-$10,000", "More than $10,000"],
     category: "general",
     weight: 0.6,
   },
   {
-    id: "pain-points",
-    text: "Which business process causes the most frustration or inefficiency in your organization?",
+    id: "timeline",
+    text: "When do you want to implement?",
     type: "multiple-choice",
-    options: [
-      "Document processing",
-      "Customer service",
-      "Data entry and management",
-      "Reporting and analytics",
-      "Inventory management",
-      "Sales and marketing",
-      "Human resources",
-      "Other",
-    ],
+    options: ["Immediately", "1-3 months", "3-6 months", "6-12 months", "Just exploring"],
     category: "general",
-    weight: 0.8,
+    weight: 0.5,
   },
 ]
 

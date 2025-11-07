@@ -26,8 +26,14 @@ export function AssessmentForm() {
     trackEvent("assessment_started")
   }, [])
 
-  // Get current question
-  const currentQuestion = assessmentQuestions[currentStep]
+  // Filter questions based on skip logic
+  const visibleQuestions = assessmentQuestions.filter(q => {
+    if (!q.showIf) return true // Always show questions without showIf
+    return q.showIf(answers)
+  })
+
+  // Get current question from visible questions
+  const currentQuestion = visibleQuestions[currentStep]
 
   // Handle answer change
   const handleAnswerChange = (value: string | number | boolean) => {
@@ -35,17 +41,17 @@ export function AssessmentForm() {
       // Find if we already have an answer for this question
       const existingIndex = prev.findIndex((a) => a.questionId === currentQuestion.id)
 
+      let newAnswers: AssessmentAnswer[]
       if (existingIndex >= 0) {
         // Update existing answer
-        const newAnswers = [...prev]
+        newAnswers = [...prev]
         newAnswers[existingIndex] = {
           questionId: currentQuestion.id,
           value,
         }
-        return newAnswers
       } else {
         // Add new answer
-        return [
+        newAnswers = [
           ...prev,
           {
             questionId: currentQuestion.id,
@@ -53,6 +59,19 @@ export function AssessmentForm() {
           },
         ]
       }
+
+      // Recalculate visible questions after answer changes
+      const newVisibleQuestions = assessmentQuestions.filter(q => {
+        if (!q.showIf) return true
+        return q.showIf(newAnswers)
+      })
+
+      // If current step is beyond visible questions, reset to last visible question
+      if (currentStep >= newVisibleQuestions.length) {
+        setCurrentStep(Math.max(0, newVisibleQuestions.length - 1))
+      }
+
+      return newAnswers
     })
   }
 
@@ -80,7 +99,13 @@ export function AssessmentForm() {
       step: currentStep + 1,
     })
 
-    if (currentStep < assessmentQuestions.length - 1) {
+    // Recalculate visible questions with current answers
+    const newVisibleQuestions = assessmentQuestions.filter(q => {
+      if (!q.showIf) return true
+      return q.showIf(answers)
+    })
+
+    if (currentStep < newVisibleQuestions.length - 1) {
       setCurrentStep((prev) => prev + 1)
     } else {
       handleSubmit()
@@ -241,8 +266,8 @@ export function AssessmentForm() {
     }
   }
 
-  // Calculate progress
-  const progress = Math.round((currentStep / (assessmentQuestions.length - 1)) * 100)
+  // Calculate progress based on visible questions
+  const progress = visibleQuestions.length > 0 ? Math.round((currentStep / (visibleQuestions.length - 1)) * 100) : 0
 
   return (
     <Card className="w-full max-w-2xl mx-auto">
@@ -258,7 +283,7 @@ export function AssessmentForm() {
           ></div>
         </div>
         <p className="text-xs text-right text-muted-foreground mt-1">
-          Question {currentStep + 1} of {assessmentQuestions.length}
+          Question {currentStep + 1} of {visibleQuestions.length}
         </p>
       </CardHeader>
       <CardContent>
@@ -280,7 +305,7 @@ export function AssessmentForm() {
           Previous
         </Button>
         <Button onClick={handleNext} disabled={isSubmitting}>
-          {currentStep < assessmentQuestions.length - 1 ? "Next" : "Submit"}
+          {currentStep < visibleQuestions.length - 1 ? "Next" : "Submit"}
           {isSubmitting && (
             <svg
               className="animate-spin ml-2 h-4 w-4 text-white"
