@@ -12,6 +12,7 @@ import { InsightMetrics } from "@/components/dashboard/insight-metrics"
 import { FreeTrialBanner } from "@/components/free-trial-banner"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2 } from "lucide-react"
+import { trackEvent } from "@/lib/analytics"
 
 function DashboardContent() {
   const { user } = useAuth()
@@ -192,45 +193,54 @@ function DashboardContent() {
           </div>
         )}
 
-        {opportunities.length > 0 ? (
-          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {opportunities.map((opportunity) => (
-              <Card key={opportunity.id} className="border border-slate-200/80 shadow-sm">
-                <CardContent className="space-y-4 p-6">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                      Impact score {Math.round(opportunity.impactScore || 0)}%
-                    </p>
-                    <h3 className="text-lg font-semibold text-slate-900 mb-1">
-                      {opportunity.title || opportunity.name}
-                    </h3>
-                    <p className="text-sm text-slate-500 line-clamp-3">{opportunity.description}</p>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="space-y-1">
-                      <p className="text-slate-500">Monthly savings</p>
-                      <p className="font-semibold text-slate-900">
-                        ${Number(opportunity.monthlySavings || 0).toLocaleString()}
-                      </p>
-                    </div>
-                    <div className="space-y-1 text-right">
-                      <p className="text-slate-500">Time saved</p>
-                      <p className="font-semibold text-slate-900">
-                        {Math.round(opportunity.timeSavedHours || 0)} hrs/mo
-                      </p>
-                    </div>
-                  </div>
-                  <Link
-                    href={`/dashboard/opportunities/${opportunity.id}`}
-                    className="inline-flex items-center text-sm font-medium text-amber-600 hover:text-amber-700"
-                  >
-                    View playbook
-                    <span className="ml-1">→</span>
-                  </Link>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                 {opportunities.length > 0 ? (
+                   <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+                     {opportunities.map((opportunity) => (
+                       <Card key={opportunity.id} className="border border-slate-200/80 shadow-sm">
+                         <CardContent className="space-y-4 p-6">
+                           <div>
+                             <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                               Impact score {Math.round(opportunity.impactScore || 0)}%
+                             </p>
+                             <h3 className="text-lg font-semibold text-slate-900 mb-1">
+                               {opportunity.title || opportunity.name}
+                             </h3>
+                             <p className="text-sm text-slate-500 line-clamp-3">{opportunity.description}</p>
+                           </div>
+                           <div className="flex items-center justify-between text-sm">
+                             <div className="space-y-1">
+                               <p className="text-slate-500">Monthly savings</p>
+                               <p className="font-semibold text-slate-900">
+                                 ${Number(opportunity.monthlySavings || 0).toLocaleString()}
+                               </p>
+                             </div>
+                             <div className="space-y-1 text-right">
+                               <p className="text-slate-500">Time saved</p>
+                               <p className="font-semibold text-slate-900">
+                                 {Math.round(opportunity.timeSavedHours || 0)} hrs/mo
+                               </p>
+                             </div>
+                           </div>
+                           <Link
+                             href={`/dashboard/opportunities/${opportunity.id}`}
+                             className="inline-flex items-center text-sm font-medium text-amber-600 hover:text-amber-700"
+                             onClick={() => {
+                               trackEvent("opportunity_clicked", {
+                                 opportunityId: opportunity.id,
+                                 opportunityTitle: opportunity.title || opportunity.name,
+                                 impactScore: opportunity.impactScore,
+                                 monthlySavings: opportunity.monthlySavings,
+                                 department: opportunity.department,
+                               })
+                             }}
+                           >
+                             View playbook
+                             <span className="ml-1">→</span>
+                           </Link>
+                         </CardContent>
+                       </Card>
+                     ))}
+                   </div>
         ) : (
           <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 p-8 text-center">
             <h3 className="text-lg font-semibold text-slate-900">Build your AI portfolio</h3>

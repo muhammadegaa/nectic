@@ -23,7 +23,13 @@ export function AssessmentForm() {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
-    trackEvent("assessment_started")
+    // Track start time for completion rate calculation
+    ;(window as any).assessmentStartTime = Date.now()
+    
+    trackEvent("assessment_started", {
+      totalQuestions: assessmentQuestions.length,
+      timestamp: new Date().toISOString(),
+    })
   }, [])
 
   // Filter questions based on skip logic
@@ -96,7 +102,11 @@ export function AssessmentForm() {
 
     trackEvent("assessment_question_completed", {
       questionId: currentQuestion.id,
+      questionText: currentQuestion.text,
       step: currentStep + 1,
+      totalVisibleQuestions: visibleQuestions.length,
+      answerValue: getCurrentAnswer(),
+      category: currentQuestion.category,
     })
 
     // Recalculate visible questions with current answers
@@ -157,9 +167,19 @@ export function AssessmentForm() {
         description: "Your assessment has been submitted successfully.",
       })
 
+      // Track completion with detailed metrics
+      const completionTime = Date.now() - (window as any).assessmentStartTime || 0
+      const visibleQuestionsCount = visibleQuestions.length
+      
       trackEvent("assessment_completed", {
         totalQuestions: assessmentQuestions.length,
+        visibleQuestions: visibleQuestionsCount,
         answersCount: answers.length,
+        completionTimeSeconds: Math.round(completionTime / 1000),
+        painPoint: answers.find(a => a.questionId === "pain-points")?.value || "unknown",
+        companySize: answers.find(a => a.questionId === "company-size")?.value || "unknown",
+        budget: answers.find(a => a.questionId === "budget")?.value || "unknown",
+        timeline: answers.find(a => a.questionId === "timeline")?.value || "unknown",
       })
 
       // Start opportunity generation in background (don't wait)
