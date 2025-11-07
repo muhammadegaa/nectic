@@ -409,6 +409,219 @@ export async function performAIAnalysisQuery(query: string, context: any = {}): 
   }
 }
 
+// Generate personalized opportunities from actual assessment answers (not just scores)
+function generatePersonalizedOpportunitiesFromAnswers(context: AIAnalysisContext): AIOpportunity[] {
+  const opportunities: AIOpportunity[] = []
+  const answers = context.assessment.answers
+  const scores = context.assessment.scores
+
+  // Extract specific answers for personalization using question IDs
+  const docVolume = answers.find(a => a.question.includes("doc-volume") || (a.question.includes("documents") && a.question.includes("monthly")))?.answer as number || 0
+  const csVolume = answers.find(a => a.question.includes("cs-volume") || (a.question.includes("customer inquiries") && a.question.includes("monthly")))?.answer as number || 0
+  const dataEntryHours = answers.find(a => a.question.includes("data-entry-volume") || (a.question.includes("data entry") && a.question.includes("hours")))?.answer as number || 0
+  const painPoint = answers.find(a => a.question.includes("pain-points") || a.question.includes("frustration") || a.question.includes("inefficiency"))?.answer as string || ""
+  const industry = context.user.industry
+
+  // Document Automation - based on actual document volume
+  if (scores.documentAutomation > 50 || docVolume > 100) {
+    const monthlySavings = Math.min(5000, Math.max(1500, docVolume * 10))
+    opportunities.push({
+      title: "Document Processing Automation",
+      description: `Automate processing of ${docVolume || 'your'} monthly documents using AI-powered extraction. Based on your assessment, this could save significant manual effort.`,
+      monthlySavings,
+      timeSavedHours: Math.min(120, Math.max(20, docVolume / 5)),
+      implementationTimeWeeks: scores.documentAutomation > 70 ? 4 : 6,
+      department: "finance",
+      complexity: scores.documentAutomation > 70 ? 2 : 3,
+      benefits: [
+        `Process ${docVolume || 'hundreds of'} documents automatically`,
+        "Reduce manual data entry by 90%",
+        "Improve data accuracy to 99.5%",
+        "Enable 24/7 document processing",
+      ],
+      requirements: ["Sample documents for training", "Integration with existing systems", "Process documentation"],
+      quickWin: scores.documentAutomation > 70,
+      recommended: true,
+      impactScore: scores.documentAutomation,
+    })
+  }
+
+  // Customer Service AI - based on actual inquiry volume
+  if (scores.customerServiceAI > 50 || csVolume > 50) {
+    const monthlySavings = Math.min(6000, Math.max(2000, csVolume * 15))
+    opportunities.push({
+      title: "Customer Service Chatbot",
+      description: `Deploy an AI chatbot to handle ${csVolume || 'your'} monthly customer inquiries, reducing response time and freeing up your team.`,
+      monthlySavings,
+      timeSavedHours: Math.min(150, Math.max(30, csVolume / 2)),
+      implementationTimeWeeks: scores.customerServiceAI > 70 ? 6 : 8,
+      department: "customer-service",
+      complexity: scores.customerServiceAI > 70 ? 2 : 3,
+      benefits: [
+        `Handle ${Math.round(csVolume * 0.6) || '60%'} of inquiries automatically`,
+        "Reduce response time by 75%",
+        "Provide 24/7 customer support",
+        "Free up staff for complex issues",
+      ],
+      requirements: ["FAQ documentation", "Integration with website/support channels", "Staff training"],
+      quickWin: scores.customerServiceAI > 70,
+      recommended: true,
+      impactScore: scores.customerServiceAI,
+    })
+  }
+
+  // Data Entry Automation - based on actual hours spent
+  if (scores.dataProcessing > 50 || dataEntryHours > 5) {
+    const monthlySavings = Math.min(4000, Math.max(1500, dataEntryHours * 50))
+    opportunities.push({
+      title: "Automated Data Entry & Validation",
+      description: `Automate ${dataEntryHours || 'your'} hours/week of manual data entry tasks, eliminating errors and freeing up your team.`,
+      monthlySavings,
+      timeSavedHours: dataEntryHours * 4, // Monthly hours
+      implementationTimeWeeks: scores.dataProcessing > 70 ? 3 : 5,
+      department: "operations",
+      complexity: scores.dataProcessing > 70 ? 2 : 3,
+      benefits: [
+        `Save ${dataEntryHours * 4} hours/month on data entry`,
+        "Eliminate manual data entry errors",
+        "Improve data consistency across systems",
+        "Free up staff for higher-value tasks",
+      ],
+      requirements: ["Access to data sources", "Data validation rules", "Integration with existing databases"],
+      quickWin: scores.dataProcessing > 70,
+      recommended: true,
+      impactScore: scores.dataProcessing,
+    })
+  }
+
+  // Pain-point specific opportunity
+  if (painPoint) {
+    const painPointMap: Record<string, { title: string; department: string; description: string }> = {
+      "Document processing": {
+        title: "Intelligent Document Management",
+        department: "finance",
+        description: "Streamline your document processing workflow with AI-powered classification and extraction."
+      },
+      "Customer service": {
+        title: "AI-Powered Customer Support",
+        department: "customer-service",
+        description: "Transform your customer service with AI that understands context and provides instant answers."
+      },
+      "Data entry": {
+        title: "Automated Data Pipeline",
+        department: "operations",
+        description: "Eliminate manual data entry with intelligent automation that learns from your workflows."
+      },
+      "Reporting and analytics": {
+        title: "AI-Driven Business Intelligence",
+        department: "operations",
+        description: "Get instant insights from your data with AI-powered reporting and analytics."
+      },
+      "Inventory management": {
+        title: "Predictive Inventory Optimization",
+        department: "operations",
+        description: "Optimize inventory levels with AI that predicts demand and prevents stockouts."
+      },
+      "Sales and marketing": {
+        title: "AI Sales Assistant",
+        department: "sales",
+        description: "Boost sales with AI that qualifies leads, schedules follow-ups, and personalizes outreach."
+      },
+      "Human resources": {
+        title: "HR Process Automation",
+        department: "hr",
+        description: "Automate HR workflows from onboarding to performance reviews with AI assistance."
+      }
+    }
+
+    const painPointKey = Object.keys(painPointMap).find(key => 
+      painPoint.toLowerCase().includes(key.toLowerCase())
+    )
+
+    if (painPointKey) {
+      const mapped = painPointMap[painPointKey]
+      opportunities.push({
+        title: mapped.title,
+        description: mapped.description,
+        monthlySavings: 3000,
+        timeSavedHours: 60,
+        implementationTimeWeeks: 4,
+        department: mapped.department,
+        complexity: 3,
+        benefits: [
+          `Address your ${painPoint.toLowerCase()} challenges`,
+          "Reduce manual work by 70%",
+          "Improve process efficiency",
+          "Enable data-driven decisions",
+        ],
+        requirements: ["Process documentation", "Stakeholder buy-in", "Integration planning"],
+        quickWin: false,
+        recommended: true,
+        impactScore: 75,
+      })
+    }
+  }
+
+  // Always include at least one opportunity based on highest score
+  if (opportunities.length === 0) {
+    const highestScore = Math.max(
+      scores.documentAutomation,
+      scores.customerServiceAI,
+      scores.dataProcessing,
+      scores.workflowAutomation
+    )
+
+    if (highestScore === scores.documentAutomation) {
+      opportunities.push({
+        title: "Document Processing Automation",
+        description: "Implement AI-powered document processing based on your assessment scores.",
+        monthlySavings: 2500,
+        timeSavedHours: 60,
+        implementationTimeWeeks: 5,
+        department: "finance",
+        complexity: 3,
+        benefits: ["Reduce manual work", "Improve accuracy", "Process documents faster"],
+        requirements: ["Sample documents", "System integration"],
+        quickWin: false,
+        recommended: true,
+        impactScore: scores.documentAutomation,
+      })
+    } else if (highestScore === scores.customerServiceAI) {
+      opportunities.push({
+        title: "Customer Service Chatbot",
+        description: "Deploy an AI chatbot based on your customer service assessment.",
+        monthlySavings: 3000,
+        timeSavedHours: 80,
+        implementationTimeWeeks: 6,
+        department: "customer-service",
+        complexity: 3,
+        benefits: ["24/7 support", "Faster responses", "Reduce workload"],
+        requirements: ["FAQ documentation", "Integration setup"],
+        quickWin: false,
+        recommended: true,
+        impactScore: scores.customerServiceAI,
+      })
+    } else {
+      opportunities.push({
+        title: "Workflow Automation",
+        description: `Automate workflows in ${industry || 'your'} industry based on your assessment.`,
+        monthlySavings: 2800,
+        timeSavedHours: 70,
+        implementationTimeWeeks: 5,
+        department: "operations",
+        complexity: 3,
+        benefits: ["Streamline processes", "Reduce errors", "Save time"],
+        requirements: ["Process mapping", "Stakeholder alignment"],
+        quickWin: false,
+        recommended: true,
+        impactScore: highestScore,
+      })
+    }
+  }
+
+  return opportunities.slice(0, 5) // Limit to 5 opportunities
+}
+
 // Function to generate AI opportunities based on assessment results
 export async function generateOpportunitiesWithAI(context: AIAnalysisContext): Promise<AIOpportunity[]> {
   try {
@@ -492,14 +705,16 @@ export async function generateOpportunitiesWithAI(context: AIAnalysisContext): P
       console.error("Error parsing AI response:", error)
       console.log("Raw AI response:", aiResponse)
 
-      // Fall back to default opportunities
-      return getDefaultOpportunities(context.assessment.scores)
+      // Fall back to personalized opportunities based on actual answers
+      console.warn("⚠️ Falling back to personalized opportunities based on assessment answers")
+      return generatePersonalizedOpportunitiesFromAnswers(context)
     }
   } catch (error) {
     console.error("Error generating opportunities with AI:", error)
+    console.warn("⚠️ Falling back to personalized opportunities based on assessment answers")
 
-    // Fall back to default opportunities
-    return getDefaultOpportunities(context.assessment.scores)
+    // Fall back to personalized opportunities based on actual answers
+    return generatePersonalizedOpportunitiesFromAnswers(context)
   }
 }
 
