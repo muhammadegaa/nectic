@@ -20,6 +20,7 @@ export interface AIAnalysisContext {
       overallReadiness: number
     }
     answers: {
+      questionId?: string // Include questionId for reliable extraction
       question: string
       answer: string | number | boolean
     }[]
@@ -415,26 +416,51 @@ function generatePersonalizedOpportunitiesFromAnswers(context: AIAnalysisContext
   const answers = context.assessment.answers
   const scores = context.assessment.scores
 
-  // Extract specific answers for personalization - handle both question text and questionId
+  // Extract answers by questionId - most reliable method
   const getAnswerByQuestionId = (questionId: string) => {
-    return answers.find(a => {
-      const question = a.question || ""
-      return question.includes(questionId) || question.toLowerCase().includes(questionId.replace("-", " "))
+    // First try to find by questionId if available (most reliable)
+    const byId = answers.find(a => a.questionId === questionId)
+    if (byId) {
+      console.log(`✅ Found answer for ${questionId} by questionId`)
+      return byId
+    }
+    
+    // Fallback: search question text for keywords
+    const keywordMap: Record<string, string[]> = {
+      "doc-volume": ["documents", "process", "monthly"],
+      "doc-time": ["document", "hours", "week", "manual", "processing"],
+      "cs-volume": ["customer inquiries", "customer", "monthly", "handle"],
+      "cs-repetitive": ["repetitive", "percentage", "inquiries"],
+      "data-entry-volume": ["data entry", "hours", "week", "manual"],
+      "data-errors": ["data", "errors", "percentage", "entries"],
+      "company-size": ["employees", "company"],
+      "budget": ["budget", "monthly", "automation"],
+      "timeline": ["implement", "when", "timeline"],
+      "pain-points": ["inefficiency", "biggest", "frustration", "pain"],
+    }
+    
+    const keywords = keywordMap[questionId] || [questionId.replace("-", " ")]
+    
+    const byText = answers.find(a => {
+      const q = (a.question || "").toLowerCase()
+      return keywords.some(keyword => q.includes(keyword.toLowerCase()))
     })
+    
+    if (byText) {
+      console.log(`⚠️ Found answer for ${questionId} by text search (less reliable)`)
+    } else {
+      console.warn(`❌ No answer found for ${questionId}`)
+    }
+    
+    return byText
   }
 
   // Extract pain point (primary question)
-  const painPointAnswer = answers.find(a => {
-    const q = a.question || ""
-    return q.toLowerCase().includes("inefficiency") || q.toLowerCase().includes("pain") || q.toLowerCase().includes("biggest")
-  })
+  const painPointAnswer = getAnswerByQuestionId("pain-points")
   const painPoint = (painPointAnswer?.answer as string) || ""
 
   // Extract document processing answers
-  const docVolumeAnswer = getAnswerByQuestionId("doc-volume") || answers.find(a => 
-    (a.question || "").toLowerCase().includes("documents") && 
-    ((a.question || "").toLowerCase().includes("monthly") || (a.question || "").toLowerCase().includes("process"))
-  )
+  const docVolumeAnswer = getAnswerByQuestionId("doc-volume")
   const docVolumeStr = (docVolumeAnswer?.answer as string) || ""
   const docVolumeMap: Record<string, number> = {
     "Less than 100": 50,
@@ -445,9 +471,7 @@ function generatePersonalizedOpportunitiesFromAnswers(context: AIAnalysisContext
   }
   const docVolume = docVolumeMap[docVolumeStr] || 0
 
-  const docTimeAnswer = getAnswerByQuestionId("doc-time") || answers.find(a => 
-    (a.question || "").toLowerCase().includes("document") && (a.question || "").toLowerCase().includes("hours")
-  )
+  const docTimeAnswer = getAnswerByQuestionId("doc-time")
   const docTimeStr = (docTimeAnswer?.answer as string) || ""
   const docTimeMap: Record<string, number> = {
     "Less than 5 hours": 2,
@@ -458,10 +482,7 @@ function generatePersonalizedOpportunitiesFromAnswers(context: AIAnalysisContext
   const docTimeHours = docTimeMap[docTimeStr] || 0
 
   // Extract customer service answers
-  const csVolumeAnswer = getAnswerByQuestionId("cs-volume") || answers.find(a => 
-    (a.question || "").toLowerCase().includes("customer inquiries") || 
-    ((a.question || "").toLowerCase().includes("customer") && (a.question || "").toLowerCase().includes("monthly"))
-  )
+  const csVolumeAnswer = getAnswerByQuestionId("cs-volume")
   const csVolumeStr = (csVolumeAnswer?.answer as string) || ""
   const csVolumeMap: Record<string, number> = {
     "Less than 100": 50,
@@ -472,9 +493,7 @@ function generatePersonalizedOpportunitiesFromAnswers(context: AIAnalysisContext
   }
   const csVolume = csVolumeMap[csVolumeStr] || 0
 
-  const csRepetitiveAnswer = getAnswerByQuestionId("cs-repetitive") || answers.find(a => 
-    (a.question || "").toLowerCase().includes("repetitive")
-  )
+  const csRepetitiveAnswer = getAnswerByQuestionId("cs-repetitive")
   const csRepetitiveStr = (csRepetitiveAnswer?.answer as string) || ""
   const csRepetitiveMap: Record<string, number> = {
     "Less than 25%": 15,
@@ -485,9 +504,7 @@ function generatePersonalizedOpportunitiesFromAnswers(context: AIAnalysisContext
   const csRepetitivePercent = csRepetitiveMap[csRepetitiveStr] || 0
 
   // Extract data entry answers
-  const dataEntryAnswer = getAnswerByQuestionId("data-entry-volume") || answers.find(a => 
-    (a.question || "").toLowerCase().includes("data entry") && (a.question || "").toLowerCase().includes("hours")
-  )
+  const dataEntryAnswer = getAnswerByQuestionId("data-entry-volume")
   const dataEntryStr = (dataEntryAnswer?.answer as string) || ""
   const dataEntryMap: Record<string, number> = {
     "Less than 5 hours": 2,
@@ -497,9 +514,7 @@ function generatePersonalizedOpportunitiesFromAnswers(context: AIAnalysisContext
   }
   const dataEntryHours = dataEntryMap[dataEntryStr] || 0
 
-  const dataErrorsAnswer = getAnswerByQuestionId("data-errors") || answers.find(a => 
-    (a.question || "").toLowerCase().includes("data") && (a.question || "").toLowerCase().includes("errors")
-  )
+  const dataErrorsAnswer = getAnswerByQuestionId("data-errors")
   const dataErrorsStr = (dataErrorsAnswer?.answer as string) || ""
   const dataErrorsMap: Record<string, number> = {
     "Less than 5%": 2,

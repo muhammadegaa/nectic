@@ -490,6 +490,7 @@ export async function generateOpportunitiesFromAssessment(userId: string): Promi
         answers: assessment.answers.map(answer => {
           const question = assessmentQuestions.find(q => q.id === answer.questionId)
           return {
+            questionId: answer.questionId, // Include questionId for reliable extraction
             question: question?.text || question?.id || '',
             answer: answer.value
           }

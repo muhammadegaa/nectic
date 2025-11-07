@@ -40,16 +40,10 @@ import { PullToRefresh } from "@/components/pull-to-refresh"
 import { ShareButton } from "@/components/share-button"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 
-// Mock user for MVP
-const mockUser = {
-  subscription: {
-    tier: "premium",
-  },
-}
-
 export default function OpportunityDetailPage() {
   const { id } = useParams()
   const { user } = useAuth()
+  const subscription = (user as any)?.subscription
   const router = useRouter()
   const [opportunity, setOpportunity] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -311,17 +305,17 @@ export default function OpportunityDetailPage() {
     {
       id: "implementation",
       label: "Implementation",
-      icon: mockUser?.subscription?.tier !== "premium" ? <Lock className="h-3 w-3 ml-1" /> : null,
+      icon: subscription?.tier !== "premium" ? <Lock className="h-3 w-3 ml-1" /> : null,
     },
     {
       id: "roi",
       label: "ROI",
-      icon: mockUser?.subscription?.tier !== "premium" ? <Lock className="h-3 w-3 ml-1" /> : null,
+      icon: subscription?.tier !== "premium" ? <Lock className="h-3 w-3 ml-1" /> : null,
     },
     {
       id: "vendors",
       label: "Vendors",
-      icon: mockUser?.subscription?.tier !== "premium" ? <Lock className="h-3 w-3 ml-1" /> : null,
+      icon: subscription?.tier !== "premium" ? <Lock className="h-3 w-3 ml-1" /> : null,
     },
   ]
 
@@ -489,7 +483,7 @@ export default function OpportunityDetailPage() {
                 tabs={tabs}
                 activeTab={activeTab}
                 onChange={(tabId: string) => {
-                  if (tabId !== "overview" && mockUser?.subscription?.tier !== "premium") {
+                  if (tabId !== "overview" && subscription?.tier !== "premium") {
                     if (tabId === "vendors" || tabId === "download" || tabId === "roi" || tabId === "implementation") {
                       openSubscriptionModal(tabId)
                     }
@@ -505,7 +499,7 @@ export default function OpportunityDetailPage() {
                     <button
                       key={tab.id}
                       onClick={() => {
-                        if (tab.id !== "overview" && mockUser?.subscription?.tier !== "premium") {
+                        if (tab.id !== "overview" && subscription?.tier !== "premium") {
                           if (tab.id === "vendors" || tab.id === "download" || tab.id === "roi" || tab.id === "implementation") {
                             openSubscriptionModal(tab.id)
                           }
@@ -695,7 +689,7 @@ export default function OpportunityDetailPage() {
                     )}
 
                     {/* Premium Features Teaser */}
-                    {mockUser?.subscription?.tier !== "premium" && (
+                    {subscription?.tier !== "premium" && (
                       <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -981,7 +975,7 @@ export default function OpportunityDetailPage() {
                 <Button
                   variant="outline"
                   onClick={() => {
-                    if (mockUser?.subscription?.tier !== "premium") {
+                    if (subscription?.tier !== "premium") {
                       openSubscriptionModal("download")
                     } else {
                       // Handle download for premium users
@@ -995,7 +989,7 @@ export default function OpportunityDetailPage() {
                 </Button>
                 <Button
                   onClick={() => {
-                    if (mockUser?.subscription?.tier !== "premium") {
+                    if (subscription?.tier !== "premium") {
                       openSubscriptionModal("implementation")
                     } else {
                       // Handle implementation for premium users
