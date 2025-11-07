@@ -14,6 +14,7 @@ import { Elements } from "@stripe/react-stripe-js"
 import { loadStripe } from "@stripe/stripe-js"
 import CheckoutForm from "./checkout-form"
 import { isDemoMode } from "@/lib/demo-mode"
+import { DemoModeBanner } from "@/components/demo-mode-banner"
 
 // Make sure to call loadStripe outside of a component's render to avoid
 // recreating the Stripe object on every render.
@@ -181,6 +182,7 @@ export default function CheckoutPage() {
 
       <main className="container py-12 flex-1">
         <div className="max-w-3xl mx-auto">
+          <DemoModeBanner />
           <div className="mb-8">
             <Link href="/#pricing" className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700">
               <ArrowLeft className="mr-2 h-4 w-4" />

@@ -8,7 +8,6 @@ import { CurrencyProvider } from "@/lib/currency-context"
 import { LanguageProvider } from "@/lib/language-context"
 import { LanguageSwitcher } from "@/components/language-switcher"
 import { AnalyticsProvider } from "@/components/providers/analytics-provider"
-import { DemoModeBanner } from "@/components/demo-mode-banner"
 import { AuthProvider } from "@/contexts/auth-context"
 import { FeatureFlagProvider } from "@/contexts/feature-flag-context"
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -57,7 +56,6 @@ export default function RootLayout({
               <FeatureFlagProvider>
                 <CurrencyProvider>
                   <LanguageProvider>
-                    <DemoModeBanner />
                     {children}
                     <div className="fixed bottom-4 right-4 flex items-center gap-2">
                       <ThemeToggle />
