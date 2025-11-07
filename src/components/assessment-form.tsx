@@ -137,7 +137,7 @@ export function AssessmentForm() {
         answersCount: answers.length,
       })
 
-      // Redirect to scanning page
+      // Redirect to scanning page to generate opportunities
       router.push("/dashboard/scanning")
     } catch (error) {
       console.error("Error submitting assessment:", error)

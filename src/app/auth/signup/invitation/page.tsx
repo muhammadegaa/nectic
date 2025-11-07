@@ -118,7 +118,7 @@ export default function InvitationSignupPage() {
 
       // Redirect after a delay
       setTimeout(() => {
-        router.push("/app")
+        router.push("/dashboard")
       }, 3000)
     } catch (err: any) {
       console.error("Signup error:", err)

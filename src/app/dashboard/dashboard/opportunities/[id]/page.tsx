@@ -264,7 +264,7 @@ export default function OpportunityDetailPage() {
         <h2 className="text-xl font-semibold mb-2">Error</h2>
         <p className="text-red-500 mb-4">{error || "Opportunity not found"}</p>
         <Button
-          onClick={() => router.push("/app/opportunities")}
+          onClick={() => router.push("/dashboard/opportunities")}
           className="px-4 py-2 bg-amber-500 text-white rounded hover:bg-amber-600"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -396,7 +396,7 @@ export default function OpportunityDetailPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => router.push("/app/opportunities")}
+                onClick={() => router.push("/dashboard/opportunities")}
                 className="group transition-all duration-200 hover:border-amber-500 hover:bg-amber-50"
               >
                 <ArrowLeft className="mr-2 h-4 w-4 transition-transform group-hover:-translate-x-1" />

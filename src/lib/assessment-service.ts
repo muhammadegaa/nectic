@@ -494,7 +494,7 @@ export async function generateOpportunitiesFromAssessment(userId: string): Promi
 
 // Keep the getDefaultOpportunities function as a fallback
 // Default opportunities for fallback based on assessment scores
-function getDefaultOpportunities(scores: AssessmentResult["scores"]): any[] {
+export function getDefaultOpportunities(scores: AssessmentResult["scores"]): any[] {
   const opportunities = []
 
   // Add document automation opportunity if score is high

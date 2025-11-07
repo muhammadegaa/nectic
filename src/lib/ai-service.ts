@@ -694,7 +694,7 @@ export async function generateImplementationGuide(opportunity: Opportunity): Pro
 }
 
 // Default opportunities for fallback
-function getDefaultOpportunities(scores: any): AIOpportunity[] {
+export function getDefaultOpportunities(scores: any): AIOpportunity[] {
   const opportunities = []
 
   // Add document automation opportunity if score is high

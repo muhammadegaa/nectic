@@ -66,7 +66,7 @@ export function useBypassAuth() {
 
         // Use a timeout to ensure state updates before navigation
         setTimeout(() => {
-          router.push("/app")
+          router.push("/dashboard")
         }, 100)
       } catch (error) {
         console.error("Error completing bypass auth:", error)

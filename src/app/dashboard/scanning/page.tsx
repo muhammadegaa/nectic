@@ -55,17 +55,33 @@ export default function ScanningPage() {
         } else {
           clearInterval(interval)
 
-          // Generate opportunities based on assessment
-          generateOpportunitiesFromAssessment(user.uid)
+          // Generate opportunities via API endpoint (server-side)
+          fetch("/api/analyze", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              userId: user.uid,
+            }),
+          })
+            .then(async (res) => {
+              if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}))
+                throw new Error(errorData.error || "Failed to generate opportunities")
+              }
+              return res.json()
+            })
             .then(() => {
               // Redirect to dashboard after analysis is complete
               setTimeout(() => {
-                router.push("/app")
+                router.push("/dashboard")
               }, 1500)
             })
             .catch((error) => {
               console.error("Error generating opportunities:", error)
-              setError("Failed to generate opportunities. Please try again.")
+              setError(error.message || "Failed to generate opportunities. Please try again.")
+              setAnalysisStarted(false)
             })
         }
       }, 2000)

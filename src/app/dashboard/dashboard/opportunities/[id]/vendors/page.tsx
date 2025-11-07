@@ -579,7 +579,7 @@ export default function VendorSelectionPage() {
       <div className="flex-1 p-8 flex flex-col items-center justify-center">
         <h1 className="text-2xl font-bold mb-4">Opportunity Not Found</h1>
         <p className="text-muted-foreground mb-6">The opportunity you're looking for doesn't exist.</p>
-        <Button onClick={() => router.push("/app/opportunities")}>
+        <Button onClick={() => router.push("/dashboard/opportunities")}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Opportunities
         </Button>

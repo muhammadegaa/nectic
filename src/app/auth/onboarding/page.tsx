@@ -61,7 +61,7 @@ export default function OnboardingPage() {
         role,
       })
 
-      router.push("/app")
+      router.push("/dashboard")
     } catch (error) {
       console.error("Error updating profile:", error)
       alert("Failed to save your information. Please try again.")
