@@ -2,13 +2,36 @@
  * Demo/Test mode utilities - bypasses payment in development
  */
 
-export const DEMO_MODE_ENABLED = process.env.NEXT_PUBLIC_DEMO_MODE === "true" || process.env.NODE_ENV === "development"
+// Check both server and client side
+const getDemoModeEnv = () => {
+  if (typeof window !== "undefined") {
+    // Client side
+    return process.env.NEXT_PUBLIC_DEMO_MODE === "true" || 
+           process.env.NEXT_PUBLIC_DEMO_MODE === "development" ||
+           process.env.NODE_ENV === "development"
+  } else {
+    // Server side
+    return process.env.NEXT_PUBLIC_DEMO_MODE === "true" || 
+           process.env.NEXT_PUBLIC_DEMO_MODE === "development" ||
+           process.env.NODE_ENV === "development"
+  }
+}
+
+export const DEMO_MODE_ENABLED = getDemoModeEnv()
 
 /**
  * Check if demo mode is enabled
  */
 export function isDemoMode(): boolean {
-  return DEMO_MODE_ENABLED
+  const enabled = getDemoModeEnv()
+  if (typeof window !== "undefined") {
+    console.log("[DEMO MODE] Client check:", {
+      NEXT_PUBLIC_DEMO_MODE: process.env.NEXT_PUBLIC_DEMO_MODE,
+      NODE_ENV: process.env.NODE_ENV,
+      enabled
+    })
+  }
+  return enabled
 }
 
 /**

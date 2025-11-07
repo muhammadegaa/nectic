@@ -20,7 +20,10 @@ export async function POST(request: Request) {
 
     // Demo mode: bypass Stripe and return demo client secret
     if (shouldBypassPayment()) {
-      console.log("DEMO MODE: Bypassing Stripe payment intent creation")
+      console.log("[DEMO MODE] Server: Bypassing Stripe payment intent creation", {
+        NEXT_PUBLIC_DEMO_MODE: process.env.NEXT_PUBLIC_DEMO_MODE,
+        NODE_ENV: process.env.NODE_ENV,
+      })
       return NextResponse.json({
         clientSecret: `demo_${plan}_${Date.now()}`,
         demoMode: true,

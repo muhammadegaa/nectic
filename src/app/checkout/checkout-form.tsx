@@ -96,20 +96,25 @@ export default function CheckoutForm({
   }
 
   // Demo mode: show simplified form
-  if (demoMode || isDemoMode()) {
+  const isDemo = demoMode || isDemoMode()
+  if (isDemo) {
+    console.log("[DEMO MODE] CheckoutForm: Showing demo mode UI", { demoMode, isDemoMode: isDemoMode() })
     return (
       <div className="space-y-6">
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-          <p className="text-sm text-amber-800 font-medium mb-2">Demo Mode Active</p>
-          <p className="text-xs text-amber-700">
+          <p className="text-sm text-amber-800 font-medium mb-2">🎯 Demo Mode Active</p>
+          <p className="text-xs text-amber-700 mb-2">
             Payment processing is disabled. Click below to continue to your dashboard.
+          </p>
+          <p className="text-xs text-amber-600">
+            Env: {process.env.NEXT_PUBLIC_DEMO_MODE || "not set"} | NODE_ENV: {process.env.NODE_ENV}
           </p>
         </div>
         <Button
           onClick={handleSubmit}
-          className="w-full py-6 text-lg"
+          className="w-full py-6 text-lg bg-amber-600 hover:bg-amber-700"
         >
-          Continue to Dashboard (Demo)
+          Continue to Dashboard (Demo Mode)
         </Button>
       </div>
     )

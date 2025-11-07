@@ -63,6 +63,14 @@ export default function CheckoutPage() {
   }, [plan])
 
   useEffect(() => {
+    // Demo mode: skip API call and set demo client secret directly
+    if (isDemoMode() && plan) {
+      console.log("[DEMO MODE] Bypassing payment intent API, using demo mode")
+      setClientSecret(`demo_${plan}_${Date.now()}`)
+      setLoading(false)
+      return
+    }
+
     // Create PaymentIntent as soon as the page loads
     if (plan) {
       fetch("/api/create-payment-intent", {
