@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button"
 import { Elements } from "@stripe/react-stripe-js"
 import { loadStripe } from "@stripe/stripe-js"
 import CheckoutForm from "./checkout-form"
+import { isDemoMode } from "@/lib/demo-mode"
 
 // Make sure to call loadStripe outside of a component's render to avoid
 // recreating the Stripe object on every render.
@@ -248,6 +249,7 @@ export default function CheckoutPage() {
                   plan={plan}
                   initialEmail={initialEmail || user?.email || ""}
                   initialName={initialName || user?.displayName || ""}
+                  demoMode={clientSecret.startsWith("demo_")}
                 />
               </Elements>
             )}

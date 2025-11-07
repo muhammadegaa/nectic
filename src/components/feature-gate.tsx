@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useAuth } from "@/contexts/auth-context"
 import { useFeatureFlags } from "@/contexts/feature-flag-context"
+import { canAccessFeature, hasActiveFreeTrial } from "@/lib/free-trial"
 
 interface FeatureGateProps {
   feature: string
@@ -16,7 +17,7 @@ export function FeatureGate({ feature, fallback, children }: FeatureGateProps) {
   const subscription = (user as any)?.subscription
   const { hasFeature, isLoading } = useFeatureFlags()
 
-  // Check if the feature is enabled
+  // Check if the feature is enabled via feature flags
   const isEnabled = hasFeature(feature)
 
   // If the feature is enabled, render the children
@@ -26,6 +27,11 @@ export function FeatureGate({ feature, fallback, children }: FeatureGateProps) {
 
   // If the user is premium, enable all features
   if (subscription?.tier === "premium") {
+    return <>{children}</>
+  }
+
+  // Check free trial access
+  if (hasActiveFreeTrial(user) && canAccessFeature(user, feature as any)) {
     return <>{children}</>
   }
 

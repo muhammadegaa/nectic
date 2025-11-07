@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server"
 import Stripe from "stripe"
+import { shouldBypassPayment, getDemoSubscription } from "@/lib/demo-mode"
 
 // Initialize Stripe with your secret key
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  apiVersion: "2025-10-29.clover",
-})
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: "2025-10-29.clover",
+    })
+  : null
 
 export async function POST(request: Request) {
   try {
@@ -13,6 +16,19 @@ export async function POST(request: Request) {
 
     if (!plan || !["standard", "premium"].includes(plan)) {
       return NextResponse.json({ error: "Valid plan is required" }, { status: 400 })
+    }
+
+    // Demo mode: bypass Stripe and return demo client secret
+    if (shouldBypassPayment()) {
+      console.log("DEMO MODE: Bypassing Stripe payment intent creation")
+      return NextResponse.json({
+        clientSecret: `demo_${plan}_${Date.now()}`,
+        demoMode: true,
+      })
+    }
+
+    if (!stripe) {
+      return NextResponse.json({ error: "Stripe not configured" }, { status: 500 })
     }
 
     // Calculate the price based on the plan
@@ -34,6 +50,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       clientSecret: paymentIntent.client_secret,
+      demoMode: false,
     })
   } catch (error) {
     console.error("Error creating payment intent:", error)

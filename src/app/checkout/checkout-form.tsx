@@ -11,12 +11,14 @@ import { Button } from "@/components/ui/button"
 import { trackEvent } from "@/lib/analytics"
 import { reportError } from "@/lib/error-reporting"
 import { Loader2 } from "lucide-react"
+import { isDemoMode } from "@/lib/demo-mode"
 
 interface CheckoutFormProps {
   clientSecret: string
   plan: string | null
   initialEmail: string
   initialName: string
+  demoMode?: boolean
 }
 
 export default function CheckoutForm({
@@ -24,6 +26,7 @@ export default function CheckoutForm({
   plan,
   initialEmail,
   initialName,
+  demoMode = false,
 }: CheckoutFormProps) {
   const stripe = useStripe()
   const elements = useElements()
@@ -34,6 +37,13 @@ export default function CheckoutForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    // Demo mode: bypass Stripe and redirect to dashboard
+    if (demoMode || isDemoMode()) {
+      trackEvent("checkout_demo_mode_completed", { plan })
+      router.push("/dashboard?demo=true")
+      return
+    }
 
     if (!stripe || !elements) {
       return
@@ -83,6 +93,26 @@ export default function CheckoutForm({
     }
 
     setIsLoading(false)
+  }
+
+  // Demo mode: show simplified form
+  if (demoMode || isDemoMode()) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+          <p className="text-sm text-amber-800 font-medium mb-2">Demo Mode Active</p>
+          <p className="text-xs text-amber-700">
+            Payment processing is disabled. Click below to continue to your dashboard.
+          </p>
+        </div>
+        <Button
+          onClick={handleSubmit}
+          className="w-full py-6 text-lg"
+        >
+          Continue to Dashboard (Demo)
+        </Button>
+      </div>
+    )
   }
 
   return (

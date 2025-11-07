@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import Link from "next/link"
 import { MissionControl } from "@/components/dashboard/mission-control"
 import { InsightMetrics } from "@/components/dashboard/insight-metrics"
+import { FreeTrialBanner } from "@/components/free-trial-banner"
 
 export default function DashboardPage() {
   const { user } = useAuth()
@@ -107,6 +108,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8 p-6">
+      <FreeTrialBanner />
       <div className="rounded-3xl border border-amber-100 bg-gradient-to-r from-amber-50 via-white to-amber-50/60 p-6 shadow-sm">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>

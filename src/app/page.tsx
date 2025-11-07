@@ -172,6 +172,7 @@ export default function LandingPage() {
                   ))}
                 </div>
 
+              <div className="space-y-3">
                 <Button
                   className="w-full h-12 group relative overflow-hidden animate-pulse-subtle"
                   onClick={() => {
@@ -182,6 +183,12 @@ export default function LandingPage() {
                   <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1 relative z-10" />
                   <div className="absolute inset-0 bg-gradient-to-r from-amber-500 to-amber-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 </Button>
+                <Link href="/auth/signup">
+                  <Button variant="outline" className="w-full h-12 border-2">
+                    Start Free Trial — No Credit Card Required
+                  </Button>
+                </Link>
+              </div>
               </div>
               <div className="mt-10 w-full">
                 <p className="text-xs uppercase tracking-[0.3em] text-slate-400 text-center mb-4">{heroTrustedBy}</p>
@@ -293,16 +300,20 @@ export default function LandingPage() {
             <div className="flex flex-col items-center justify-center space-y-4 text-center">
               <div className="space-y-2 max-w-3xl">
                 <Badge variant="outline" className="mb-2 bg-white">
-                  {isLoading ? "Limited Time Offer" : t("pricing_badge")}
+                  {isLoading ? "14-Day Free Trial" : t("pricing_badge")}
                 </Badge>
                 <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
-                  {isLoading ? "Early Access Pricing" : t("pricing_title")}
+                  {isLoading ? "Plans for readiness and pilot execution" : t("pricing_title")}
                 </h2>
                 <p className="max-w-[700px] text-gray-500 md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed dark:text-gray-400">
                   {isLoading
-                    ? "Launch with a diagnostic, opportunity brief, and pilot guidance."
+                    ? "Start free. No credit card required. Upgrade anytime during your trial."
                     : t("pricing_subtitle")}
                 </p>
+                <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-green-50 border border-green-200 rounded-full">
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  <span className="text-sm font-medium text-green-800">14-day free trial • Cancel anytime</span>
+                </div>
               </div>
             </div>
             <div className="mx-auto grid max-w-5xl gap-6 py-12 lg:grid-cols-2">
