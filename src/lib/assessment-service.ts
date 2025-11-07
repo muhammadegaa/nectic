@@ -228,19 +228,26 @@ function calculateScores(answers: AssessmentAnswer[]): AssessmentResult["scores"
   docQuestions.forEach((q) => {
     const answer = answers.find((a) => a.questionId === q.id)
     if (answer) {
-      // Convert answer to a 0-100 score
       let score = 0
       if (q.id === "doc-volume") {
-        // Higher volume = higher score
-        const volume = Number(answer.value)
-        score = Math.min(100, volume / 10)
-      } else if (q.id === "doc-errors") {
-        // Higher error rate = higher score (more opportunity)
-        score = Number(answer.value)
+        // Map multiple-choice answers to scores
+        const volumeMap: Record<string, number> = {
+          "Less than 100": 20,
+          "100-500": 40,
+          "500-2,000": 60,
+          "2,000-10,000": 80,
+          "More than 10,000": 100,
+        }
+        score = volumeMap[answer.value as string] || 50
       } else if (q.id === "doc-time") {
-        // More time spent = higher score
-        const hours = Number(answer.value)
-        score = Math.min(100, hours * 5)
+        // Map hours to scores
+        const timeMap: Record<string, number> = {
+          "Less than 5 hours": 20,
+          "5-20 hours": 50,
+          "20-40 hours": 75,
+          "40+ hours": 100,
+        }
+        score = timeMap[answer.value as string] || 50
       }
 
       docScore += score * q.weight
@@ -258,19 +265,24 @@ function calculateScores(answers: AssessmentAnswer[]): AssessmentResult["scores"
   csQuestions.forEach((q) => {
     const answer = answers.find((a) => a.questionId === q.id)
     if (answer) {
-      // Convert answer to a 0-100 score
       let score = 0
       if (q.id === "cs-volume") {
-        // Higher volume = higher score
-        const volume = Number(answer.value)
-        score = Math.min(100, volume / 100)
+        const volumeMap: Record<string, number> = {
+          "Less than 100": 20,
+          "100-500": 40,
+          "500-2,000": 60,
+          "2,000-10,000": 80,
+          "More than 10,000": 100,
+        }
+        score = volumeMap[answer.value as string] || 50
       } else if (q.id === "cs-repetitive") {
-        // Higher repetitive percentage = higher score
-        score = Number(answer.value)
-      } else if (q.id === "cs-response-time") {
-        // Longer response time = higher score (more opportunity)
-        const hours = Number(answer.value)
-        score = Math.min(100, hours * 20)
+        const repetitiveMap: Record<string, number> = {
+          "Less than 25%": 20,
+          "25-50%": 50,
+          "50-75%": 75,
+          "75%+": 100,
+        }
+        score = repetitiveMap[answer.value as string] || 50
       }
 
       csScore += score * q.weight
@@ -288,19 +300,23 @@ function calculateScores(answers: AssessmentAnswer[]): AssessmentResult["scores"
   dataQuestions.forEach((q) => {
     const answer = answers.find((a) => a.questionId === q.id)
     if (answer) {
-      // Convert answer to a 0-100 score
       let score = 0
       if (q.id === "data-entry-volume") {
-        // More hours = higher score
-        const hours = Number(answer.value)
-        score = Math.min(100, hours * 5)
-      } else if (q.id === "data-sources") {
-        // More sources = higher score
-        const sources = Number(answer.value)
-        score = Math.min(100, sources * 10)
+        const hoursMap: Record<string, number> = {
+          "Less than 5 hours": 20,
+          "5-20 hours": 50,
+          "20-40 hours": 75,
+          "40+ hours": 100,
+        }
+        score = hoursMap[answer.value as string] || 50
       } else if (q.id === "data-errors") {
-        // Higher error rate = higher score
-        score = Number(answer.value)
+        const errorsMap: Record<string, number> = {
+          "Less than 5%": 20,
+          "5-15%": 50,
+          "15-30%": 75,
+          "30%+": 100,
+        }
+        score = errorsMap[answer.value as string] || 50
       }
 
       dataScore += score * q.weight
@@ -318,30 +334,38 @@ function calculateScores(answers: AssessmentAnswer[]): AssessmentResult["scores"
   generalQuestions.forEach((q) => {
     const answer = answers.find((a) => a.questionId === q.id)
     if (answer) {
-      // Convert answer to a 0-100 score
       let score = 0
-      if (q.id === "process-standardization") {
-        // More standardized = higher score
-        score = (Number(answer.value) / 5) * 100
-      } else if (q.id === "tech-adoption") {
-        // More eager = higher score
-        score = (Number(answer.value) / 5) * 100
-      } else if (q.id === "current-ai") {
-        // Already using AI = lower score (less opportunity)
-        score = answer.value === true ? 30 : 70
-      } else if (q.id === "decision-speed") {
-        // Faster decisions = higher score
-        const options = ["Less than 1 month", "1-3 months", "3-6 months", "6-12 months", "More than 12 months"]
-        const index = options.indexOf(answer.value as string)
-        score = 100 - index * 20 // 100, 80, 60, 40, 20
+      if (q.id === "company-size") {
+        const sizeMap: Record<string, number> = {
+          "1-10": 30,
+          "11-50": 50,
+          "51-200": 70,
+          "201-500": 85,
+          "501-1000": 95,
+          "1000+": 100,
+        }
+        score = sizeMap[answer.value as string] || 50
       } else if (q.id === "budget") {
-        // Higher budget = higher score
-        const options = ["Less than $500", "$500-$2,000", "$2,000-$5,000", "$5,000-$10,000", "More than $10,000"]
-        const index = options.indexOf(answer.value as string)
-        score = 20 + index * 20 // 20, 40, 60, 80, 100
+        const budgetMap: Record<string, number> = {
+          "Less than $500": 20,
+          "$500-$2,000": 40,
+          "$2,000-$5,000": 60,
+          "$5,000-$10,000": 80,
+          "More than $10,000": 100,
+        }
+        score = budgetMap[answer.value as string] || 50
+      } else if (q.id === "timeline") {
+        const timelineMap: Record<string, number> = {
+          "Immediately": 100,
+          "1-3 months": 80,
+          "3-6 months": 60,
+          "6-12 months": 40,
+          "Just exploring": 20,
+        }
+        score = timelineMap[answer.value as string] || 50
       } else if (q.id === "pain-points") {
-        // All pain points are equally important
-        score = 80 // High opportunity regardless of pain point
+        // All pain points indicate high opportunity
+        score = 80
       }
 
       generalScore += score * q.weight

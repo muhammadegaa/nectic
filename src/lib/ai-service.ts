@@ -415,77 +415,147 @@ function generatePersonalizedOpportunitiesFromAnswers(context: AIAnalysisContext
   const answers = context.assessment.answers
   const scores = context.assessment.scores
 
-  // Extract specific answers for personalization
-  // Answers come with question text from assessment-service mapping
-  const docVolumeAnswer = answers.find(a => 
-    a.question.toLowerCase().includes("documents") && 
-    (a.question.toLowerCase().includes("monthly") || a.question.toLowerCase().includes("process"))
-  )
-  const docVolume = (docVolumeAnswer?.answer as number) || 0
+  // Extract specific answers for personalization - handle both question text and questionId
+  const getAnswerByQuestionId = (questionId: string) => {
+    return answers.find(a => {
+      const question = a.question || ""
+      return question.includes(questionId) || question.toLowerCase().includes(questionId.replace("-", " "))
+    })
+  }
 
-  const csVolumeAnswer = answers.find(a => 
-    a.question.toLowerCase().includes("customer inquiries") || 
-    (a.question.toLowerCase().includes("customer") && a.question.toLowerCase().includes("monthly"))
-  )
-  const csVolume = (csVolumeAnswer?.answer as number) || 0
-
-  const dataEntryAnswer = answers.find(a => 
-    a.question.toLowerCase().includes("data entry") && 
-    a.question.toLowerCase().includes("hours")
-  )
-  const dataEntryHours = (dataEntryAnswer?.answer as number) || 0
-
-  const painPointAnswer = answers.find(a => 
-    a.question.toLowerCase().includes("frustration") || 
-    a.question.toLowerCase().includes("inefficiency") ||
-    a.question.toLowerCase().includes("pain")
-  )
+  // Extract pain point (primary question)
+  const painPointAnswer = answers.find(a => {
+    const q = a.question || ""
+    return q.toLowerCase().includes("inefficiency") || q.toLowerCase().includes("pain") || q.toLowerCase().includes("biggest")
+  })
   const painPoint = (painPointAnswer?.answer as string) || ""
+
+  // Extract document processing answers
+  const docVolumeAnswer = getAnswerByQuestionId("doc-volume") || answers.find(a => 
+    (a.question || "").toLowerCase().includes("documents") && 
+    ((a.question || "").toLowerCase().includes("monthly") || (a.question || "").toLowerCase().includes("process"))
+  )
+  const docVolumeStr = (docVolumeAnswer?.answer as string) || ""
+  const docVolumeMap: Record<string, number> = {
+    "Less than 100": 50,
+    "100-500": 300,
+    "500-2,000": 1250,
+    "2,000-10,000": 6000,
+    "More than 10,000": 15000,
+  }
+  const docVolume = docVolumeMap[docVolumeStr] || 0
+
+  const docTimeAnswer = getAnswerByQuestionId("doc-time") || answers.find(a => 
+    (a.question || "").toLowerCase().includes("document") && (a.question || "").toLowerCase().includes("hours")
+  )
+  const docTimeStr = (docTimeAnswer?.answer as string) || ""
+  const docTimeMap: Record<string, number> = {
+    "Less than 5 hours": 2,
+    "5-20 hours": 12,
+    "20-40 hours": 30,
+    "40+ hours": 50,
+  }
+  const docTimeHours = docTimeMap[docTimeStr] || 0
+
+  // Extract customer service answers
+  const csVolumeAnswer = getAnswerByQuestionId("cs-volume") || answers.find(a => 
+    (a.question || "").toLowerCase().includes("customer inquiries") || 
+    ((a.question || "").toLowerCase().includes("customer") && (a.question || "").toLowerCase().includes("monthly"))
+  )
+  const csVolumeStr = (csVolumeAnswer?.answer as string) || ""
+  const csVolumeMap: Record<string, number> = {
+    "Less than 100": 50,
+    "100-500": 300,
+    "500-2,000": 1250,
+    "2,000-10,000": 6000,
+    "More than 10,000": 15000,
+  }
+  const csVolume = csVolumeMap[csVolumeStr] || 0
+
+  const csRepetitiveAnswer = getAnswerByQuestionId("cs-repetitive") || answers.find(a => 
+    (a.question || "").toLowerCase().includes("repetitive")
+  )
+  const csRepetitiveStr = (csRepetitiveAnswer?.answer as string) || ""
+  const csRepetitiveMap: Record<string, number> = {
+    "Less than 25%": 15,
+    "25-50%": 37,
+    "50-75%": 62,
+    "75%+": 85,
+  }
+  const csRepetitivePercent = csRepetitiveMap[csRepetitiveStr] || 0
+
+  // Extract data entry answers
+  const dataEntryAnswer = getAnswerByQuestionId("data-entry-volume") || answers.find(a => 
+    (a.question || "").toLowerCase().includes("data entry") && (a.question || "").toLowerCase().includes("hours")
+  )
+  const dataEntryStr = (dataEntryAnswer?.answer as string) || ""
+  const dataEntryMap: Record<string, number> = {
+    "Less than 5 hours": 2,
+    "5-20 hours": 12,
+    "20-40 hours": 30,
+    "40+ hours": 50,
+  }
+  const dataEntryHours = dataEntryMap[dataEntryStr] || 0
+
+  const dataErrorsAnswer = getAnswerByQuestionId("data-errors") || answers.find(a => 
+    (a.question || "").toLowerCase().includes("data") && (a.question || "").toLowerCase().includes("errors")
+  )
+  const dataErrorsStr = (dataErrorsAnswer?.answer as string) || ""
+  const dataErrorsMap: Record<string, number> = {
+    "Less than 5%": 2,
+    "5-15%": 10,
+    "15-30%": 22,
+    "30%+": 40,
+  }
+  const dataErrorsPercent = dataErrorsMap[dataErrorsStr] || 0
   const industry = context.user.industry
 
-  // Document Automation - based on actual document volume
-  if (scores.documentAutomation > 50 || docVolume > 100) {
-    const monthlySavings = Math.min(5000, Math.max(1500, docVolume * 10))
+  // Document Automation - based on pain point and actual document volume
+  if (painPoint.includes("Document processing") || scores.documentAutomation > 50 || docVolume > 0) {
+    const monthlySavings = Math.min(8000, Math.max(2000, docVolume * 0.5 + docTimeHours * 50))
     opportunities.push({
       title: "Document Processing Automation",
-      description: `Automate processing of ${docVolume || 'your'} monthly documents using AI-powered extraction. Based on your assessment, this could save significant manual effort.`,
-      monthlySavings,
-      timeSavedHours: Math.min(120, Math.max(20, docVolume / 5)),
+      description: `Automate processing of ${docVolume > 0 ? docVolume.toLocaleString() : 'your'} monthly documents using AI-powered extraction. Based on your assessment, this could save ${docTimeHours || 20} hours per week.`,
+      monthlySavings: Math.round(monthlySavings),
+      timeSavedHours: Math.min(160, Math.max(20, docTimeHours * 4)),
       implementationTimeWeeks: scores.documentAutomation > 70 ? 4 : 6,
       department: "finance",
       complexity: scores.documentAutomation > 70 ? 2 : 3,
       benefits: [
-        `Process ${docVolume || 'hundreds of'} documents automatically`,
+        `Process ${docVolume > 0 ? docVolume.toLocaleString() : 'hundreds of'} documents automatically`,
+        `Save ${docTimeHours || 20} hours per week on manual processing`,
         "Reduce manual data entry by 90%",
         "Improve data accuracy to 99.5%",
         "Enable 24/7 document processing",
       ],
       requirements: ["Sample documents for training", "Integration with existing systems", "Process documentation"],
-      quickWin: scores.documentAutomation > 70,
+      quickWin: scores.documentAutomation > 70 && docTimeHours >= 20,
       recommended: true,
       impactScore: scores.documentAutomation,
     })
   }
 
-  // Customer Service AI - based on actual inquiry volume
-  if (scores.customerServiceAI > 50 || csVolume > 50) {
-    const monthlySavings = Math.min(6000, Math.max(2000, csVolume * 15))
+  // Customer Service AI - based on pain point and actual inquiry volume
+  if (painPoint.includes("Customer service") || scores.customerServiceAI > 50 || csVolume > 0) {
+    const autoHandlePercent = csRepetitivePercent > 0 ? csRepetitivePercent : 60
+    const monthlySavings = Math.min(10000, Math.max(2500, csVolume * 0.3 + csRepetitivePercent * 20))
     opportunities.push({
-      title: "Customer Service Chatbot",
-      description: `Deploy an AI chatbot to handle ${csVolume || 'your'} monthly customer inquiries, reducing response time and freeing up your team.`,
-      monthlySavings,
-      timeSavedHours: Math.min(150, Math.max(30, csVolume / 2)),
+      title: "Customer Service AI Chatbot",
+      description: `Deploy an AI chatbot to handle ${csVolume > 0 ? csVolume.toLocaleString() : 'your'} monthly customer inquiries. With ${csRepetitivePercent > 0 ? csRepetitivePercent + '%' : '60%'} repetitive inquiries, this can significantly reduce workload.`,
+      monthlySavings: Math.round(monthlySavings),
+      timeSavedHours: Math.min(200, Math.max(40, csVolume * 0.1)),
       implementationTimeWeeks: scores.customerServiceAI > 70 ? 6 : 8,
       department: "customer-service",
       complexity: scores.customerServiceAI > 70 ? 2 : 3,
       benefits: [
-        `Handle ${Math.round(csVolume * 0.6) || '60%'} of inquiries automatically`,
-        "Reduce response time by 75%",
+        `Handle ${Math.round(csVolume * autoHandlePercent / 100) || Math.round(csVolume * 0.6)} inquiries automatically per month`,
+        `Reduce response time by 75% for ${csRepetitivePercent > 0 ? csRepetitivePercent + '%' : 'repetitive'} inquiries`,
         "Provide 24/7 customer support",
         "Free up staff for complex issues",
+        "Improve customer satisfaction scores",
       ],
       requirements: ["FAQ documentation", "Integration with website/support channels", "Staff training"],
-      quickWin: scores.customerServiceAI > 70,
+      quickWin: scores.customerServiceAI > 70 && csRepetitivePercent >= 50,
       recommended: true,
       impactScore: scores.customerServiceAI,
     })
