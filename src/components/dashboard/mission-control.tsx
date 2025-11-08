@@ -53,17 +53,10 @@ export function MissionControl({
       title: "Secure pilot sponsorship",
       description: "Confirm budget and owners for the top opportunity. Premium unlocks vendor shortlists & ROI tracking.",
       cta: {
-        label: hasActiveSubscription ? "Track implementation" : "Upgrade for pilots",
-        href: hasActiveSubscription ? "/dashboard/implementation" : "/checkout?plan=premium",
+        label: hasActiveSubscription ? "View opportunities" : "Upgrade for pilots",
+        href: hasActiveSubscription ? "/dashboard" : "/checkout?plan=premium",
       },
       status: hasActiveSubscription ? "in_progress" : hasCompletedAssessment && hasOpportunities ? "todo" : "todo",
-    },
-    {
-      id: 4,
-      title: "Invite transformation stakeholders",
-      description: "Loop in operations, finance, and IT leads to co-own the AI roadmap inside Nectic.",
-      cta: { label: "Invite teammates", href: "/dashboard/team" },
-      status: "todo",
     },
   ]
 

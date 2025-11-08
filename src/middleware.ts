@@ -3,8 +3,7 @@ import type { NextRequest } from 'next/server'
 
 // Define paths that require authentication
 const PROTECTED_PATHS = [
-  '/dashboard/scanning',
-  '/dashboard/documents',
+  '/dashboard',
   '/dashboard/opportunities',
   '/dashboard/profile',
   '/dashboard/settings'

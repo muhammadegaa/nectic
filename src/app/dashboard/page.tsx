@@ -190,10 +190,7 @@ function DashboardContent() {
 
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-slate-900">Recommended Opportunities</h2>
-          <Link href="/dashboard/opportunities" className="text-sm font-medium text-amber-600 hover:text-amber-700">
-            View full portfolio →
-          </Link>
+          <h2 className="text-xl font-semibold text-slate-900">Your AI Opportunities</h2>
         </div>
 
         {error && (
@@ -205,7 +202,7 @@ function DashboardContent() {
                  {opportunities.length > 0 ? (
                    <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
                      {opportunities.map((opportunity) => (
-                       <Card key={opportunity.id} className="border border-slate-200/80 shadow-sm">
+                       <Card key={opportunity.id} className="border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow">
                          <CardContent className="space-y-4 p-6">
                            <div>
                              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
@@ -243,27 +240,34 @@ function DashboardContent() {
                                })
                              }}
                            >
-                             View playbook
+                             View details
                              <span className="ml-1">→</span>
                            </Link>
                          </CardContent>
                        </Card>
                      ))}
                    </div>
-        ) : (
-          <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 p-8 text-center">
-            <h3 className="text-lg font-semibold text-slate-900">Build your AI portfolio</h3>
-            <p className="mt-2 text-sm text-slate-500 max-w-lg mx-auto">
-              Complete the readiness diagnostic to generate a board-ready briefing with quantified automation impact.
-            </p>
-            <Link
-              href="/dashboard/assessment"
-              className="mt-4 inline-flex items-center justify-center rounded-full bg-amber-500 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-amber-600"
-            >
-              Start diagnostic
-            </Link>
-          </div>
-        )}
+        ) : !user?.hasCompletedAssessment ? (
+                   <div className="rounded-2xl border border-dashed border-slate-200 bg-gradient-to-br from-amber-50 to-white p-12 text-center">
+                     <h3 className="text-2xl font-semibold text-slate-900 mb-2">Discover Your AI Opportunities</h3>
+                     <p className="mt-2 text-base text-slate-600 max-w-lg mx-auto mb-6">
+                       Complete a quick 5-minute assessment to get personalized AI automation opportunities with ROI estimates.
+                     </p>
+                     <Link
+                       href="/dashboard/assessment"
+                       className="inline-flex items-center justify-center rounded-full bg-amber-500 px-8 py-3 text-base font-medium text-white shadow-lg hover:bg-amber-600 transition-all hover:scale-105"
+                     >
+                       Start Assessment
+                     </Link>
+                   </div>
+                 ) : (
+                   <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 p-8 text-center">
+                     <h3 className="text-lg font-semibold text-slate-900">Generating your opportunities...</h3>
+                     <p className="mt-2 text-sm text-slate-500 max-w-lg mx-auto">
+                       This usually takes 30-60 seconds. Your opportunities will appear here automatically.
+                     </p>
+                   </div>
+                 )}
       </div>
     </div>
   )

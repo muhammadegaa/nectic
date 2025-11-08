@@ -47,11 +47,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
 
   const navigationItems = [
     { name: "Dashboard", href: "/dashboard", icon: Home },
-    { name: "Analytics", href: "/dashboard/analytics", icon: BarChart2 },
-    { name: "Team", href: "/dashboard/team", icon: Users },
-    { name: "Documents", href: "/dashboard/documents", icon: FileText },
     { name: "Settings", href: "/dashboard/settings", icon: Settings },
-    { name: "Help", href: "/dashboard/help", icon: HelpCircle },
   ]
 
   return (

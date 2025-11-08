@@ -11,10 +11,6 @@ import { Separator } from "@/components/ui/separator"
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: Home },
-  { name: "Opportunities", href: "/dashboard/opportunities", icon: Lightbulb },
-  { name: "Implementation", href: "/dashboard/implementation", icon: FileText },
-  { name: "Analytics", href: "/dashboard/analytics", icon: CheckCircle2 },
-  { name: "Team", href: "/dashboard/team", icon: Users },
   { name: "Settings", href: "/dashboard/settings", icon: Settings },
 ]
 
