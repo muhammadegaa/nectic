@@ -424,13 +424,8 @@ export async function saveAssessmentResults(userId: string, answers: AssessmentA
       })
     }
 
-    // Generate opportunities based on assessment
-    try {
-      await generateOpportunitiesFromAssessment(userId)
-    } catch (error) {
-      console.error("Error generating opportunities:", error)
-      // Don't fail the assessment if opportunity generation fails
-    }
+    // Note: Opportunity generation is handled separately by /api/analyze route
+    // This allows for async processing without blocking the assessment submission
 
     return assessmentResult
   } catch (error) {

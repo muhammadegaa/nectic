@@ -7,5 +7,4 @@ export const ROUTES = {
   MARKETING: '/marketing',
   WELCOME: '/auth/welcome',
   ASSESSMENT: '/dashboard/assessment',
-  SCANNING: '/dashboard/scanning',
 } as const

@@ -45,8 +45,8 @@ export default function LoginPage() {
       getAssessmentResults(user.uid)
         .then((assessment) => {
           if (assessment) {
-            console.log("User has completed assessment, redirecting to /dashboard/scanning")
-            router.push("/dashboard/scanning")
+            console.log("User has completed assessment, redirecting to /dashboard")
+            router.push("/dashboard")
           } else {
             console.log("User needs to complete assessment, redirecting to /dashboard/assessment")
             router.push("/dashboard/assessment")
@@ -54,8 +54,8 @@ export default function LoginPage() {
         })
         .catch((error) => {
           console.error("Error checking assessment status:", error)
-          // Default to assessment page if there's an error
-          router.push("/dashboard/assessment")
+          // Default to dashboard - it will show assessment prompt if needed
+          router.push("/dashboard")
         })
     }
   }, [user, bypassAuth, loading, router])

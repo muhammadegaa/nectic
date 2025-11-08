@@ -223,7 +223,7 @@ export function AssessmentForm() {
     switch (currentQuestion.type) {
       case "multiple-choice":
         return (
-          <RadioGroup value={currentAnswer as string} onValueChange={handleAnswerChange} className="space-y-3">
+          <RadioGroup value={(currentAnswer as string) || ""} onValueChange={handleAnswerChange} className="space-y-3">
             {currentQuestion.options?.map((option) => (
               <div key={option} className="flex items-center space-x-2">
                 <RadioGroupItem value={option} id={option} />
