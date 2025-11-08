@@ -67,59 +67,18 @@ export default function OpportunityDetailPage() {
         <div className="md:col-span-2">
           <Card>
             <CardHeader>
-              <CardTitle>{opportunity.title || opportunity.name}</CardTitle>
+              <CardTitle className="text-2xl">{opportunity.title || opportunity.name}</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-600 mb-6">{opportunity.description}</p>
+              <p className="text-gray-600 text-lg mb-8">{opportunity.description}</p>
 
-              <div className="grid gap-4 md:grid-cols-2 mb-6">
-                <div className="flex items-center">
-                  <DollarSign className="h-5 w-5 text-green-500 mr-2" />
-                  <div>
-                    <p className="text-sm font-medium">Monthly Savings</p>
-                    <p className="text-lg">${opportunity.monthlySavings.toLocaleString()}</p>
-                  </div>
-                </div>
-                <div className="flex items-center">
-                  <Clock className="h-5 w-5 text-blue-500 mr-2" />
-                  <div>
-                    <p className="text-sm font-medium">Time Saved</p>
-                    <p className="text-lg">{opportunity.timeSavedHours} hours/month</p>
-                  </div>
-                </div>
-                <div className="flex items-center">
-                  <TrendingUp className="h-5 w-5 text-amber-500 mr-2" />
-                  <div>
-                    <p className="text-sm font-medium">Impact Score</p>
-                    <p className="text-lg">{opportunity.impactScore}%</p>
-                  </div>
-                </div>
-                <div className="flex items-center">
-                  <CheckCircle className="h-5 w-5 text-purple-500 mr-2" />
-                  <div>
-                    <p className="text-sm font-medium">Implementation Time</p>
-                    <p className="text-lg">{opportunity.implementationTimeWeeks} weeks</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mb-6">
-                <h3 className="text-lg font-medium mb-2">Benefits</h3>
-                <ul className="list-disc pl-5 space-y-1">
+              <div className="mb-8">
+                <h3 className="text-xl font-semibold mb-4">Key Benefits</h3>
+                <ul className="space-y-3">
                   {opportunity.benefits.map((benefit, index) => (
-                    <li key={index} className="text-gray-600">
-                      {benefit}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div>
-                <h3 className="text-lg font-medium mb-2">Requirements</h3>
-                <ul className="list-disc pl-5 space-y-1">
-                  {opportunity.requirements.map((requirement, index) => (
-                    <li key={index} className="text-gray-600">
-                      {requirement}
+                    <li key={index} className="flex items-start">
+                      <CheckCircle className="h-6 w-6 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
+                      <span className="text-gray-700 text-base">{benefit}</span>
                     </li>
                   ))}
                 </ul>
@@ -129,50 +88,52 @@ export default function OpportunityDetailPage() {
         </div>
 
         <div>
-          <Card>
+          <Card className="sticky top-6">
             <CardHeader>
-              <CardTitle>Implementation Details</CardTitle>
+              <CardTitle>ROI Summary</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div>
-                  <p className="text-sm font-medium">Department</p>
-                  <p className="text-gray-600 capitalize">{opportunity.department.replace(/-/g, " ")}</p>
+                <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                  <p className="text-sm font-medium text-green-800 mb-1">Monthly Savings</p>
+                  <p className="text-2xl font-bold text-green-900">${opportunity.monthlySavings.toLocaleString()}</p>
+                  <p className="text-xs text-green-700 mt-1">${(opportunity.monthlySavings * 12).toLocaleString()} annually</p>
                 </div>
-                <div>
-                  <p className="text-sm font-medium">Complexity</p>
-                  <div className="flex">
-                    {[...Array(5)].map((_, i) => (
-                      <div
-                        key={i}
-                        className={`h-2 w-8 mr-1 rounded ${
-                          i < opportunity.complexity ? "bg-blue-500" : "bg-gray-200"
-                        }`}
-                      />
-                    ))}
+                
+                <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="text-sm font-medium text-blue-800 mb-1">Time Saved</p>
+                  <p className="text-2xl font-bold text-blue-900">{opportunity.timeSavedHours} hrs/month</p>
+                  <p className="text-xs text-blue-700 mt-1">~{Math.round(opportunity.timeSavedHours / 40)} FTE equivalent</p>
+                </div>
+
+                <div className="pt-4 border-t">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm font-medium">Impact Score</p>
+                    <p className="text-lg font-bold text-amber-600">{opportunity.impactScore}%</p>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-amber-500 h-2 rounded-full transition-all"
+                      style={{ width: `${opportunity.impactScore}%` }}
+                    />
                   </div>
                 </div>
-                <div>
-                  <p className="text-sm font-medium">Implementation Effort</p>
-                  <div className="flex">
-                    {[...Array(5)].map((_, i) => (
-                      <div
-                        key={i}
-                        className={`h-2 w-8 mr-1 rounded ${
-                          i < opportunity.implementationEffort ? "bg-amber-500" : "bg-gray-200"
-                        }`}
-                      />
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <p className="text-sm font-medium">Quick Win</p>
-                  <p className="text-gray-600">{opportunity.quickWin ? "Yes" : "No"}</p>
+
+                <div className="pt-4 border-t">
+                  <p className="text-sm font-medium mb-2">Implementation Time</p>
+                  <p className="text-lg font-semibold">{opportunity.implementationTimeWeeks} weeks</p>
                 </div>
               </div>
 
-              <div className="mt-6">
-                <Button className="w-full">Start Implementation</Button>
+              <div className="mt-6 space-y-2">
+                <Link href="/checkout?plan=premium">
+                  <Button className="w-full" size="lg">
+                    Upgrade to See Vendors & Implementation Guide
+                  </Button>
+                </Link>
+                <p className="text-xs text-center text-gray-500">
+                  Premium features unlock vendor recommendations and step-by-step implementation plans
+                </p>
               </div>
             </CardContent>
           </Card>
