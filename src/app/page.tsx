@@ -1,12 +1,21 @@
+import Navigation from "@/components/navigation"
+import HeroSection from "@/components/hero-section"
+import HowItWorks from "@/components/how-it-works"
+import FeatureHighlights from "@/components/feature-highlights"
+import EnterpriseTrust from "@/components/enterprise-trust"
+import CtaSection from "@/components/cta-section"
+import Footer from "@/components/footer"
+
 export default function Home() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-24">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Nectic</h1>
-        <p className="text-lg text-muted-foreground">
-          Your application is ready to build.
-        </p>
-      </div>
+    <main className="w-full overflow-hidden bg-background">
+      <Navigation />
+      <HeroSection />
+      <HowItWorks />
+      <FeatureHighlights />
+      <EnterpriseTrust />
+      <CtaSection />
+      <Footer />
     </main>
   )
 }
