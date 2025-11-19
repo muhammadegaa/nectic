@@ -2,6 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
+@import "tw-animate-css";
+
 :root {
   /* Updated to warm amber/orange palette for YC-worthy aesthetic */
   --background: oklch(0.08 0 0); /* Deep dark */
@@ -76,7 +78,7 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
   }
   body {
     @apply bg-background text-foreground;
