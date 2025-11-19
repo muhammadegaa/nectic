@@ -42,7 +42,7 @@ export class FirebaseUserRepository implements IUserRepository {
 
   async create(user: Omit<UserProfile, 'id' | 'createdAt' | 'updatedAt'>): Promise<UserProfile> {
     const now = Timestamp.now()
-    const userRef = doc(db, this.usersCollection, user.id)
+    const userRef = doc(collection(db, this.usersCollection))
     
     await setDoc(userRef, {
       ...user,

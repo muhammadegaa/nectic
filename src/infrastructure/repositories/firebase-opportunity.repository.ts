@@ -77,7 +77,7 @@ export class FirebaseOpportunityRepository implements IOpportunityRepository {
         where('opportunityId', '==', opportunityId)
       )
       const vendorsSnapshot = await getDocs(vendorsQuery)
-      vendorRecommendations = vendorsSnapshot.docs.map(doc => doc.data())
+      vendorRecommendations = vendorsSnapshot.docs.map(doc => doc.data()) as any
     } catch (error) {
       // Vendors not available
       vendorRecommendations = undefined
@@ -88,7 +88,7 @@ export class FirebaseOpportunityRepository implements IOpportunityRepository {
     try {
       const guideDoc = await getDoc(doc(db, this.guidesCollection, opportunityId))
       if (guideDoc.exists()) {
-        implementationGuide = guideDoc.data()
+        implementationGuide = guideDoc.data() as any
       }
     } catch (error) {
       // Guide not available

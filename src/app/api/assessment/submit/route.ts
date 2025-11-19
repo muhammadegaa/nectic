@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { SubmitAssessmentUseCase } from '@/application/use-cases/assessment/submit-assessment.use-case'
 import { CalculateAssessmentScoresUseCase } from '@/application/use-cases/assessment/calculate-assessment-scores.use-case'
-import { getUserRepository, getAssessmentRepository } from '@/infrastructure/di/container'
+import { getUserRepository, getAssessmentRepository, getAIService } from '@/infrastructure/di/container'
 import { DomainError, ValidationError } from '@/application/errors/domain-errors'
 
 export async function POST(request: NextRequest) {
@@ -32,11 +32,13 @@ export async function POST(request: NextRequest) {
     // Initialize use cases with dependencies
     const assessmentRepository = getAssessmentRepository()
     const userRepository = getUserRepository()
+    const aiService = getAIService()
     const calculateScores = new CalculateAssessmentScoresUseCase()
     const submitAssessment = new SubmitAssessmentUseCase(
       assessmentRepository,
       userRepository,
-      calculateScores
+      calculateScores,
+      aiService
     )
 
     // Execute use case

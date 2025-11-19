@@ -4,7 +4,7 @@
  */
 
 import { IAIService } from '@/domain/services/ai-service.interface'
-import { AssessmentResult } from '@/domain/entities/assessment.entity'
+import { AssessmentResult, NLPExtractedData } from '@/domain/entities/assessment.entity'
 import { AIOpportunity } from '@/domain/entities/opportunity.entity'
 
 export class PerplexityAIService implements IAIService {
@@ -163,6 +163,30 @@ Return ONLY valid JSON array, no markdown or extra text.`
         isPremium: true,
       },
     ]
+  }
+
+  async extractStructuredDataFromText(text: string): Promise<NLPExtractedData> {
+    // Simple implementation - extract primary pain point from text
+    // In a real implementation, this would use NLP/LLM to extract structured data
+    const lowerText = text.toLowerCase()
+    
+    const painPoints: Record<string, string> = {
+      'document': 'document processing',
+      'paperwork': 'document processing',
+      'customer': 'customer service',
+      'support': 'customer service',
+      'data': 'data processing',
+      'workflow': 'workflow automation',
+      'process': 'workflow automation',
+    }
+
+    for (const [keyword, painPoint] of Object.entries(painPoints)) {
+      if (lowerText.includes(keyword)) {
+        return { primaryPainPoint: painPoint }
+      }
+    }
+
+    return {}
   }
 }
 

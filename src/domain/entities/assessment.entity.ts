@@ -22,6 +22,11 @@ export interface AssessmentAnswer {
   answeredAt: Date
 }
 
+export interface NLPExtractedData {
+  primaryPainPoint?: string
+  [key: string]: any
+}
+
 export interface AssessmentResult {
   id: string
   userId: string
@@ -34,5 +39,6 @@ export interface AssessmentResult {
   }
   completedAt: Date
   primaryPainPoint?: string
+  nlpExtractedData?: NLPExtractedData
 }
 

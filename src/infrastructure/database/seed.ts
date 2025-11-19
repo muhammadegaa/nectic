@@ -157,7 +157,7 @@ function generateDeals(count: number): Deal[] {
     
     // Only add actualCloseDate if deal is closed
     if (stage === 'closed-won' || stage === 'closed-lost') {
-      deal.actualCloseDate = randomDate(new Date(createdAt), new Date()).toISOString()
+      deal.actualCloseDate = randomDate(new Date(createdAt), new Date())
     }
     
     deals.push(deal)

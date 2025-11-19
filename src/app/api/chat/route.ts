@@ -19,7 +19,7 @@ function detectIntent(message: string, intentMappings: any[]): string[] {
   // Check each intent mapping
   for (const mapping of intentMappings) {
     const keywords = mapping.keywords.map((k: string) => k.toLowerCase())
-    const hasMatch = keywords.some(keyword => lowerMessage.includes(keyword))
+    const hasMatch = keywords.some((keyword: string) => lowerMessage.includes(keyword))
 
     if (hasMatch) {
       mapping.collections.forEach((col: string) => matchedCollections.add(col))

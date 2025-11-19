@@ -15,7 +15,8 @@ import { FirebaseAssessmentRepository } from '../repositories/firebase-assessmen
 import { FirebaseOpportunityRepository } from '../repositories/firebase-opportunity.repository'
 import { FirebasePaymentRepository } from '../repositories/firebase-payment.repository'
 import { PerplexityAIService } from '../services/perplexity-ai.service'
-import { StripePaymentService } from '../services/stripe-payment.service'
+// Temporarily disabled for MVP - causes build issues
+// import { StripePaymentService } from '../services/stripe-payment.service'
 
 // Repository instances
 let userRepository: IUserRepository
@@ -65,10 +66,12 @@ export function getAIService(): IAIService {
 }
 
 export function getPaymentService(): IPaymentService {
-  if (!paymentService) {
-    paymentService = new StripePaymentService()
-  }
-  return paymentService
+  // Temporarily disabled for MVP - causes build issues
+  // if (!paymentService) {
+  //   paymentService = new StripePaymentService()
+  // }
+  // return paymentService
+  throw new Error('Payment service not available in MVP')
 }
 
 
