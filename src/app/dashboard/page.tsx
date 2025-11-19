@@ -71,7 +71,7 @@ export default function DashboardPage() {
           </div>
           <Button
             onClick={() => router.push("/agents/new")}
-            className="bg-primary text-primary-foreground hover:bg-primary/90"
+            className="bg-foreground text-background hover:bg-foreground/90"
           >
             <Plus className="w-4 h-4 mr-2" />
             New Agent
@@ -127,7 +127,7 @@ export default function DashboardPage() {
               </p>
               <Button
                 onClick={() => router.push("/agents/new")}
-                className="bg-primary text-primary-foreground hover:bg-primary/90"
+                className="bg-foreground text-background hover:bg-foreground/90"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Create Your First Agent

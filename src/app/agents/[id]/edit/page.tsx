@@ -347,7 +347,7 @@ export default function EditAgentPage() {
               >
                 Delete Agent
               </Button>
-              <Button type="submit" disabled={isLoading} className="bg-primary text-primary-foreground hover:bg-primary/90">
+              <Button type="submit" disabled={isLoading} className="bg-foreground text-background hover:bg-foreground/90">
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Save Changes
               </Button>
