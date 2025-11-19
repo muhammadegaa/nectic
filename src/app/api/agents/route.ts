@@ -15,7 +15,7 @@ const agentRepo = new FirebaseAgentRepository()
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { name, description, collections, intentMappings } = body
+    const { name, description, collections, intentMappings, userId } = body
 
     if (!name || !collections || !Array.isArray(collections) || collections.length === 0) {
       return NextResponse.json(
@@ -24,11 +24,19 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'User ID is required' },
+        { status: 401 }
+      )
+    }
+
     const agent = await agentRepo.create({
       name,
       description,
       collections,
       intentMappings: intentMappings || [],
+      userId,
     })
 
     return NextResponse.json(agent)
@@ -41,9 +49,12 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const agents = await agentRepo.findAll()
+    const { searchParams } = new URL(request.url)
+    const userId = searchParams.get('userId') || undefined
+    
+    const agents = await agentRepo.findAll(userId)
     return NextResponse.json(agents)
   } catch (error: any) {
     console.error('Error fetching agents:', error)

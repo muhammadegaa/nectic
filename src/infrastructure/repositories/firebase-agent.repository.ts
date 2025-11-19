@@ -31,8 +31,14 @@ export class FirebaseAgentRepository {
     return doc.data() as Agent
   }
 
-  async findAll(): Promise<Agent[]> {
-    const snapshot = await adminDb.collection(this.collection).get()
+  async findAll(userId?: string): Promise<Agent[]> {
+    let query: FirebaseFirestore.Query = adminDb.collection(this.collection)
+    
+    if (userId) {
+      query = query.where('userId', '==', userId)
+    }
+    
+    const snapshot = await query.get()
     return snapshot.docs.map(doc => doc.data() as Agent)
   }
 

@@ -53,9 +53,8 @@ export default function Navigation() {
               <span className="absolute bottom-0 left-0 w-0 h-px bg-foreground transition-all duration-200 group-hover:w-full" />
             </a>
             <Button
-              variant="ghost"
               size="sm"
-              className="group text-sm text-foreground/60 hover:text-foreground transition-all duration-200"
+              className="group bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 text-sm font-medium transition-all duration-200 hover:shadow-md hover:shadow-primary/30 hover:scale-[1.02] active:scale-[0.98]"
             >
               Talk to us
               <ArrowRight className="w-3.5 h-3.5 ml-1.5 transition-transform duration-200 group-hover:translate-x-0.5" />
@@ -94,9 +93,8 @@ export default function Navigation() {
               Security
             </a>
             <Button
-              variant="ghost"
               size="sm"
-              className="w-full justify-start group"
+              className="w-full justify-center group bg-primary text-primary-foreground hover:bg-primary/90"
             >
               Talk to us
               <ArrowRight className="w-3.5 h-3.5 ml-1.5 transition-transform duration-200 group-hover:translate-x-0.5" />

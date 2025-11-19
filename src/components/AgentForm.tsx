@@ -5,8 +5,7 @@ import { useForm, useFieldArray } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { useRouter } from "next/navigation"
-import { collection, addDoc, serverTimestamp } from "firebase/firestore"
-import { db } from "@/lib/firebase"
+import { useAuth } from "@/contexts/auth-context"
 import { Loader2, Plus, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -39,6 +38,7 @@ type AgentFormValues = z.infer<typeof agentSchema>
 
 export function AgentForm() {
     const router = useRouter()
+    const { user } = useAuth()
     const [isLoading, setIsLoading] = useState(false)
 
     const form = useForm<AgentFormValues>({
@@ -56,20 +56,41 @@ export function AgentForm() {
     })
 
     async function onSubmit(data: AgentFormValues) {
+        if (!user) {
+            router.push("/auth/login")
+            return
+        }
+
         setIsLoading(true)
         try {
-            const docRef = await addDoc(collection(db, "agents"), {
-                name: data.name,
-                collections: data.collections,
-                intents: data.intents.map(intent => ({
-                    keywords: intent.keywords.split(",").map(k => k.trim()).filter(k => k),
-                    collection: intent.collection
-                })),
-                createdAt: serverTimestamp(),
-                updatedAt: serverTimestamp(),
+            // Transform intents to intentMappings format
+            const intentMappings = data.intents.map(intent => ({
+                intent: intent.keywords.split(",")[0].trim() || "general",
+                keywords: intent.keywords.split(",").map(k => k.trim()).filter(k => k),
+                collections: [intent.collection]
+            }))
+
+            const response = await fetch("/api/agents", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    name: data.name,
+                    description: "",
+                    collections: data.collections,
+                    intentMappings,
+                    userId: user.uid,
+                }),
             })
 
-            router.push(`/agents/${docRef.id}/chat`)
+            if (!response.ok) {
+                const error = await response.json()
+                throw new Error(error.message || "Failed to create agent")
+            }
+
+            const agent = await response.json()
+            router.push(`/agents/${agent.id}/chat`)
         } catch (error) {
             console.error("Error creating agent:", error)
             // In a real app, show toast error

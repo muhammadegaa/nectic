@@ -9,6 +9,7 @@ export interface Agent {
   description?: string
   collections: string[] // e.g., ['finance_transactions', 'sales_deals']
   intentMappings: IntentMapping[] // Intent keywords → collections
+  userId: string // User who owns this agent
   createdAt: string
   updatedAt: string
 }
