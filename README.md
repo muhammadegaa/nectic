@@ -152,8 +152,12 @@ NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
 NEXT_PUBLIC_FIREBASE_APP_ID=
 
-# Firebase Admin (for seeding)
-FIREBASE_SERVICE_ACCOUNT_KEY=  # Or use firebase-service-account.json file
+# Firebase Admin (for server-side operations)
+# In Vercel: Set FIREBASE_SERVICE_ACCOUNT_KEY or FIREBASE_ADMIN_SDK_KEY
+# Value should be the entire JSON service account key as a single-line string
+# Get it from: Firebase Console → Project Settings → Service Accounts → Generate New Private Key
+# Convert to single line: cat your-service-account.json | jq -c .
+FIREBASE_SERVICE_ACCOUNT_KEY=  # Or use firebase-service-account.json file locally
 
 # OpenAI (for AI agent)
 OPENAI_API_KEY=
@@ -161,6 +165,8 @@ OPENAI_API_KEY=
 # Tinker (for model fine-tuning)
 TINKER_API_KEY=  # Required for tinker-training scripts
 ```
+<｜tool▁calls▁begin｜><｜tool▁call▁begin｜>
+run_terminal_cmd
 
 ## 📝 Next Steps
 
