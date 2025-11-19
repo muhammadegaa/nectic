@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Plus, Trash2, Loader2, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { useToast } from "@/components/ui/use-toast"
+import { DataPreview } from "@/components/agents/DataPreview"
 
 const AVAILABLE_COLLECTIONS = [
   { id: "finance_transactions", label: "Finance Transactions", description: "Financial transactions data" },
@@ -180,32 +181,36 @@ export default function NewAgentPage() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Data Collections</CardTitle>
-              <CardDescription>Select the data sources this agent can access</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {AVAILABLE_COLLECTIONS.map((collection) => (
-                  <label
-                    key={collection.id}
-                    className="flex items-start p-4 border border-border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
-                  >
-                    <Checkbox
-                      checked={selectedCollections.includes(collection.id)}
-                      onCheckedChange={() => handleCollectionToggle(collection.id)}
-                      className="mt-1 mr-3"
-                    />
-                    <div className="flex-1">
-                      <div className="font-medium text-foreground">{collection.label}</div>
-                      <div className="text-sm text-foreground/60 mt-1">{collection.description}</div>
-                    </div>
-                  </label>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Data Collections</CardTitle>
+                <CardDescription>Select the data sources this agent can access</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {AVAILABLE_COLLECTIONS.map((collection) => (
+                    <label
+                      key={collection.id}
+                      className="flex items-start p-4 border border-border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                    >
+                      <Checkbox
+                        checked={selectedCollections.includes(collection.id)}
+                        onCheckedChange={() => handleCollectionToggle(collection.id)}
+                        className="mt-1 mr-3"
+                      />
+                      <div className="flex-1">
+                        <div className="font-medium text-foreground">{collection.label}</div>
+                        <div className="text-sm text-foreground/60 mt-1">{collection.description}</div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <DataPreview selectedCollections={selectedCollections} />
+          </div>
 
           <Card>
             <CardHeader>

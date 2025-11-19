@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Loader2, Plus, Trash2, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import type { Agent } from "@/domain/entities/agent.entity"
+import { DataPreview } from "@/components/agents/DataPreview"
 
 const AVAILABLE_COLLECTIONS = [
   { id: "finance_transactions", label: "Finance Transactions" },
@@ -237,34 +238,48 @@ export default function EditAgentPage() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label>Data Collections</Label>
-                <div className="grid gap-2">
-                  {AVAILABLE_COLLECTIONS.map((item) => (
-                    <div key={item.id} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={item.id}
-                        checked={form.watch("collections")?.includes(item.id)}
-                        onCheckedChange={(checked) => {
-                          const current = form.watch("collections") || []
-                          if (checked) {
-                            form.setValue("collections", [...current, item.id])
-                          } else {
-                            form.setValue(
-                              "collections",
-                              current.filter((value) => value !== item.id)
-                            )
-                          }
-                        }}
-                      />
-                      <Label htmlFor={item.id}>{item.label}</Label>
-                    </div>
-                  ))}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Data Collections</Label>
+                  <div className="grid gap-2">
+                    {AVAILABLE_COLLECTIONS.map((item) => (
+                      <div key={item.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={item.id}
+                          checked={form.watch("collections")?.includes(item.id)}
+                          onCheckedChange={(checked) => {
+                            const current = form.watch("collections") || []
+                            if (checked) {
+                              form.setValue("collections", [...current, item.id])
+                            } else {
+                              form.setValue(
+                                "collections",
+                                current.filter((value) => value !== item.id)
+                              )
+                            }
+                          }}
+                        />
+                        <Label htmlFor={item.id}>{item.label}</Label>
+                      </div>
+                    ))}
+                  </div>
+                  {form.formState.errors.collections && (
+                    <p className="text-sm text-destructive">{form.formState.errors.collections.message}</p>
+                  )}
                 </div>
-                {form.formState.errors.collections && (
-                  <p className="text-sm text-destructive">{form.formState.errors.collections.message}</p>
-                )}
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Data Preview</CardTitle>
+              <CardDescription>
+                Preview sample data from selected collections
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <DataPreview selectedCollections={form.watch("collections") || []} />
             </CardContent>
           </Card>
 
