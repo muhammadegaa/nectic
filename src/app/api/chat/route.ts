@@ -5,11 +5,13 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { FirebaseAgentRepository } from '@/infrastructure/repositories/firebase-agent.repository'
+import { FirebaseConversationRepository } from '@/infrastructure/repositories/firebase-conversation.repository'
 import { adminDb } from '@/infrastructure/firebase/firebase-server'
 
 export const dynamic = 'force-dynamic'
 
 const agentRepo = new FirebaseAgentRepository()
+const conversationRepo = new FirebaseConversationRepository()
 
 /**
  * Detect intent from user message using agent's intent mappings
@@ -68,12 +70,19 @@ async function queryCollections(collections: string[], limit: number = 10): Prom
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { agentId, message } = body
+    const { agentId, message, userId, conversationId } = body
 
     if (!agentId || !message) {
       return NextResponse.json(
         { error: 'agentId and message are required' },
         { status: 400 }
+      )
+    }
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'userId is required' },
+        { status: 401 }
       )
     }
 
@@ -153,8 +162,47 @@ Please provide a clear, natural language answer based on this data.`
     const completion = await openaiResponse.json()
     const response = completion.choices[0]?.message?.content || 'I apologize, but I could not generate a response.'
 
+    // Handle conversation persistence
+    let finalConversationId = conversationId
+    let conversationTitle = ''
+
+    if (!conversationId) {
+      // Create new conversation with title from first message
+      conversationTitle = message.length > 50 ? message.substring(0, 50) + '...' : message
+      const newConversation = await conversationRepo.create({
+        agentId,
+        userId,
+        title: conversationTitle,
+      })
+      finalConversationId = newConversation.id
+    } else {
+      // Update conversation title if this is the first user message
+      const existingConversation = await conversationRepo.findById(conversationId)
+      if (existingConversation && existingConversation.messageCount === 0) {
+        conversationTitle = message.length > 50 ? message.substring(0, 50) + '...' : message
+        await conversationRepo.update(conversationId, { title: conversationTitle })
+      }
+    }
+
+    // Save user message
+    await conversationRepo.addMessage({
+      conversationId: finalConversationId,
+      role: 'user',
+      content: message,
+      status: 'sent',
+    })
+
+    // Save assistant response
+    await conversationRepo.addMessage({
+      conversationId: finalConversationId,
+      role: 'assistant',
+      content: response,
+      status: 'sent',
+    })
+
     return NextResponse.json({
       response,
+      conversationId: finalConversationId,
       collectionsUsed: relevantCollections,
       dataCount: Object.values(data).reduce((sum, arr) => sum + arr.length, 0),
     })
