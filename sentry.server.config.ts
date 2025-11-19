@@ -4,5 +4,9 @@ if (process.env.SENTRY_DSN) {
   Sentry.init({
     dsn: process.env.SENTRY_DSN,
     tracesSampleRate: Number(process.env.SENTRY_TRACES_SAMPLE_RATE || 0.1),
+    integrations: [
+      // Only include integrations we actually use
+      // Exclude Prisma since we're not using it
+    ],
   })
 }
