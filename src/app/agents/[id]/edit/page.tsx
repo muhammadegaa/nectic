@@ -202,7 +202,7 @@ export default function EditAgentPage() {
         <h1 className="text-4xl font-light text-foreground mb-8">Edit Agent</h1>
 
         {error && (
-          <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive">
+          <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive text-sm">
             {error}
           </div>
         )}
@@ -277,7 +277,7 @@ export default function EditAgentPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {fields.map((field, index) => (
-                <div key={field.id} className="flex gap-4 items-start p-4 border rounded-lg">
+                        <div key={field.id} className="flex gap-4 items-start p-4 border border-border rounded-lg bg-muted/30">
                   <div className="flex-1 space-y-2">
                     <Label>Keywords (comma separated)</Label>
                     <Textarea

@@ -6,29 +6,38 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useAuth } from "@/contexts/auth-context"
 import { ArrowRight, Loader2 } from "lucide-react"
+import { useToast } from "@/components/ui/use-toast"
 
 export default function SignupPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
-  const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
   const { signUpWithEmail, signInWithGoogle } = useAuth()
   const router = useRouter()
+  const { toast } = useToast()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError("")
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match")
+      toast({
+        title: "Validation Error",
+        description: "Passwords do not match",
+        variant: "destructive",
+      })
       return
     }
 
     if (password.length < 6) {
-      setError("Password must be at least 6 characters")
+      toast({
+        title: "Validation Error",
+        description: "Password must be at least 6 characters",
+        variant: "destructive",
+      })
       return
     }
 
@@ -36,37 +45,51 @@ export default function SignupPage() {
 
     try {
       await signUpWithEmail(email, password)
+      toast({
+        title: "Account created!",
+        description: "Welcome to Nectic. Your account has been created successfully.",
+      })
       router.push("/dashboard")
     } catch (err: any) {
-      setError(err.message || "Failed to create account. Please try again.")
+      toast({
+        title: "Sign up failed",
+        description: err.message || "Failed to create account. Please try again.",
+        variant: "destructive",
+      })
     } finally {
       setLoading(false)
     }
   }
 
   const handleGoogleSignIn = async () => {
-    setError("")
     setLoading(true)
 
     try {
       await signInWithGoogle()
+      toast({
+        title: "Welcome!",
+        description: "Your account has been created successfully.",
+      })
       router.push("/dashboard")
     } catch (err: any) {
-      setError(err.message || "Failed to sign in with Google.")
+      toast({
+        title: "Sign up failed",
+        description: err.message || "Failed to sign up with Google.",
+        variant: "destructive",
+      })
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <div className="w-full max-w-md space-y-8">
-        <div className="text-center">
-          <h1 className="text-4xl font-light text-foreground mb-2">Create account</h1>
-          <p className="text-foreground/60">Get started with Nectic</p>
-        </div>
-
-        <div className="space-y-6">
+    <div className="min-h-screen flex items-center justify-center bg-background px-4 py-12">
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-3xl font-light text-foreground">Create account</CardTitle>
+          <CardDescription>Get started with Nectic</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
@@ -109,15 +132,9 @@ export default function SignupPage() {
               />
             </div>
 
-            {error && (
-              <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">
-                {error}
-              </div>
-            )}
-
             <Button
               type="submit"
-              className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+              className="w-full bg-foreground text-background hover:bg-foreground/90"
               disabled={loading}
             >
               {loading ? (
@@ -139,7 +156,7 @@ export default function SignupPage() {
               <span className="w-full border-t border-border" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-foreground/50">Or continue with</span>
+              <span className="bg-card px-2 text-foreground/50">Or continue with</span>
             </div>
           </div>
 
@@ -173,13 +190,12 @@ export default function SignupPage() {
 
           <p className="text-center text-sm text-foreground/60">
             Already have an account?{" "}
-            <Link href="/auth/login" className="text-primary hover:underline">
+            <Link href="/auth/login" className="text-foreground hover:underline">
               Sign in
             </Link>
           </p>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }
-
