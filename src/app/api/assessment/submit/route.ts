@@ -9,6 +9,8 @@ import { CalculateAssessmentScoresUseCase } from '@/application/use-cases/assess
 import { getUserRepository, getAssessmentRepository, getAIService } from '@/infrastructure/di/container'
 import { DomainError, ValidationError } from '@/application/errors/domain-errors'
 
+export const dynamic = 'force-dynamic'
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()

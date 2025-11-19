@@ -8,6 +8,8 @@ import { CreateCheckoutSessionUseCase } from '@/application/use-cases/payment/cr
 import { getPaymentService } from '@/infrastructure/di/container'
 import { ValidationError } from '@/application/errors/domain-errors'
 
+export const dynamic = 'force-dynamic'
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()

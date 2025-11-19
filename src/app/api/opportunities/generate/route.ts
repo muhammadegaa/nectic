@@ -8,6 +8,8 @@ import { GenerateOpportunitiesUseCase } from '@/application/use-cases/opportunit
 import { getAssessmentRepository, getOpportunityRepository, getAIService } from '@/infrastructure/di/container'
 import { DomainError } from '@/application/errors/domain-errors'
 
+export const dynamic = 'force-dynamic'
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()

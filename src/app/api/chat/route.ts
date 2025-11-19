@@ -7,6 +7,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { FirebaseAgentRepository } from '@/infrastructure/repositories/firebase-agent.repository'
 import { adminDb } from '@/infrastructure/firebase/firebase-server'
 
+export const dynamic = 'force-dynamic'
+
 const agentRepo = new FirebaseAgentRepository()
 
 /**

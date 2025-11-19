@@ -8,6 +8,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { FirebaseAgentRepository } from '@/infrastructure/repositories/firebase-agent.repository'
 import type { Agent, IntentMapping } from '@/domain/entities/agent.entity'
 
+export const dynamic = 'force-dynamic'
+
 const agentRepo = new FirebaseAgentRepository()
 
 export async function POST(request: NextRequest) {

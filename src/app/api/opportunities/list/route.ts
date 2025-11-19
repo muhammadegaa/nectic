@@ -7,6 +7,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getOpportunityRepository } from '@/infrastructure/di/container'
 import { OpportunityListDTO } from '@/application/dtos/opportunity.dto'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams

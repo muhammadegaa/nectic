@@ -6,6 +6,8 @@
 import { NextResponse } from 'next/server'
 import { adminDb } from '@/infrastructure/firebase/firebase-server'
 
+export const dynamic = 'force-dynamic'
+
 // Helper functions
 function randomDate(start: Date, end: Date): string {
   return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime())).toISOString()
