@@ -27,8 +27,15 @@ export default function Footer() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-12 mb-12">
           {/* Brand */}
           <div>
-            <Link href="/" className="flex items-center gap-2.5 mb-4">
-              <img src="/logo.svg" alt="Nectic" className="w-8 h-8" />
+            <Link
+              href="/"
+              className="flex items-center gap-2.5 mb-4 group transition-opacity duration-200 hover:opacity-80"
+            >
+              <img
+                src="/logo.svg"
+                alt="Nectic"
+                className="w-8 h-8 transition-transform duration-200 group-hover:scale-105"
+              />
               <span className="text-xl font-medium text-foreground">Nectic</span>
             </Link>
           </div>
@@ -41,7 +48,7 @@ export default function Footer() {
                 <li key={link.label}>
                   <a
                     href={link.href}
-                    className="text-sm text-foreground/50 hover:text-foreground transition-colors"
+                    className="text-sm text-foreground/50 hover:text-foreground transition-colors duration-200"
                   >
                     {link.label}
                   </a>
@@ -58,7 +65,7 @@ export default function Footer() {
                 <li key={link.label}>
                   <a
                     href={link.href}
-                    className="text-sm text-foreground/50 hover:text-foreground transition-colors"
+                    className="text-sm text-foreground/50 hover:text-foreground transition-colors duration-200"
                   >
                     {link.label}
                   </a>
@@ -75,7 +82,7 @@ export default function Footer() {
                 <li key={link.label}>
                   <a
                     href={link.href}
-                    className="text-sm text-foreground/50 hover:text-foreground transition-colors"
+                    className="text-sm text-foreground/50 hover:text-foreground transition-colors duration-200"
                   >
                     {link.label}
                   </a>

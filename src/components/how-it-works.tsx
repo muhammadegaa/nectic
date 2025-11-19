@@ -38,16 +38,22 @@ export default function HowItWorks() {
             <a
               key={index}
               href={product.link}
-              className={`group block p-8 border border-border hover:border-foreground/20 transition-all duration-300 ${
-                isLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+              className={`group block p-8 border border-border hover:border-foreground/20 transition-all duration-300 ease-out hover:bg-foreground/[0.01] ${
+                isLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
               }`}
-              style={{ transitionDelay: `${index * 100}ms` }}
+              style={{
+                transitionDelay: `${index * 100}ms`,
+              }}
             >
               <div className="flex items-start justify-between mb-4">
-                <h3 className="text-2xl font-light text-foreground">{product.title}</h3>
-                <ArrowRight className="w-5 h-5 text-foreground/40 group-hover:text-foreground group-hover:translate-x-1 transition-all" />
+                <h3 className="text-2xl font-light text-foreground group-hover:text-foreground/90 transition-colors duration-200">
+                  {product.title}
+                </h3>
+                <ArrowRight className="w-5 h-5 text-foreground/40 group-hover:text-foreground group-hover:translate-x-1 transition-all duration-200 flex-shrink-0 ml-4" />
               </div>
-              <p className="text-foreground/60 leading-relaxed">{product.description}</p>
+              <p className="text-foreground/60 leading-relaxed group-hover:text-foreground/70 transition-colors duration-200">
+                {product.description}
+              </p>
             </a>
           ))}
         </div>
