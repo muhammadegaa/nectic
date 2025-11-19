@@ -18,13 +18,15 @@ if (getApps().length === 0) {
     let projectId: string | undefined = undefined
 
     // Option 1: Service account key from environment variable (JSON string)
-    const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY
+    // Support both FIREBASE_SERVICE_ACCOUNT_KEY and FIREBASE_ADMIN_SDK_KEY
+    const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY || process.env.FIREBASE_ADMIN_SDK_KEY
     if (serviceAccountKey) {
       try {
         serviceAccount = JSON.parse(serviceAccountKey)
         projectId = serviceAccount.project_id
       } catch (e) {
-        console.error('Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY:', e)
+        console.error('Failed to parse Firebase service account key:', e)
+        console.error('Make sure the value is the entire JSON as a single-line string')
       }
     } 
     // Option 2: Service account key from file
