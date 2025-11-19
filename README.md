@@ -81,6 +81,56 @@ src/
 └── presentation/          # Presentation layer (hooks, components)
 ```
 
+## 🤖 Model Fine-Tuning with Tinker
+
+Nectic can fine-tune its own language models for generating AI opportunity reports using the [Tinker platform](https://tinker.ai).
+
+### Overview
+
+The `tinker-training/` subproject contains Python scripts to:
+- Train LoRA adapters on business context → opportunity report examples
+- Export checkpoints for inference
+- Sample from trained models
+
+### Quick Start
+
+1. **Navigate to training directory:**
+   ```bash
+   cd tinker-training
+   ```
+
+2. **Set up Python environment:**
+   ```bash
+   python -m venv .venv
+   source .venv/bin/activate  # Windows: .venv\Scripts\activate
+   pip install -r requirements.txt
+   ```
+
+3. **Set Tinker API key:**
+   ```bash
+   export TINKER_API_KEY=your_api_key_here
+   ```
+
+4. **Train a model:**
+   ```bash
+   python train_nectic_opportunity_model.py \
+     --dataset data/nectic_examples.jsonl \
+     --num-steps 500
+   ```
+
+5. **Test the model:**
+   ```bash
+   python sample_nectic_model.py \
+     --checkpoint-name nectic-v1_weights_final \
+     --business-context "A restaurant uses paper menus and phone orders..."
+   ```
+
+### Integration
+
+The trained model can be integrated into Nectic's opportunity generation pipeline by replacing the current AI service implementation.
+
+For detailed documentation, see [`tinker-training/README.md`](./tinker-training/README.md).
+
 ## 🔧 Development
 
 ### Available Scripts
@@ -107,6 +157,9 @@ FIREBASE_SERVICE_ACCOUNT_KEY=  # Or use firebase-service-account.json file
 
 # OpenAI (for AI agent)
 OPENAI_API_KEY=
+
+# Tinker (for model fine-tuning)
+TINKER_API_KEY=  # Required for tinker-training scripts
 ```
 
 ## 📝 Next Steps
