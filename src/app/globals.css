@@ -5,75 +5,75 @@
 @import "tw-animate-css";
 
 :root {
-  /* Updated to warm amber/orange palette for YC-worthy aesthetic */
-  --background: oklch(0.08 0 0); /* Deep dark */
-  --foreground: oklch(0.98 0 0); /* Near white */
-  --card: oklch(0.12 0 0); /* Card background */
-  --card-foreground: oklch(0.98 0 0);
-  --primary: oklch(0.65 0.22 40); /* Vibrant orange */
-  --primary-foreground: oklch(0.98 0 0); /* Changed to white for better contrast */
-  --secondary: oklch(0.7 0.2 45); /* Warm amber */
-  --secondary-foreground: oklch(0.08 0 0);
-  --muted: oklch(0.25 0 0);
-  --muted-foreground: oklch(0.65 0 0);
-  --accent: oklch(0.75 0.25 50); /* Golden amber accent */
-  --accent-foreground: oklch(0.08 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(1 0 0);
-  --border: oklch(0.2 0 0);
-  --input: oklch(0.15 0 0);
-  --ring: oklch(0.75 0.25 50);
+  /* Dark theme - warm amber/orange palette */
+  --background: 0 0% 8%; /* Deep dark */
+  --foreground: 0 0% 98%; /* Near white */
+  --card: 0 0% 12%;
+  --card-foreground: 0 0% 98%;
+  --primary: 40 100% 65%; /* Vibrant orange */
+  --primary-foreground: 0 0% 98%;
+  --secondary: 45 100% 70%; /* Warm amber */
+  --secondary-foreground: 0 0% 8%;
+  --muted: 0 0% 25%;
+  --muted-foreground: 0 0% 65%;
+  --accent: 50 100% 75%; /* Golden amber accent */
+  --accent-foreground: 0 0% 8%;
+  --destructive: 27 100% 58%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 0 0% 20%;
+  --input: 0 0% 15%;
+  --ring: 50 100% 75%;
   --radius: 0.5rem;
-  --popover: oklch(0.145 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --chart-1: oklch(0.7 0.2 45);
-  --chart-2: oklch(0.75 0.25 50);
-  --chart-3: oklch(0.65 0.22 40);
-  --chart-4: oklch(0.72 0.18 55);
-  --chart-5: oklch(0.68 0.23 35);
-  --sidebar: oklch(0.1 0 0);
-  --sidebar-foreground: oklch(0.98 0 0);
-  --sidebar-primary: oklch(0.65 0.22 40);
-  --sidebar-primary-foreground: oklch(0.98 0 0); /* Changed to white */
-  --sidebar-accent: oklch(0.75 0.25 50);
-  --sidebar-accent-foreground: oklch(0.08 0 0);
-  --sidebar-border: oklch(0.18 0 0);
-  --sidebar-ring: oklch(0.75 0.25 50);
+  --popover: 0 0% 14.5%;
+  --popover-foreground: 0 0% 98.5%;
+  --chart-1: 45 100% 70%;
+  --chart-2: 50 100% 75%;
+  --chart-3: 40 100% 65%;
+  --chart-4: 55 100% 72%;
+  --chart-5: 35 100% 68%;
+  --sidebar: 0 0% 10%;
+  --sidebar-foreground: 0 0% 98%;
+  --sidebar-primary: 40 100% 65%;
+  --sidebar-primary-foreground: 0 0% 98%;
+  --sidebar-accent: 50 100% 75%;
+  --sidebar-accent-foreground: 0 0% 8%;
+  --sidebar-border: 0 0% 18%;
+  --sidebar-ring: 50 100% 75%;
 }
 
 .dark {
-  --background: oklch(0.08 0 0);
-  --foreground: oklch(0.98 0 0);
-  --card: oklch(0.12 0 0);
-  --card-foreground: oklch(0.98 0 0);
-  --primary: oklch(0.7 0.18 40);
-  --primary-foreground: oklch(0.98 0 0); /* Changed to white for better contrast */
-  --secondary: oklch(0.65 0.15 45);
-  --secondary-foreground: oklch(0.08 0 0);
-  --muted: oklch(0.25 0 0);
-  --muted-foreground: oklch(0.65 0 0);
-  --accent: oklch(0.78 0.22 50);
-  --accent-foreground: oklch(0.08 0 0);
-  --destructive: oklch(0.396 0.141 25.723);
-  --destructive-foreground: oklch(0.637 0.237 25.331);
-  --border: oklch(0.2 0 0);
-  --input: oklch(0.15 0 0);
-  --ring: oklch(0.78 0.22 50);
-  --popover: oklch(0.145 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --chart-1: oklch(0.65 0.22 40);
-  --chart-2: oklch(0.7 0.2 45);
-  --chart-3: oklch(0.75 0.25 50);
-  --chart-4: oklch(0.72 0.18 55);
-  --chart-5: oklch(0.68 0.23 35);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.65 0.22 40);
-  --sidebar-primary-foreground: oklch(0.985 0 0); /* Changed to white */
-  --sidebar-accent: oklch(0.78 0.22 50);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.269 0 0);
-  --sidebar-ring: oklch(0.439 0 0);
+  --background: 0 0% 8%;
+  --foreground: 0 0% 98%;
+  --card: 0 0% 12%;
+  --card-foreground: 0 0% 98%;
+  --primary: 40 100% 70%;
+  --primary-foreground: 0 0% 98%;
+  --secondary: 45 100% 65%;
+  --secondary-foreground: 0 0% 8%;
+  --muted: 0 0% 25%;
+  --muted-foreground: 0 0% 65%;
+  --accent: 50 100% 78%;
+  --accent-foreground: 0 0% 8%;
+  --destructive: 25 100% 40%;
+  --destructive-foreground: 64 100% 64%;
+  --border: 0 0% 20%;
+  --input: 0 0% 15%;
+  --ring: 50 100% 78%;
+  --popover: 0 0% 14.5%;
+  --popover-foreground: 0 0% 98.5%;
+  --chart-1: 40 100% 65%;
+  --chart-2: 45 100% 70%;
+  --chart-3: 50 100% 75%;
+  --chart-4: 55 100% 72%;
+  --chart-5: 35 100% 68%;
+  --sidebar: 0 0% 20.5%;
+  --sidebar-foreground: 0 0% 98.5%;
+  --sidebar-primary: 40 100% 65%;
+  --sidebar-primary-foreground: 0 0% 98.5%;
+  --sidebar-accent: 50 100% 78%;
+  --sidebar-accent-foreground: 0 0% 98.5%;
+  --sidebar-border: 0 0% 26.9%;
+  --sidebar-ring: 0 0% 43.9%;
 }
 
 @layer base {
@@ -82,12 +82,12 @@
   }
   body {
     @apply bg-background text-foreground;
-    background-color: oklch(var(--background));
-    color: oklch(var(--foreground));
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
   }
 }
 
-/* Updated animation keyframes to use warm amber/orange glow */
+/* Animation keyframes */
 @keyframes fadeInUp {
   from {
     opacity: 0;
@@ -130,7 +130,6 @@
   }
 }
 
-/* Mesh gradient background animation */
 @keyframes meshGradient {
   0%,
   100% {
@@ -141,7 +140,6 @@
   }
 }
 
-/* Radial blur effect on hover */
 @keyframes radialBlur {
   0% {
     background-size: 100% 100%;
@@ -151,7 +149,6 @@
   }
 }
 
-/* Shimmer effect for premium feel */
 @keyframes shimmer {
   0% {
     background-position: -1000px 0;
@@ -161,7 +158,6 @@
   }
 }
 
-/* Updated hover glow pulse to use amber/orange colors */
 @keyframes hoverGlowPulse {
   0% {
     box-shadow: 0 0 20px rgba(251, 146, 60, 0.2), inset 0 0 20px rgba(251, 146, 60, 0.1);
@@ -174,7 +170,6 @@
   }
 }
 
-/* Background spotlight animation for cards */
 @keyframes spotlightShine {
   0% {
     background-position: -200% center;
