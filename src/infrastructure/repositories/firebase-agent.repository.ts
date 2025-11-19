@@ -28,7 +28,10 @@ export class FirebaseAgentRepository {
     if (!doc.exists) {
       return null
     }
-    return doc.data() as Agent
+    return {
+      id: doc.id,
+      ...doc.data()
+    } as Agent
   }
 
   async findAll(userId?: string): Promise<Agent[]> {
@@ -39,7 +42,10 @@ export class FirebaseAgentRepository {
     }
     
     const snapshot = await query.get()
-    return snapshot.docs.map(doc => doc.data() as Agent)
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    } as Agent))
   }
 
   async update(id: string, updates: Partial<Agent>): Promise<Agent> {
@@ -49,7 +55,13 @@ export class FirebaseAgentRepository {
       updatedAt: new Date().toISOString(),
     })
     const updated = await docRef.get()
-    return updated.data() as Agent
+    if (!updated.exists) {
+      throw new Error('Agent not found after update')
+    }
+    return {
+      id: updated.id,
+      ...updated.data()
+    } as Agent
   }
 
   async delete(id: string): Promise<void> {

@@ -116,7 +116,8 @@ export default function NewAgentPage() {
       })
 
       if (!response.ok) {
-        throw new Error("Failed to create agent")
+        const errorData = await response.json().catch(() => ({ error: "Failed to create agent" }))
+        throw new Error(errorData.error || errorData.message || "Failed to create agent")
       }
 
       const agent = await response.json()
@@ -125,11 +126,11 @@ export default function NewAgentPage() {
         description: "Agent created successfully",
       })
       router.push(`/agents/${agent.id}/chat`)
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating agent:", error)
       toast({
         title: "Error",
-        description: "Failed to create agent. Please try again.",
+        description: error.message || "Failed to create agent. Please try again.",
         variant: "destructive",
       })
     } finally {
