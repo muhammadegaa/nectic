@@ -39,10 +39,17 @@ export default function Navigation() {
           {/* Desktop Menu - Minimal */}
           <div className="hidden lg:flex items-center gap-8">
             <a
-              href="#features"
+              href="#how-to"
               className="text-sm text-foreground/60 hover:text-foreground transition-colors duration-200 relative group"
             >
-              Product
+              How to
+              <span className="absolute bottom-0 left-0 w-0 h-px bg-foreground transition-all duration-200 group-hover:w-full" />
+            </a>
+            <a
+              href="#use-cases"
+              className="text-sm text-foreground/60 hover:text-foreground transition-colors duration-200 relative group"
+            >
+              Use Cases
               <span className="absolute bottom-0 left-0 w-0 h-px bg-foreground transition-all duration-200 group-hover:w-full" />
             </a>
             <a
@@ -79,11 +86,18 @@ export default function Navigation() {
         {isOpen && (
           <div className="lg:hidden pb-6 space-y-4 border-t border-border/50 pt-4 animate-fade-in">
             <a
-              href="#features"
+              href="#how-to"
               onClick={() => setIsOpen(false)}
               className="block text-sm text-foreground/60 hover:text-foreground transition-colors duration-200"
             >
-              Product
+              How to
+            </a>
+            <a
+              href="#use-cases"
+              onClick={() => setIsOpen(false)}
+              className="block text-sm text-foreground/60 hover:text-foreground transition-colors duration-200"
+            >
+              Use Cases
             </a>
             <a
               href="#security"

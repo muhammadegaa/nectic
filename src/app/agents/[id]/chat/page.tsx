@@ -7,7 +7,9 @@ import { ArrowLeft, Send, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/components/ui/use-toast"
+import { format } from "date-fns"
 import type { Agent } from "@/domain/entities/agent.entity"
 
 interface Message {
@@ -15,6 +17,7 @@ interface Message {
   role: "user" | "assistant"
   content: string
   timestamp: string
+  status?: "sending" | "sent" | "error"
 }
 
 export default function AgentChatPage() {
@@ -78,11 +81,19 @@ export default function AgentChatPage() {
       role: "user",
       content: input.trim(),
       timestamp: new Date().toISOString(),
+      status: "sending",
     }
 
     setMessages((prev) => [...prev, userMessage])
     setInput("")
     setIsLoading(true)
+
+    // Update message status to sent
+    setTimeout(() => {
+      setMessages((prev) =>
+        prev.map((msg) => (msg.id === userMessage.id ? { ...msg, status: "sent" } : msg))
+      )
+    }, 100)
 
     try {
       const response = await fetch("/api/chat", {
@@ -104,6 +115,7 @@ export default function AgentChatPage() {
         role: "assistant",
         content: data.response,
         timestamp: new Date().toISOString(),
+        status: "sent",
       }
 
       setMessages((prev) => [...prev, assistantMessage])
@@ -128,8 +140,34 @@ export default function AgentChatPage() {
 
   if (isLoadingAgent) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-foreground/60" />
+      <div className="flex flex-col h-screen bg-background">
+        <div className="border-b border-border px-6 py-4 bg-card">
+          <div className="max-w-4xl mx-auto">
+            <Skeleton className="h-6 w-48" />
+            <Skeleton className="h-4 w-64 mt-2" />
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto px-6 py-6">
+          <div className="max-w-4xl mx-auto space-y-4">
+            <div className="flex justify-start">
+              <Card className="px-4 py-3 border-border max-w-3xl">
+                <Skeleton className="h-4 w-64 mb-2" />
+                <Skeleton className="h-4 w-48" />
+              </Card>
+            </div>
+            <div className="flex justify-start">
+              <Card className="px-4 py-3 border-border max-w-3xl">
+                <Skeleton className="h-4 w-56 mb-2" />
+                <Skeleton className="h-4 w-72" />
+              </Card>
+            </div>
+          </div>
+        </div>
+        <div className="border-t border-border px-6 py-4 bg-card">
+          <div className="max-w-4xl mx-auto">
+            <Skeleton className="h-10 w-full" />
+          </div>
+        </div>
       </div>
     )
   }
@@ -175,9 +213,18 @@ export default function AgentChatPage() {
                 }`}
               >
                 <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p>
-                <p className="text-xs mt-2 opacity-60">
-                  {new Date(message.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                </p>
+                <div className="flex items-center justify-between mt-2">
+                  <p className="text-xs opacity-60">
+                    {format(new Date(message.timestamp), "h:mm a")}
+                  </p>
+                  {message.role === "user" && message.status && (
+                    <span className="text-xs opacity-60">
+                      {message.status === "sending" && "Sending..."}
+                      {message.status === "sent" && "✓"}
+                      {message.status === "error" && "✗"}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           ))}

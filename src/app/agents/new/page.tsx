@@ -21,13 +21,26 @@ const AVAILABLE_COLLECTIONS = [
 
 export default function NewAgentPage() {
   const router = useRouter()
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const { toast } = useToast()
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [selectedCollections, setSelectedCollections] = useState<string[]>([])
   const [intentMappings, setIntentMappings] = useState<Array<{ intent: string; keywords: string; collections: string[] }>>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-foreground/60" />
+      </div>
+    )
+  }
+
+  if (!user) {
+    router.push("/auth/login")
+    return null
+  }
 
   const handleCollectionToggle = (collectionId: string) => {
     setSelectedCollections((prev) =>

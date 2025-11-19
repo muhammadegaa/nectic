@@ -6,6 +6,7 @@ import Link from "next/link"
 import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Plus, MessageSquare, Loader2, ArrowRight } from "lucide-react"
 import type { Agent } from "@/domain/entities/agent.entity"
 
@@ -50,8 +51,55 @@ export default function DashboardPage() {
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-foreground/60" />
+      <div className="min-h-screen bg-background">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8 py-12">
+          <div className="space-y-8">
+            {/* Header Skeleton */}
+            <div className="flex justify-between items-center">
+              <div className="space-y-2">
+                <Skeleton className="h-10 w-48" />
+                <Skeleton className="h-5 w-64" />
+              </div>
+              <Skeleton className="h-10 w-32" />
+            </div>
+
+            {/* Stats Skeleton */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[1, 2, 3].map((i) => (
+                <Card key={i}>
+                  <CardHeader>
+                    <Skeleton className="h-4 w-32" />
+                  </CardHeader>
+                  <CardContent>
+                    <Skeleton className="h-8 w-16" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Agent Cards Skeleton */}
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {[1, 2, 3].map((i) => (
+                <Card key={i}>
+                  <CardHeader>
+                    <Skeleton className="h-6 w-32 mb-2" />
+                    <Skeleton className="h-4 w-full" />
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="space-y-2">
+                      <Skeleton className="h-3 w-24" />
+                      <div className="flex gap-2">
+                        <Skeleton className="h-6 w-20" />
+                        <Skeleton className="h-6 w-24" />
+                      </div>
+                    </div>
+                    <Skeleton className="h-10 w-full" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     )
   }
