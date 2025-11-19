@@ -14,12 +14,18 @@ let adminDb: FirebaseFirestore.Firestore
 if (getApps().length === 0) {
   // Initialize with service account if available
   try {
+    let serviceAccount: any = null
+    let projectId: string | undefined = undefined
+
     // Option 1: Service account key from environment variable (JSON string)
     const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY
     if (serviceAccountKey) {
-      app = initializeApp({
-        credential: cert(JSON.parse(serviceAccountKey))
-      })
+      try {
+        serviceAccount = JSON.parse(serviceAccountKey)
+        projectId = serviceAccount.project_id
+      } catch (e) {
+        console.error('Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY:', e)
+      }
     } 
     // Option 2: Service account key from file
     else {
@@ -28,19 +34,42 @@ if (getApps().length === 0) {
       const serviceAccountPath = path.join(process.cwd(), 'firebase-service-account.json')
       
       if (fs.existsSync(serviceAccountPath)) {
-        const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'))
-        app = initializeApp({
-          credential: cert(serviceAccount)
-        })
-      } else {
-        // Fallback to default credentials (for Vercel/Cloud Run)
-        app = initializeApp()
+        try {
+          serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'))
+          projectId = serviceAccount.project_id
+        } catch (e) {
+          console.error('Failed to parse firebase-service-account.json:', e)
+        }
       }
     }
-  } catch (error) {
-    console.error('Firebase Admin initialization error:', error)
-    // Fallback to default credentials
-    app = initializeApp()
+
+    // Option 3: Try project ID from env var
+    if (!projectId) {
+      projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID
+    }
+
+    // Initialize with credentials if available
+    if (serviceAccount) {
+      app = initializeApp({
+        credential: cert(serviceAccount),
+        projectId: projectId || serviceAccount.project_id,
+      })
+      console.log('✅ Firebase Admin initialized with service account')
+    } else if (projectId) {
+      // Initialize with just project ID (for Vercel with default credentials)
+      // This works if Vercel has default GCP credentials configured
+      app = initializeApp({
+        projectId,
+      })
+      console.log('✅ Firebase Admin initialized with project ID:', projectId)
+    } else {
+      const errorMsg = 'Firebase Admin SDK: No credentials or project ID found. Please set FIREBASE_SERVICE_ACCOUNT_KEY (as JSON string) or NEXT_PUBLIC_FIREBASE_PROJECT_ID environment variable in Vercel.'
+      console.error('❌', errorMsg)
+      throw new Error(errorMsg)
+    }
+  } catch (error: any) {
+    console.error('Firebase Admin initialization error:', error.message)
+    throw new Error(`Firebase Admin SDK initialization failed: ${error.message}. Please configure Firebase credentials.`)
   }
   
   adminAuth = getAuth(app)
