@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/infrastructure/firebase/firebase-server'
+import { requireAuth } from '@/lib/auth-server'
 
 export const dynamic = 'force-dynamic'
 
@@ -25,12 +26,15 @@ const COLLECTION_LABELS: Record<string, string> = {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { collections, userId } = body
+    const { collections } = body
 
-    // Require userId for authentication
-    if (!userId) {
+    // Authenticate user via server-side auth
+    let userId: string
+    try {
+      userId = await requireAuth(request)
+    } catch (error: any) {
       return NextResponse.json(
-        { error: 'User ID is required' },
+        { error: 'Unauthorized: Authentication required' },
         { status: 401 }
       )
     }

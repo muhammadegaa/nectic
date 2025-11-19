@@ -57,12 +57,13 @@ export function DataPreview({ selectedCollections }: DataPreviewProps) {
 
     setIsLoading(true)
     try {
+      const { getAuthHeaders } = await import('@/lib/auth-client')
+      const headers = await getAuthHeaders()
       const response = await fetch("/api/data-preview", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
           collections,
-          userId: user.uid,
         }),
       })
 

@@ -176,8 +176,10 @@ export default function AgentChatPage() {
     }
 
     try {
-      const url = `/api/conversations/${currentConversationId}/export?format=${format}&userId=${user.uid}`
-      const response = await fetch(url)
+      const { getAuthHeaders } = await import('@/lib/auth-client')
+      const headers = await getAuthHeaders()
+      const url = `/api/conversations/${currentConversationId}/export?format=${format}`
+      const response = await fetch(url, { headers })
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))

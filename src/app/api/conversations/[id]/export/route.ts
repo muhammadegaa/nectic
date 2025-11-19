@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { FirebaseConversationRepository } from '@/infrastructure/repositories/firebase-conversation.repository'
 import { FirebaseAgentRepository } from '@/infrastructure/repositories/firebase-agent.repository'
+import { requireAuth } from '@/lib/auth-server'
 import { format } from 'date-fns'
 
 export const dynamic = 'force-dynamic'
@@ -21,7 +22,6 @@ export async function GET(
     const conversationId = params.id
     const { searchParams } = new URL(request.url)
     const format = searchParams.get('format') || 'json'
-    const userId = searchParams.get('userId')
 
     // Validate format
     if (format !== 'json' && format !== 'markdown') {
@@ -31,10 +31,13 @@ export async function GET(
       )
     }
 
-    // Require userId for authentication
-    if (!userId) {
+    // Authenticate user via server-side auth
+    let userId: string
+    try {
+      userId = await requireAuth(request)
+    } catch (error: any) {
       return NextResponse.json(
-        { error: 'User ID is required' },
+        { error: 'Unauthorized: Authentication required' },
         { status: 401 }
       )
     }
