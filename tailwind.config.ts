@@ -78,6 +78,19 @@ const config = {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
+        "float": {
+          "0%, 100%": { transform: "translateY(0px)" },
+          "50%": { transform: "translateY(-20px)" },
+        },
+        "line-reveal": {
+          "0%": { width: "0%" },
+          "100%": { width: "100%" },
+        },
+        "mesh-gradient": {
+          "0%": { backgroundPosition: "0% 50%" },
+          "50%": { backgroundPosition: "100% 50%" },
+          "100%": { backgroundPosition: "0% 50%" },
+        },
       },
       animation: {
         "fade-in": "fade-in 0.5s ease-out forwards",
@@ -85,6 +98,9 @@ const config = {
         "pulse-subtle": "pulse-subtle 2s infinite",
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "float": "float 6s ease-in-out infinite",
+        "line-reveal": "line-reveal 1s ease-out forwards",
+        "mesh-gradient": "mesh-gradient 15s ease infinite",
       },
     },
   },
