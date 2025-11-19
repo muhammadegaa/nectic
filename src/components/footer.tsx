@@ -27,7 +27,8 @@ export default function Footer() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-12 mb-12">
           {/* Brand */}
           <div>
-            <Link href="/" className="block mb-4">
+            <Link href="/" className="flex items-center gap-2.5 mb-4">
+              <img src="/logo.svg" alt="Nectic" className="w-8 h-8" />
               <span className="text-xl font-medium text-foreground">Nectic</span>
             </Link>
           </div>
