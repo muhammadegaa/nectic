@@ -3,12 +3,18 @@
 import { useState, useEffect, useRef } from "react"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Send, Loader2, MessageSquare, Plus, Trash2 } from "lucide-react"
+import { ArrowLeft, Send, Loader2, MessageSquare, Plus, Trash2, Download } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/components/ui/use-toast"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { format, formatDistanceToNow } from "date-fns"
 import { useAuth } from "@/contexts/auth-context"
 import type { Agent } from "@/domain/entities/agent.entity"
@@ -154,6 +160,69 @@ export default function AgentChatPage() {
       toast({
         title: "Error",
         description: "Failed to delete conversation",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const exportConversation = async (format: 'json' | 'markdown') => {
+    if (!currentConversationId || !user) {
+      toast({
+        title: "Error",
+        description: "No conversation to export",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      const url = `/api/conversations/${currentConversationId}/export?format=${format}&userId=${user.uid}`
+      const response = await fetch(url)
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        if (response.status === 403) {
+          throw new Error("You don't have permission to export this conversation")
+        } else if (response.status === 404) {
+          throw new Error("Conversation not found")
+        } else {
+          throw new Error(errorData.message || "Failed to export conversation")
+        }
+      }
+
+      if (format === 'json') {
+        const data = await response.json()
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `conversation-${currentConversationId}.json`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+      } else {
+        const text = await response.text()
+        const blob = new Blob([text], { type: 'text/markdown' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `conversation-${currentConversationId}.md`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+      }
+
+      toast({
+        title: "Success",
+        description: `Conversation exported as ${format.toUpperCase()}`,
+      })
+    } catch (error: any) {
+      console.error("Error exporting conversation:", error)
+      toast({
+        title: "Error",
+        description: error.message || "Failed to export conversation",
         variant: "destructive",
       })
     }
@@ -361,15 +430,38 @@ export default function AgentChatPage() {
               </div>
             </div>
             {currentConversationId && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={startNewConversation}
-                className="text-sm"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                New Chat
-              </Button>
+              <div className="flex items-center gap-2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-sm"
+                      disabled={!currentConversationId}
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Export
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => exportConversation('json')}>
+                      Export as JSON
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => exportConversation('markdown')}>
+                      Export as Markdown
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={startNewConversation}
+                  className="text-sm"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  New Chat
+                </Button>
+              </div>
             )}
           </div>
         </div>
