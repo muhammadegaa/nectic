@@ -12,15 +12,30 @@ export class FirebaseAgentRepository {
     const now = new Date().toISOString()
     const docRef = adminDb.collection(this.collection).doc()
     
-    const newAgent: Agent = {
-      id: docRef.id,
+    // Clean undefined values (Firestore doesn't allow undefined)
+    const cleanedAgent = this.cleanUndefined({
       ...agent,
       createdAt: now,
       updatedAt: now,
-    }
+    })
+    
+    const newAgent: Agent = {
+      id: docRef.id,
+      ...cleanedAgent,
+    } as Agent
 
     await docRef.set(newAgent)
     return newAgent
+  }
+
+  private cleanUndefined(obj: any): any {
+    const cleaned: any = {}
+    for (const [key, value] of Object.entries(obj)) {
+      if (value !== undefined) {
+        cleaned[key] = value
+      }
+    }
+    return cleaned
   }
 
   async findById(id: string): Promise<Agent | null> {
@@ -50,10 +65,14 @@ export class FirebaseAgentRepository {
 
   async update(id: string, updates: Partial<Agent>): Promise<Agent> {
     const docRef = adminDb.collection(this.collection).doc(id)
-    await docRef.update({
+    
+    // Clean undefined values before updating
+    const cleanedUpdates = this.cleanUndefined({
       ...updates,
       updatedAt: new Date().toISOString(),
     })
+    
+    await docRef.update(cleanedUpdates)
     const updated = await docRef.get()
     if (!updated.exists) {
       throw new Error('Agent not found after update')
