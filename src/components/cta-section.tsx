@@ -29,7 +29,7 @@ export default function CtaSection() {
         >
           <Button
             size="lg"
-            className="group bg-primary text-primary-foreground hover:bg-primary/90 h-12 px-8 text-base font-medium transition-all duration-200 hover:shadow-lg hover:shadow-primary/30 hover:scale-[1.02] active:scale-[0.98]"
+            className="group bg-foreground text-background hover:bg-foreground/90 h-12 px-8 text-base font-medium transition-all duration-200 hover:shadow-lg hover:shadow-foreground/20 hover:scale-[1.02] active:scale-[0.98]"
           >
             Talk to us
             <ArrowRight className="w-4 h-4 ml-2 transition-transform duration-200 group-hover:translate-x-1" />
