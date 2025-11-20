@@ -10,6 +10,7 @@ import { getFirestore } from 'firebase-admin/firestore'
 let app: App | null = null
 let adminAuth: ReturnType<typeof getAuth> | null = null
 let adminDb: FirebaseFirestore.Firestore | null = null
+let initError: Error | null = null
 
 function initializeFirebaseAdmin() {
   if (app) {
@@ -31,6 +32,11 @@ function initializeFirebaseAdmin() {
     // Option 1: Service account key from environment variable (JSON string)
     // Support both FIREBASE_SERVICE_ACCOUNT_KEY and FIREBASE_ADMIN_SDK_KEY
     const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY || process.env.FIREBASE_ADMIN_SDK_KEY
+    
+    console.log('[firebase-server] Checking for service account key...')
+    console.log('[firebase-server] FIREBASE_SERVICE_ACCOUNT_KEY exists:', !!process.env.FIREBASE_SERVICE_ACCOUNT_KEY)
+    console.log('[firebase-server] FIREBASE_ADMIN_SDK_KEY exists:', !!process.env.FIREBASE_ADMIN_SDK_KEY)
+    console.log('[firebase-server] serviceAccountKey length:', serviceAccountKey?.length || 0)
     
     // Check if the key exists and is not empty
     if (serviceAccountKey && serviceAccountKey.trim().length > 0) {
@@ -134,8 +140,10 @@ Error: ${devError.message}`
       console.warn('⚠️  Firebase Admin SDK initialization warning during build:', error.message)
       return
     }
+    // Don't throw during lazy initialization - let it fail gracefully when actually used
     console.error('Firebase Admin initialization error:', error.message)
-    throw new Error(`Firebase Admin SDK initialization failed: ${error.message}. Please configure Firebase credentials.`)
+    // Store the error so we can throw it when getAdminAuth is actually called
+    initError = new Error(`Firebase Admin SDK initialization failed: ${error.message}. Please configure Firebase credentials.`)
   }
   
   if (app) {
