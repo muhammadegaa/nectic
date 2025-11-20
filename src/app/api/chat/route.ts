@@ -7,6 +7,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { FirebaseAgentRepository } from '@/infrastructure/repositories/firebase-agent.repository'
 import { FirebaseConversationRepository } from '@/infrastructure/repositories/firebase-conversation.repository'
 import { adminDb } from '@/infrastructure/firebase/firebase-server'
+import { requireAuth } from '@/lib/auth-server'
+import { incrementAgentQueryStats } from '@/lib/agentAnalytics'
 
 export const dynamic = 'force-dynamic'
 
@@ -70,7 +72,7 @@ async function queryCollections(collections: string[], limit: number = 10): Prom
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { agentId, message, userId, conversationId } = body
+    const { agentId, message, conversationId } = body
 
     if (!agentId || !message) {
       return NextResponse.json(
@@ -79,9 +81,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!userId) {
+    // Authenticate user via server-side auth
+    let userId: string
+    try {
+      userId = await requireAuth(request)
+    } catch (error: any) {
       return NextResponse.json(
-        { error: 'userId is required' },
+        { error: 'Unauthorized: Authentication required' },
         { status: 401 }
       )
     }
@@ -184,6 +190,9 @@ Please provide a clear, natural language answer based on this data.`
       }
     }
 
+    // Track start time for response time calculation
+    const userMessageStartTime = Date.now()
+
     // Save user message
     await conversationRepo.addMessage({
       conversationId: finalConversationId,
@@ -199,6 +208,17 @@ Please provide a clear, natural language answer based on this data.`
       content: response,
       status: 'sent',
     })
+
+    // Calculate response time (time from user message to assistant response)
+    const responseTimeMs = Date.now() - userMessageStartTime
+
+    // Track analytics (increment query stats)
+    try {
+      await incrementAgentQueryStats(agentId, userId, responseTimeMs)
+    } catch (analyticsError: any) {
+      // Log but don't fail the request if analytics tracking fails
+      console.error('Error tracking analytics:', analyticsError)
+    }
 
     return NextResponse.json({
       response,

@@ -13,9 +13,11 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
 import { Loader2, Plus, Trash2, ArrowLeft } from "lucide-react"
+import { format, formatDistanceToNow } from "date-fns"
 import Link from "next/link"
 import type { Agent } from "@/domain/entities/agent.entity"
 import { DataPreview } from "@/components/agents/DataPreview"
+import { useAgentAnalytics } from "@/presentation/hooks/use-agent-analytics"
 
 const AVAILABLE_COLLECTIONS = [
   { id: "finance_transactions", label: "Finance Transactions" },
@@ -369,8 +371,105 @@ export default function EditAgentPage() {
             </CardFooter>
           </Card>
         </form>
+
+        {/* Analytics Card */}
+        <AgentAnalyticsCard agentId={agentId} />
       </div>
     </div>
+  )
+}
+
+function AgentAnalyticsCard({ agentId }: { agentId: string }) {
+  const { analytics, loading } = useAgentAnalytics(agentId, true)
+
+  if (loading) {
+    return (
+      <Card className="mt-8">
+        <CardHeader>
+          <CardTitle>Usage Analytics</CardTitle>
+          <CardDescription>View usage statistics for this agent</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <div className="h-4 bg-muted rounded animate-pulse" />
+            <div className="h-4 bg-muted rounded animate-pulse" />
+            <div className="h-4 bg-muted rounded animate-pulse" />
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (!analytics) {
+    return null
+  }
+
+  const feedbackTotal = analytics.positiveFeedbackCount + analytics.negativeFeedbackCount
+  const feedbackTrend =
+    feedbackTotal === 0
+      ? "No feedback yet"
+      : analytics.positiveFeedbackCount > analytics.negativeFeedbackCount * 2
+      ? "Mostly positive"
+      : analytics.negativeFeedbackCount > analytics.positiveFeedbackCount * 2
+      ? "Mostly negative"
+      : "Mixed"
+
+  return (
+    <Card className="mt-8">
+      <CardHeader>
+        <CardTitle>Usage Analytics</CardTitle>
+        <CardDescription>View usage statistics for this agent</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm font-medium text-foreground/60 mb-1">Total Queries</p>
+              <p className="text-2xl font-light text-foreground">{analytics.totalQueries}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-foreground/60 mb-1">Last Used</p>
+              <p className="text-sm text-foreground/80">
+                {analytics.lastUsedAt
+                  ? formatDistanceToNow(new Date(analytics.lastUsedAt), { addSuffix: true })
+                  : "Never"}
+              </p>
+              {analytics.lastUsedAt && (
+                <p className="text-xs text-foreground/60 mt-1">
+                  {format(new Date(analytics.lastUsedAt), "MMM d, yyyy 'at' h:mm a")}
+                </p>
+              )}
+            </div>
+            {analytics.last7dQueries !== undefined && (
+              <div>
+                <p className="text-sm font-medium text-foreground/60 mb-1">Last 7 Days</p>
+                <p className="text-sm text-foreground/80">{analytics.last7dQueries} queries</p>
+              </div>
+            )}
+          </div>
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm font-medium text-foreground/60 mb-1">Feedback</p>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-foreground/80">👍 Positive</span>
+                  <span className="text-sm font-medium text-foreground">{analytics.positiveFeedbackCount}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-foreground/80">👎 Negative</span>
+                  <span className="text-sm font-medium text-foreground">{analytics.negativeFeedbackCount}</span>
+                </div>
+                {feedbackTotal > 0 && (
+                  <div className="pt-2 border-t border-border">
+                    <p className="text-xs text-foreground/60">Trend: {feedbackTrend}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 

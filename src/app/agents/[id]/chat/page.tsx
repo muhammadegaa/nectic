@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Send, Loader2, MessageSquare, Plus, Trash2, Download } from "lucide-react"
+import { ArrowLeft, Send, Loader2, MessageSquare, Plus, Trash2, Download, ThumbsUp, ThumbsDown, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
@@ -38,6 +38,8 @@ export default function AgentChatPage() {
   const [isLoadingAgent, setIsLoadingAgent] = useState(true)
   const [isLoadingConversations, setIsLoadingConversations] = useState(true)
   const [showConversations, setShowConversations] = useState(false)
+  const [votedMessages, setVotedMessages] = useState<Set<string>>(new Set())
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -165,6 +167,98 @@ export default function AgentChatPage() {
     }
   }
 
+  const generateOpportunityReport = async () => {
+    if (!user || !agent) {
+      toast({
+        title: "Error",
+        description: "Unable to generate report",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsGeneratingReport(true)
+    try {
+      const { getAuthHeaders } = await import('@/lib/auth-client')
+      const headers = await getAuthHeaders()
+      const response = await fetch(`/api/agents/${agentId}/opportunity-report`, {
+        method: "POST",
+        headers: { ...headers, "Content-Type": "application/json" },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.message || "Failed to generate report")
+      }
+
+      const data = await response.json()
+      
+      // Create markdown file and download
+      const blob = new Blob([data.report], { type: 'text/markdown' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `ai-opportunity-report-${agent.name.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}.md`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+
+      toast({
+        title: "Report Generated",
+        description: "AI Opportunity Report downloaded successfully",
+      })
+    } catch (error: any) {
+      console.error("Error generating report:", error)
+      toast({
+        title: "Error",
+        description: error.message || "Failed to generate report. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsGeneratingReport(false)
+    }
+  }
+
+  const submitFeedback = async (messageId: string, feedback: 'up' | 'down') => {
+    if (votedMessages.has(messageId) || !user || !currentConversationId) {
+      return
+    }
+
+    try {
+      const { getAuthHeaders } = await import('@/lib/auth-client')
+      const headers = await getAuthHeaders()
+      const response = await fetch(`/api/agents/${agentId}/feedback`, {
+        method: "POST",
+        headers: { ...headers, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          conversationId: currentConversationId,
+          messageId,
+          feedback,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to submit feedback")
+      }
+
+      // Mark message as voted
+      setVotedMessages((prev) => new Set(prev).add(messageId))
+      
+      toast({
+        title: "Feedback recorded",
+        description: "Thank you for your feedback!",
+      })
+    } catch (error) {
+      console.error("Error submitting feedback:", error)
+      toast({
+        title: "Error",
+        description: "Failed to submit feedback. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
+
   const exportConversation = async (format: 'json' | 'markdown') => {
     if (!currentConversationId || !user) {
       toast({
@@ -254,13 +348,14 @@ export default function AgentChatPage() {
     }, 100)
 
     try {
+      const { getAuthHeaders } = await import('@/lib/auth-client')
+      const headers = await getAuthHeaders()
       const response = await fetch("/api/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { ...headers, "Content-Type": "application/json" },
         body: JSON.stringify({
           agentId,
           message: userMessage.content,
-          userId: user.uid,
           conversationId: currentConversationId || undefined,
         }),
       })
@@ -431,40 +526,56 @@ export default function AgentChatPage() {
                 {agent.description && <p className="text-sm text-foreground/60 mt-1">{agent.description}</p>}
               </div>
             </div>
-            {currentConversationId && (
-              <div className="flex items-center gap-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-sm"
-                      disabled={!currentConversationId}
-                    >
-                      <Download className="w-4 h-4 mr-2" />
-                      Export
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => exportConversation('json')}>
-                      Export as JSON
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => exportConversation('markdown')}>
-                      Export as Markdown
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={startNewConversation}
-                  className="text-sm"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  New Chat
-                </Button>
-              </div>
-            )}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={generateOpportunityReport}
+                disabled={isGeneratingReport}
+                className="text-sm"
+              >
+                {isGeneratingReport ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <FileText className="w-4 h-4 mr-2" />
+                )}
+                {isGeneratingReport ? "Generating..." : "AI Report"}
+              </Button>
+              {currentConversationId && (
+                <>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-sm"
+                        disabled={!currentConversationId}
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Export
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => exportConversation('json')}>
+                        Export as JSON
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => exportConversation('markdown')}>
+                        Export as Markdown
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={startNewConversation}
+                    className="text-sm"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    New Chat
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
         </div>
 
@@ -485,13 +596,39 @@ export default function AgentChatPage() {
                     <p className="text-xs opacity-60">
                       {format(new Date(message.timestamp), "h:mm a")}
                     </p>
-                    {message.role === "user" && message.status && (
-                      <span className="text-xs opacity-60">
-                        {message.status === "sending" && "Sending..."}
-                        {message.status === "sent" && "✓"}
-                        {message.status === "error" && "✗"}
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {message.role === "user" && message.status && (
+                        <span className="text-xs opacity-60">
+                          {message.status === "sending" && "Sending..."}
+                          {message.status === "sent" && "✓"}
+                          {message.status === "error" && "✗"}
+                        </span>
+                      )}
+                      {message.role === "assistant" && currentConversationId && (
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 opacity-70 hover:opacity-100 disabled:opacity-50"
+                            onClick={() => submitFeedback(message.id, 'up')}
+                            disabled={votedMessages.has(message.id)}
+                            title="Helpful"
+                          >
+                            <ThumbsUp className="w-3 h-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 opacity-70 hover:opacity-100 disabled:opacity-50"
+                            onClick={() => submitFeedback(message.id, 'down')}
+                            disabled={votedMessages.has(message.id)}
+                            title="Not helpful"
+                          >
+                            <ThumbsDown className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
