@@ -28,33 +28,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let isMounted = true
     let timeoutId: NodeJS.Timeout | null = null
+    let hasReceivedAuthState = false
     
     // Wait for auth state to be restored from persistence
     // This is critical for enterprise users who expect sessions to persist
     const unsubscribe = onAuthStateChangedHelper((user) => {
+      hasReceivedAuthState = true
+      
       if (isMounted) {
         setUser(user)
-        setLoading(false)
+        
+        // Only set loading to false after we've received auth state AND waited a bit
+        // This ensures persistence has time to restore
         if (timeoutId) {
           clearTimeout(timeoutId)
-          timeoutId = null
         }
+        
+        // Wait a bit more to ensure persistence is fully restored
+        timeoutId = setTimeout(() => {
+          if (isMounted) {
+            setLoading(false)
+          }
+        }, 300) // Small delay to ensure persistence is fully restored
       }
     })
 
     // Set a timeout to mark as loaded even if onAuthStateChanged hasn't fired
-    // This prevents infinite loading states
+    // This prevents infinite loading states, but give it time for persistence
     timeoutId = setTimeout(() => {
       if (isMounted) {
-        // Check one final time if currentUser exists
+        // Check one final time if currentUser exists (persistence might have restored it)
         import('@/infrastructure/firebase/firebase-client').then(({ auth }) => {
-          if (isMounted && auth.currentUser && !user) {
-            setUser(auth.currentUser)
+          if (isMounted) {
+            if (auth.currentUser) {
+              setUser(auth.currentUser)
+            }
+            setLoading(false)
           }
-          setLoading(false)
         })
       }
-    }, 2000) // Wait up to 2 seconds for persistence to restore
+    }, 3000) // Wait up to 3 seconds for persistence to restore
 
     return () => {
       isMounted = false
