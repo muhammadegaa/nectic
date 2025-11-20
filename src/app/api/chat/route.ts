@@ -10,6 +10,7 @@ import { getAdminDb } from '@/infrastructure/firebase/firebase-server'
 import { requireAuth } from '@/lib/auth-server'
 import { incrementAgentQueryStats } from '@/lib/agentAnalytics'
 import { agentTools } from '@/lib/agent-tools'
+import { powerfulTools } from '@/lib/powerful-tools'
 import { executeTool } from '@/lib/tool-executors'
 
 export const dynamic = 'force-dynamic'
@@ -172,7 +173,7 @@ IMPORTANT: This contains sensitive enterprise data. Do not use for training.`
       body: JSON.stringify({
         model: 'gpt-4o',
         messages,
-        tools: agentTools,
+        tools: [...agentTools, ...powerfulTools], // Combine basic and powerful tools
         tool_choice: 'auto', // Let LLM decide when to use tools
           temperature: 0.3, // Lower temperature for more focused responses
           max_tokens: 1500,

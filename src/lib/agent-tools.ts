@@ -30,6 +30,9 @@ export type CollectionName = typeof AVAILABLE_COLLECTIONS[number]
 /**
  * Agent tools for OpenAI Function Calling
  * These enable the LLM to decide what data to fetch and how
+ * 
+ * NOTE: For powerful agentic AI tools (budget analysis, forecasting, etc.),
+ * see powerful-tools.ts and import powerfulTools
  */
 export const agentTools: ToolDefinition[] = [
   {

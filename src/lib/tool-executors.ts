@@ -5,6 +5,7 @@
 
 import { getAdminDb } from '@/infrastructure/firebase/firebase-server'
 import { CollectionName, collectionSchemas } from './agent-tools'
+import { executePowerfulTool } from './powerful-tool-executors'
 
 export interface QueryFilters {
   dateRange?: { start: string; end: string }
@@ -23,6 +24,23 @@ export interface QueryFilters {
  */
 export async function executeTool(toolName: string, args: any): Promise<any> {
   try {
+    // Check if it's a powerful tool first
+    const powerfulToolNames = [
+      'budget_vs_actual', 'cash_flow_forecast', 'revenue_trend_analysis',
+      'expense_categorization_analysis', 'financial_health_score',
+      'pipeline_health', 'win_rate_analysis', 'sales_forecast',
+      'at_risk_deals_detection', 'conversion_funnel_analysis',
+      'team_capacity_analysis', 'performance_trends', 'retention_risk_analysis',
+      'hiring_needs_prediction', 'correlate_finance_sales',
+      'department_performance_comparison', 'trend_forecasting',
+      'what_if_scenario', 'pattern_recognition'
+    ]
+    
+    if (powerfulToolNames.includes(toolName)) {
+      return await executePowerfulTool(toolName, args)
+    }
+    
+    // Basic tools
     switch (toolName) {
       case "query_collection":
         return await queryCollectionWithFilters(args.collection, args.filters || {})
