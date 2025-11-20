@@ -14,6 +14,8 @@ import {
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
+  setPersistence,
+  browserLocalPersistence,
   User as FirebaseUser
 } from 'firebase/auth'
 import {
@@ -39,6 +41,12 @@ const app: FirebaseApp = getApps().length === 0
 const auth = getAuth(app)
 const db = getFirestore(app)
 const googleProvider = new GoogleAuthProvider()
+
+// Set persistence to localStorage (persists across browser sessions)
+// This is critical for enterprise users who expect to stay logged in
+setPersistence(auth, browserLocalPersistence).catch((error) => {
+  console.error('Error setting auth persistence:', error)
+})
 
 // Auth functions
 export const signInWithGoogle = async () => {

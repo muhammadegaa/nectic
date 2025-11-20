@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
@@ -30,6 +30,14 @@ export default function NewAgentPage() {
   const [intentMappings, setIntentMappings] = useState<Array<{ intent: string; keywords: string; collections: string[] }>>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  // Wait for auth to be ready before checking user
+  // This prevents redirecting to login when auth is still restoring from persistence
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push("/auth/login")
+    }
+  }, [authLoading, user, router])
+
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -39,8 +47,7 @@ export default function NewAgentPage() {
   }
 
   if (!user) {
-    router.push("/auth/login")
-    return null
+    return null // Will redirect via useEffect
   }
 
   const handleCollectionToggle = (collectionId: string) => {

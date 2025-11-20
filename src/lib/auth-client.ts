@@ -14,27 +14,48 @@ import { auth } from '@/infrastructure/firebase/firebase-client'
  */
 export async function getIdToken(): Promise<string | null> {
   try {
-    // If currentUser is available, use it
+    // First check if currentUser is available (fast path)
     if (auth.currentUser) {
-      return await auth.currentUser.getIdToken()
+      return await auth.currentUser.getIdToken(true) // Force refresh to ensure valid token
     }
 
-    // Otherwise, wait for auth state to be ready (up to 2 seconds)
+    // Wait for auth state to be restored from persistence (up to 3 seconds)
     return new Promise((resolve) => {
+      let resolved = false
+      
       const unsubscribe = auth.onAuthStateChanged((user) => {
+        if (resolved) return
+        
         unsubscribe()
+        resolved = true
+        
         if (user) {
-          user.getIdToken().then(resolve).catch(() => resolve(null))
+          user.getIdToken(true) // Force refresh
+            .then(resolve)
+            .catch((error) => {
+              console.error('Error getting ID token after auth state change:', error)
+              resolve(null)
+            })
         } else {
           resolve(null)
         }
       })
 
-      // Timeout after 2 seconds
+      // Timeout after 3 seconds (give more time for persistence to restore)
       setTimeout(() => {
-        unsubscribe()
-        resolve(null)
-      }, 2000)
+        if (!resolved) {
+          unsubscribe()
+          resolved = true
+          // Final check - sometimes auth.currentUser is set but onAuthStateChanged hasn't fired yet
+          if (auth.currentUser) {
+            auth.currentUser.getIdToken(true)
+              .then(resolve)
+              .catch(() => resolve(null))
+          } else {
+            resolve(null)
+          }
+        }
+      }, 3000)
     })
   } catch (error) {
     console.error('Error getting ID token:', error)
