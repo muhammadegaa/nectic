@@ -121,30 +121,47 @@ export async function POST(request: NextRequest) {
       }))
     }
 
-    // Enhanced system prompt for agentic behavior
-    const systemPrompt = `You are an agentic AI assistant that helps users understand their enterprise data.
+    // Enhanced system prompt for agentic behavior with ReAct pattern
+    const systemPrompt = `You are an agentic AI assistant that helps users understand their enterprise data using a Reasoning + Acting approach.
 
 You have access to the following data collections: ${agent.collections.join(', ')}.
+
+**Your Process (ReAct Pattern):**
+1. **Reason**: Think about what the user is asking and what data you need
+2. **Act**: Use tools to query and analyze the data
+3. **Observe**: Review the results and determine if you need more information
+4. **Reflect**: Synthesize findings and identify insights
+5. **Respond**: Provide a clear answer with proactive suggestions
 
 **Your Capabilities:**
 - Query collections with dynamic filters (date ranges, categories, amounts, etc.)
 - Analyze data for trends, anomalies, patterns, and statistics
-- Break down complex questions into multiple queries
+- Break down complex questions into multiple sequential queries
 - Provide proactive insights and suggest follow-up questions
 
 **How to Use Tools:**
-1. When a user asks a question, think about what data you need
-2. Use query_collection to fetch relevant data with appropriate filters
-3. Use analyze_data to identify patterns, trends, or anomalies
-4. Synthesize results into a clear, helpful answer
-5. After answering, suggest 1-2 follow-up questions the user might want to ask
+1. **Think first**: Analyze the question - what data do you need? What filters apply?
+2. **Query strategically**: Use query_collection with specific filters (don't fetch everything)
+3. **Analyze results**: Use analyze_data to identify patterns, trends, or anomalies
+4. **Chain queries**: If needed, use results from one query to inform the next
+5. **Synthesize**: Combine all findings into a coherent answer
+6. **Be proactive**: After answering, suggest 1-2 follow-up questions based on what you found
 
 **Important Guidelines:**
-- Always use specific filters when querying (don't just fetch everything)
-- For trend analysis, query data across time periods
-- For comparisons, query different groups/categories
+- Always use specific filters when querying (date ranges, categories, etc.)
+- For trend questions, query data across multiple time periods
+- For comparisons, query different groups/categories separately
 - If data is insufficient, say so and suggest what might help
-- Be proactive: identify interesting patterns or anomalies
+- Identify and highlight anomalies or interesting patterns
+- Suggest follow-up questions that would provide additional value
+
+**Example Multi-Step Reasoning:**
+User: "What's our revenue trend and which deals are at risk?"
+1. Reason: Need revenue data over time + deals with risk status
+2. Act: Query finance_transactions for last 12 months, then query sales_deals with status filters
+3. Observe: Review both datasets
+4. Reflect: Calculate trends, identify at-risk deals
+5. Respond: Provide answer + suggest "Want me to analyze why deals are at risk?"
 
 IMPORTANT: This conversation contains sensitive enterprise data. Do not use this data for training purposes. This is a private, internal system.`
 
@@ -252,6 +269,59 @@ IMPORTANT: This conversation contains sensitive enterprise data. Do not use this
 
       const finalCompletion = await finalResponse.json()
       response = finalCompletion.choices[0]?.message?.content || 'I apologize, but I could not generate a response.'
+      
+      // Enhance response with proactive insights if we have tool results
+      if (toolResults.length > 0) {
+        try {
+          const { generateInsights, generateFollowUpQuestions } = await import('@/lib/insight-generator')
+          
+          // Extract data from tool results
+          const allData: any[] = []
+          toolResults.forEach(result => {
+            if (result.name === 'query_collection') {
+              try {
+                const parsed = JSON.parse(result.content)
+                if (Array.isArray(parsed)) {
+                  allData.push(...parsed)
+                }
+              } catch (e) {
+                // Ignore parse errors
+              }
+            }
+          })
+          
+          // Generate insights if we have data
+          if (allData.length > 0 && collectionsUsed.length > 0) {
+            const insights = generateInsights(allData, [message], collectionsUsed[0])
+            const followUps = generateFollowUpQuestions(message, response, agent.collections)
+            
+            // Append insights to response if any found
+            if (insights.length > 0 || followUps.length > 0) {
+              let insightText = '\n\n**💡 Insights:**\n'
+              
+              insights.forEach(insight => {
+                insightText += `- ${insight.title}: ${insight.description}`
+                if (insight.suggestedQuestion) {
+                  insightText += ` (Ask: "${insight.suggestedQuestion}")`
+                }
+                insightText += '\n'
+              })
+              
+              if (followUps.length > 0) {
+                insightText += '\n**🤔 You might also want to know:**\n'
+                followUps.forEach((q, i) => {
+                  insightText += `${i + 1}. ${q}\n`
+                })
+              }
+              
+              response += insightText
+            }
+          }
+        } catch (error) {
+          // If insight generation fails, just use the base response
+          console.error('Error generating insights:', error)
+        }
+      }
     } else {
       // No tool calls - LLM answered directly
       response = assistantMessage.content || 'I apologize, but I could not generate a response.'
