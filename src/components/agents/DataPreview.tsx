@@ -63,6 +63,9 @@ export function DataPreview({ selectedCollections }: DataPreviewProps) {
 
     setIsLoading(true)
     try {
+      // Wait a bit for auth state to propagate
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
       const { getAuthHeaders } = await import('@/lib/auth-client')
       const authHeaders = await getAuthHeaders()
       const response = await fetch("/api/data-preview", {
@@ -85,11 +88,14 @@ export function DataPreview({ selectedCollections }: DataPreviewProps) {
       setPreviews(data.collections || [])
     } catch (error: any) {
       console.error("Error fetching data preview:", error)
-      toast({
-        title: "Error",
-        description: error.message || "Failed to load data preview",
-        variant: "destructive",
-      })
+      // Don't show toast for auth errors - they're expected during initial load
+      if (!error.message?.includes("not authenticated")) {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to load data preview",
+          variant: "destructive",
+        })
+      }
       setPreviews([])
     } finally {
       setIsLoading(false)

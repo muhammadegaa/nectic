@@ -9,15 +9,33 @@ import { auth } from '@/infrastructure/firebase/firebase-client'
 
 /**
  * Get Firebase ID token for authenticated user
+ * Waits for auth state to be ready if needed
  * @returns ID token string or null if not authenticated
  */
 export async function getIdToken(): Promise<string | null> {
   try {
-    const user = auth.currentUser
-    if (!user) {
-      return null
+    // If currentUser is available, use it
+    if (auth.currentUser) {
+      return await auth.currentUser.getIdToken()
     }
-    return await user.getIdToken()
+
+    // Otherwise, wait for auth state to be ready (up to 2 seconds)
+    return new Promise((resolve) => {
+      const unsubscribe = auth.onAuthStateChanged((user) => {
+        unsubscribe()
+        if (user) {
+          user.getIdToken().then(resolve).catch(() => resolve(null))
+        } else {
+          resolve(null)
+        }
+      })
+
+      // Timeout after 2 seconds
+      setTimeout(() => {
+        unsubscribe()
+        resolve(null)
+      }, 2000)
+    })
   } catch (error) {
     console.error('Error getting ID token:', error)
     return null
