@@ -192,15 +192,47 @@ IMPORTANT: This contains sensitive enterprise data. Do not use for training.`
     let response: string
     let collectionsUsed: string[] = []
     let dataCount = 0
+    let reasoningSteps: Array<{ step: string; tool?: string; args?: any; result?: any }> = []
 
     // Execute tool calls if any
     if (toolCalls.length > 0) {
+      // Add initial reasoning step
+      reasoningSteps.push({
+        step: `Analyzing your question: "${message}"`,
+      })
+      
+      reasoningSteps.push({
+        step: `Planning: I need to query ${toolCalls.length} data source${toolCalls.length > 1 ? 's' : ''} to answer this.`,
+      })
+
       const toolResults: any[] = []
       
       for (const toolCall of toolCalls) {
         try {
           const functionName = toolCall.function.name
           const functionArgs = JSON.parse(toolCall.function.arguments)
+          
+          // Add reasoning step for tool call
+          if (functionName === 'query_collection') {
+            const filters = functionArgs.filters || {}
+            let filterDesc = []
+            if (filters.dateRange) filterDesc.push(`date range: ${filters.dateRange.start} to ${filters.dateRange.end}`)
+            if (filters.category) filterDesc.push(`category: ${filters.category}`)
+            if (filters.status) filterDesc.push(`status: ${filters.status}`)
+            if (filters.minAmount) filterDesc.push(`min amount: $${filters.minAmount}`)
+            
+            reasoningSteps.push({
+              step: `Querying ${functionArgs.collection}${filterDesc.length > 0 ? ` with filters: ${filterDesc.join(', ')}` : ''}`,
+              tool: functionName,
+              args: functionArgs
+            })
+          } else if (functionName === 'analyze_data') {
+            reasoningSteps.push({
+              step: `Analyzing data for ${functionArgs.analysisType}${functionArgs.groupBy ? ` grouped by ${functionArgs.groupBy}` : ''}`,
+              tool: functionName,
+              args: functionArgs
+            })
+          }
           
           // Execute tool
           const result = await executeTool(functionName, functionArgs)
@@ -212,6 +244,11 @@ IMPORTANT: This contains sensitive enterprise data. Do not use for training.`
             }
             if (Array.isArray(result)) {
               dataCount += result.length
+              // Update reasoning step with result
+              const lastStep = reasoningSteps[reasoningSteps.length - 1]
+              if (lastStep) {
+                lastStep.result = { count: result.length, sample: result.slice(0, 2) }
+              }
             }
           }
           
@@ -223,6 +260,10 @@ IMPORTANT: This contains sensitive enterprise data. Do not use for training.`
           })
         } catch (error: any) {
           console.error(`Error executing tool ${toolCall.function.name}:`, error)
+          reasoningSteps.push({
+            step: `Error executing ${toolCall.function.name}: ${error.message}`,
+            tool: toolCall.function.name
+          })
           toolResults.push({
             tool_call_id: toolCall.id,
             role: 'tool',
@@ -231,6 +272,11 @@ IMPORTANT: This contains sensitive enterprise data. Do not use for training.`
           })
         }
       }
+      
+      // Add synthesis step
+      reasoningSteps.push({
+        step: `Synthesizing ${dataCount} record${dataCount !== 1 ? 's' : ''} into answer...`,
+      })
 
       // Second call: Synthesize tool results into final answer
       const finalResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -329,6 +375,7 @@ IMPORTANT: This contains sensitive enterprise data. Do not use for training.`
       conversationId: finalConversationId,
       collectionsUsed: collectionsUsed.length > 0 ? collectionsUsed : agent.collections,
       dataCount,
+      reasoningSteps: reasoningSteps.length > 0 ? reasoningSteps : undefined, // Include reasoning steps
     })
   } catch (error: any) {
     console.error('Error in chat API:', error)

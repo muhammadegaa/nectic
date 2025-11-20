@@ -415,6 +415,24 @@ export default function AgentChatPage() {
       // This ensures new conversations appear and existing ones are updated
       await fetchConversations()
 
+      // Add reasoning steps as thinking messages
+      if (data.reasoningSteps && data.reasoningSteps.length > 0) {
+        const thinkingMessages: Message[] = data.reasoningSteps.map((step: any, index: number) => ({
+          id: `thinking-${Date.now()}-${index}`,
+          role: "thinking" as const,
+          content: step.step,
+          timestamp: new Date().toISOString(),
+          toolCalls: step.tool ? [{
+            tool: step.tool,
+            args: step.args,
+            result: step.result
+          }] : undefined,
+        }))
+        
+        setMessages((prev) => [...prev, ...thinkingMessages])
+      }
+
+      // Add final assistant response
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
@@ -607,16 +625,51 @@ export default function AgentChatPage() {
         {/* Messages */}
         <div className="flex-1 overflow-y-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6">
           <div className="max-w-4xl mx-auto space-y-3 sm:space-y-4">
-            {messages.map((message) => (
-              <div key={message.id} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
-                <div
-                  className={`max-w-[85%] sm:max-w-2xl md:max-w-3xl rounded-lg px-3 sm:px-4 py-2 sm:py-3 ${
-                    message.role === "user"
-                      ? "bg-foreground text-background"
-                      : "bg-card border border-border text-foreground"
-                  }`}
-                >
-                  <p className="whitespace-pre-wrap text-sm sm:text-base leading-relaxed break-words">{message.content}</p>
+            {messages.map((message) => {
+              // Handle thinking/reasoning messages differently
+              if (message.role === "thinking") {
+                return (
+                  <div key={message.id} className="flex justify-start">
+                    <div className="max-w-[85%] sm:max-w-2xl md:max-w-3xl rounded-lg px-3 sm:px-4 py-2 sm:py-3 bg-muted/50 border border-border/50 text-foreground/70">
+                      <div className="flex items-start gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-foreground/40 mt-1.5 animate-pulse" />
+                        <div className="flex-1">
+                          <p className="text-xs sm:text-sm leading-relaxed break-words italic">{message.content}</p>
+                          {message.toolCalls && message.toolCalls.length > 0 && (
+                            <div className="mt-2 pt-2 border-t border-border/30">
+                              {message.toolCalls.map((toolCall, idx) => (
+                                <div key={idx} className="text-xs text-foreground/50">
+                                  <span className="font-mono">{toolCall.tool}</span>
+                                  {toolCall.result && (
+                                    <span className="ml-2">
+                                      → {Array.isArray(toolCall.result) 
+                                        ? `${toolCall.result.length} results`
+                                        : toolCall.result.count 
+                                        ? `${toolCall.result.count} records`
+                                        : 'done'}
+                                    </span>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              }
+              
+              return (
+                <div key={message.id} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
+                  <div
+                    className={`max-w-[85%] sm:max-w-2xl md:max-w-3xl rounded-lg px-3 sm:px-4 py-2 sm:py-3 ${
+                      message.role === "user"
+                        ? "bg-foreground text-background"
+                        : "bg-card border border-border text-foreground"
+                    }`}
+                  >
+                    <p className="whitespace-pre-wrap text-sm sm:text-base leading-relaxed break-words">{message.content}</p>
                   <div className="flex items-center justify-between mt-2 gap-2">
                     <p className="text-xs opacity-60 flex-shrink-0">
                       {format(new Date(message.timestamp), "h:mm a")}
@@ -657,7 +710,8 @@ export default function AgentChatPage() {
                   </div>
                 </div>
               </div>
-            ))}
+              )
+            })}
             {isLoading && (
               <div className="flex justify-start">
                 <Card className="px-4 py-3 border-border">

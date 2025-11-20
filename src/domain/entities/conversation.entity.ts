@@ -16,9 +16,14 @@ export interface Conversation {
 export interface Message {
   id: string
   conversationId?: string // Optional for temporary messages (e.g., welcome message)
-  role: 'user' | 'assistant'
+  role: 'user' | 'assistant' | 'thinking' // 'thinking' shows AI reasoning steps
   content: string
   timestamp: string
   status?: 'sending' | 'sent' | 'error'
+  toolCalls?: Array<{
+    tool: string
+    args: any
+    result?: any
+  }>
 }
 
