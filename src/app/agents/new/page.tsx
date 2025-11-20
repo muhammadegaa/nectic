@@ -104,15 +104,16 @@ export default function NewAgentPage() {
               },
             ]
 
+      const { getAuthHeaders } = await import('@/lib/auth-client')
+      const headers = await getAuthHeaders()
       const response = await fetch("/api/agents", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { ...headers, "Content-Type": "application/json" },
         body: JSON.stringify({
           name: name.trim(),
           description: description.trim() || undefined,
           collections: selectedCollections,
           intentMappings: finalMappings,
-          userId: user.uid,
         }),
       })
 

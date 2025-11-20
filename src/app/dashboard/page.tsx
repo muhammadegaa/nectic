@@ -182,7 +182,11 @@ export default function DashboardPage() {
 
     try {
       setLoading(true)
-      const response = await fetch(`/api/agents?userId=${user.uid}`)
+      const { getAuthHeaders } = await import('@/lib/auth-client')
+      const headers = await getAuthHeaders()
+      const response = await fetch(`/api/agents`, {
+        headers,
+      })
       
       if (!response.ok) {
         throw new Error("Failed to fetch agents")

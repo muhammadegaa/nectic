@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { FirebaseAgentRepository } from '@/infrastructure/repositories/firebase-agent.repository'
+import { requireAuth } from '@/lib/auth-server'
 import type { Agent, IntentMapping } from '@/domain/entities/agent.entity'
 
 export const dynamic = 'force-dynamic'
@@ -15,7 +16,7 @@ const agentRepo = new FirebaseAgentRepository()
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { name, description, collections, intentMappings, userId } = body
+    const { name, description, collections, intentMappings } = body
 
     if (!name || !collections || !Array.isArray(collections) || collections.length === 0) {
       return NextResponse.json(
@@ -24,9 +25,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!userId) {
+    // Authenticate user via server-side auth
+    let userId: string
+    try {
+      userId = await requireAuth(request)
+    } catch (error: any) {
       return NextResponse.json(
-        { error: 'User ID is required' },
+        { error: 'Unauthorized: Authentication required' },
         { status: 401 }
       )
     }
@@ -51,8 +56,16 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId') || undefined
+    // Authenticate user via server-side auth
+    let userId: string
+    try {
+      userId = await requireAuth(request)
+    } catch (error: any) {
+      return NextResponse.json(
+        { error: 'Unauthorized: Authentication required' },
+        { status: 401 }
+      )
+    }
     
     const agents = await agentRepo.findAll(userId)
     return NextResponse.json(agents)

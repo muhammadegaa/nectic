@@ -62,10 +62,18 @@ export async function POST(request: NextRequest) {
           .limit(8)
           .get()
 
-        // Get count estimate (simple approximation for MVP)
-        // For now, we'll use a simple estimate. A more accurate count would require
-        // a separate count query which can be expensive for large collections
-        const countEstimate = snapshot.size > 0 ? snapshot.size * 25 : null
+        // Get count estimate
+        let countEstimate: number | null = null
+        try {
+          const countSnapshot = await adminDb
+            .collection(collectionId)
+            .count()
+            .get()
+          countEstimate = countSnapshot.data().count
+        } catch (countError) {
+          // Fallback to simple estimate if count query fails
+          countEstimate = snapshot.size > 0 ? snapshot.size * 25 : null
+        }
 
         // Extract key fields from documents
         const sample = snapshot.docs.map((doc) => {
