@@ -3,7 +3,7 @@
  * Run with: npm run seed
  */
 
-import { adminDb } from '../firebase/firebase-server'
+import { getAdminDb } from '../firebase/firebase-server'
 import { COLLECTIONS } from './schema'
 import type { Transaction, Budget, Deal, Customer, SalesActivity, Employee, LeaveRequest, PerformanceReview } from './schema'
 
@@ -410,6 +410,7 @@ export async function seedDatabase() {
     const transactions = generateTransactions(200)
     const budgets = generateBudgets()
 
+    const adminDb = getAdminDb()
     for (const txn of transactions) {
       await adminDb.collection(COLLECTIONS.FINANCE.TRANSACTIONS).doc(txn.id).set(cleanUndefined(txn))
     }

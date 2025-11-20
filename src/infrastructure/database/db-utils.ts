@@ -3,7 +3,7 @@
  * Helper functions for common queries
  */
 
-import { adminDb } from '../firebase/firebase-server'
+import { getAdminDb } from '../firebase/firebase-server'
 import { COLLECTIONS } from './schema'
 import type { Transaction, Deal, Employee } from './schema'
 
@@ -19,6 +19,7 @@ export async function getTransactions(filters?: {
   type?: 'income' | 'expense' | 'transfer'
   limit?: number
 }): Promise<Transaction[]> {
+  const adminDb = getAdminDb()
   let query: FirebaseFirestore.Query = adminDb.collection(COLLECTIONS.FINANCE.TRANSACTIONS)
 
   if (filters?.startDate) {
@@ -87,6 +88,7 @@ export async function getDeals(filters?: {
   minValue?: number
   limit?: number
 }): Promise<Deal[]> {
+  const adminDb = getAdminDb()
   let query: FirebaseFirestore.Query = adminDb.collection(COLLECTIONS.SALES.DEALS)
 
   if (filters?.stage) {
@@ -142,6 +144,7 @@ export async function getEmployees(filters?: {
   status?: Employee['status']
   location?: string
 }): Promise<Employee[]> {
+  const adminDb = getAdminDb()
   let query: FirebaseFirestore.Query = adminDb.collection(COLLECTIONS.HR.EMPLOYEES)
 
   if (filters?.department) {
@@ -192,6 +195,7 @@ export async function queryCollection(
   orderBy?: { field: string; direction: 'asc' | 'desc' },
   limit?: number
 ) {
+  const adminDb = getAdminDb()
   let query: FirebaseFirestore.Query = adminDb.collection(collectionName)
 
   if (filters) {

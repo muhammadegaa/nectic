@@ -2,13 +2,14 @@
  * Firebase Agent Repository
  */
 
-import { adminDb } from '../firebase/firebase-server'
+import { getAdminDb } from '../firebase/firebase-server'
 import type { Agent } from '@/domain/entities/agent.entity'
 
 export class FirebaseAgentRepository {
   private readonly collection = 'agents'
 
   async create(agent: Omit<Agent, 'id' | 'createdAt' | 'updatedAt'>): Promise<Agent> {
+    const adminDb = getAdminDb()
     const now = new Date().toISOString()
     const docRef = adminDb.collection(this.collection).doc()
     
@@ -39,6 +40,7 @@ export class FirebaseAgentRepository {
   }
 
   async findById(id: string): Promise<Agent | null> {
+    const adminDb = getAdminDb()
     const doc = await adminDb.collection(this.collection).doc(id).get()
     if (!doc.exists) {
       return null
@@ -50,6 +52,7 @@ export class FirebaseAgentRepository {
   }
 
   async findAll(userId?: string): Promise<Agent[]> {
+    const adminDb = getAdminDb()
     let query: FirebaseFirestore.Query = adminDb.collection(this.collection)
     
     if (userId) {
@@ -64,6 +67,7 @@ export class FirebaseAgentRepository {
   }
 
   async update(id: string, updates: Partial<Agent>): Promise<Agent> {
+    const adminDb = getAdminDb()
     const docRef = adminDb.collection(this.collection).doc(id)
     
     // Clean undefined values before updating
@@ -84,6 +88,7 @@ export class FirebaseAgentRepository {
   }
 
   async delete(id: string): Promise<void> {
+    const adminDb = getAdminDb()
     await adminDb.collection(this.collection).doc(id).delete()
   }
 }

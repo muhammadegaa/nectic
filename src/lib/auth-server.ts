@@ -3,7 +3,7 @@
  * Verifies Firebase ID tokens from Authorization headers
  */
 
-import { adminAuth } from '@/infrastructure/firebase/firebase-server'
+import { getAdminAuth } from '@/infrastructure/firebase/firebase-server'
 import { NextRequest } from 'next/server'
 
 /**
@@ -26,6 +26,7 @@ export async function getAuthenticatedUserId(request: NextRequest): Promise<stri
     const idToken = authHeader.substring(7)
 
     // Verify token with Firebase Admin
+    const adminAuth = getAdminAuth()
     const decodedToken = await adminAuth.verifyIdToken(idToken)
     
     return decodedToken.uid

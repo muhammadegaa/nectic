@@ -4,7 +4,7 @@
  */
 
 import { NextResponse } from 'next/server'
-import { adminDb } from '@/infrastructure/firebase/firebase-server'
+import { getAdminDb } from '@/infrastructure/firebase/firebase-server'
 
 export const dynamic = 'force-dynamic'
 
@@ -188,6 +188,7 @@ export async function GET() {
 
     // Finance
     console.log('📊 Seeding finance data...')
+    const adminDb = getAdminDb()
     const transactions = generateTransactions(200)
     for (const txn of transactions) {
       await adminDb.collection('finance_transactions').doc(txn.id).set(cleanUndefined(txn))
@@ -205,8 +206,9 @@ export async function GET() {
     // HR
     console.log('👥 Seeding HR data...')
     const employees = generateEmployees(25)
+    const adminDbEmployees = getAdminDb()
     for (const emp of employees) {
-      await adminDb.collection('hr_employees').doc(emp.id).set(cleanUndefined(emp))
+      await adminDbEmployees.collection('hr_employees').doc(emp.id).set(cleanUndefined(emp))
     }
     console.log(`✅ Seeded ${employees.length} employees`)
 

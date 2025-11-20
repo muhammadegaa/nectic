@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { FirebaseAgentRepository } from '@/infrastructure/repositories/firebase-agent.repository'
 import { FirebaseConversationRepository } from '@/infrastructure/repositories/firebase-conversation.repository'
-import { adminDb } from '@/infrastructure/firebase/firebase-server'
+import { getAdminDb } from '@/infrastructure/firebase/firebase-server'
 import { requireAuth } from '@/lib/auth-server'
 import { incrementAgentQueryStats } from '@/lib/agentAnalytics'
 
@@ -51,6 +51,7 @@ async function queryCollections(collections: string[], limit: number = 10): Prom
 
   for (const collectionName of collections) {
     try {
+      const adminDb = getAdminDb()
       const snapshot = await adminDb
         .collection(collectionName)
         .limit(limit)

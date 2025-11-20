@@ -3,7 +3,7 @@
  * Manages agent usage metrics and feedback tracking
  */
 
-import { adminDb } from '@/infrastructure/firebase/firebase-server'
+import { getAdminDb } from '@/infrastructure/firebase/firebase-server'
 import { FieldValue } from 'firebase-admin/firestore'
 import type { AgentAnalytics } from '@/domain/entities/agent-analytics.entity'
 import { FirebaseAgentRepository } from '@/infrastructure/repositories/firebase-agent.repository'
@@ -15,6 +15,7 @@ const analyticsCollection = 'agent_analytics'
  * Get or create analytics document for an agent
  */
 async function getOrCreateAnalyticsDoc(agentId: string, userId: string): Promise<FirebaseFirestore.DocumentReference> {
+  const adminDb = getAdminDb()
   const docRef = adminDb.collection(analyticsCollection).doc(agentId)
   const doc = await docRef.get()
 
@@ -151,6 +152,7 @@ export async function getAgentAnalytics(
       throw new Error('Unauthorized: You do not have access to this agent\'s analytics')
     }
 
+    const adminDb = getAdminDb()
     const docRef = adminDb.collection(analyticsCollection).doc(agentId)
     const doc = await docRef.get()
 

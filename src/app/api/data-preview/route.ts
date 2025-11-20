@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { adminDb } from '@/infrastructure/firebase/firebase-server'
+import { getAdminDb } from '@/infrastructure/firebase/firebase-server'
 import { requireAuth } from '@/lib/auth-server'
 
 export const dynamic = 'force-dynamic'
@@ -56,6 +56,7 @@ export async function POST(request: NextRequest) {
 
       try {
         // Get sample documents (limit 8 for preview)
+        const adminDb = getAdminDb()
         const snapshot = await adminDb
           .collection(collectionId)
           .limit(8)
