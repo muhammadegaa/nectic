@@ -129,17 +129,16 @@ export default function EditAgentPage() {
         collections: [intent.collection],
       }))
 
+      const { getAuthHeaders } = await import('@/lib/auth-client')
+      const headers = await getAuthHeaders()
       const response = await fetch(`/api/agents/${agentId}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { ...headers, "Content-Type": "application/json" },
         body: JSON.stringify({
           name: data.name,
           description: data.description,
           collections: data.collections,
           intentMappings,
-          userId: user.uid,
         }),
       })
 
@@ -165,8 +164,11 @@ export default function EditAgentPage() {
     setError("")
 
     try {
-      const response = await fetch(`/api/agents/${agentId}?userId=${user.uid}`, {
+      const { getAuthHeaders } = await import('@/lib/auth-client')
+      const headers = await getAuthHeaders()
+      const response = await fetch(`/api/agents/${agentId}`, {
         method: "DELETE",
+        headers,
       })
 
       if (!response.ok) {

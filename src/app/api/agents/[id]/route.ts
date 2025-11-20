@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { FirebaseAgentRepository } from '@/infrastructure/repositories/firebase-agent.repository'
+import { requireAuth } from '@/lib/auth-server'
 
 export const dynamic = 'force-dynamic'
 
@@ -41,8 +42,19 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+    // Authenticate user via server-side auth
+    let userId: string
+    try {
+      userId = await requireAuth(request)
+    } catch (error: any) {
+      return NextResponse.json(
+        { error: 'Unauthorized: Authentication required' },
+        { status: 401 }
+      )
+    }
+
     const body = await request.json()
-    const { name, description, collections, intentMappings, userId } = body
+    const { name, description, collections, intentMappings } = body
 
     // Verify agent exists and belongs to user
     const existingAgent = await agentRepo.findById(params.id)
@@ -55,7 +67,7 @@ export async function PUT(
 
     if (existingAgent.userId !== userId) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: 'Unauthorized: You do not have access to this agent' },
         { status: 403 }
       )
     }
@@ -89,12 +101,13 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
-
-    if (!userId) {
+    // Authenticate user via server-side auth
+    let userId: string
+    try {
+      userId = await requireAuth(request)
+    } catch (error: any) {
       return NextResponse.json(
-        { error: 'User ID is required' },
+        { error: 'Unauthorized: Authentication required' },
         { status: 401 }
       )
     }
@@ -110,7 +123,7 @@ export async function DELETE(
 
     if (existingAgent.userId !== userId) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: 'Unauthorized: You do not have access to this agent' },
         { status: 403 }
       )
     }
