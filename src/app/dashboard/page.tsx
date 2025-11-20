@@ -156,6 +156,8 @@ function AgentCard({ agent }: { agent: Agent }) {
   )
 }
 
+import Image from "next/image"
+
 export default function DashboardPage() {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()

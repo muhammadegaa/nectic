@@ -570,12 +570,19 @@ export default function AgentChatPage() {
               >
                 <MessageSquare className="w-5 h-5" />
               </Button>
-              <Link href="/dashboard" className="text-foreground/60 hover:text-foreground transition-colors">
-                <ArrowLeft className="w-5 h-5" />
+              <Link href="/dashboard" className="text-foreground/60 hover:text-foreground transition-colors flex-shrink-0">
+                <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
               </Link>
-              <div>
-                <h1 className="text-xl font-medium text-foreground">{agent.name}</h1>
-                {agent.description && <p className="text-sm text-foreground/60 mt-1">{agent.description}</p>}
+              <Link href="/" className="flex items-center gap-2 group transition-opacity duration-200 hover:opacity-80 flex-shrink-0">
+                <img 
+                  src="/logo-icon.svg" 
+                  alt="Nectic" 
+                  className="w-6 h-6 sm:w-7 sm:h-7 transition-transform duration-200 group-hover:scale-105"
+                />
+              </Link>
+              <div className="min-w-0 flex-1">
+                <h1 className="text-base sm:text-lg md:text-xl font-medium text-foreground truncate">{agent.name}</h1>
+                {agent.description && <p className="text-xs sm:text-sm text-foreground/60 mt-0.5 sm:mt-1 line-clamp-1">{agent.description}</p>}
               </div>
             </div>
             <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
