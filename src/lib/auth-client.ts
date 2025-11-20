@@ -16,46 +16,71 @@ export async function getIdToken(): Promise<string | null> {
   try {
     // First check if currentUser is available (fast path)
     if (auth.currentUser) {
-      return await auth.currentUser.getIdToken(true) // Force refresh to ensure valid token
+      try {
+        return await auth.currentUser.getIdToken(false) // Don't force refresh on fast path
+      } catch (error) {
+        console.error('Error getting token from currentUser:', error)
+        // Fall through to wait for auth state
+      }
     }
 
-    // Wait for auth state to be restored from persistence (up to 3 seconds)
+    // Wait for auth state to be restored from persistence (up to 5 seconds)
     return new Promise((resolve) => {
       let resolved = false
+      let timeoutId: NodeJS.Timeout | null = null
       
       const unsubscribe = auth.onAuthStateChanged((user) => {
         if (resolved) return
         
-        unsubscribe()
-        resolved = true
-        
         if (user) {
-          user.getIdToken(true) // Force refresh
-            .then(resolve)
+          unsubscribe()
+          if (timeoutId) clearTimeout(timeoutId)
+          resolved = true
+          
+          user.getIdToken(false) // Don't force refresh - use cached if available
+            .then((token) => {
+              resolve(token)
+            })
             .catch((error) => {
               console.error('Error getting ID token after auth state change:', error)
               resolve(null)
             })
-        } else {
-          resolve(null)
+        } else if (!resolved) {
+          // User is null - check one more time after a short delay
+          // Sometimes persistence takes a moment to restore
+          setTimeout(() => {
+            if (!resolved && auth.currentUser) {
+              unsubscribe()
+              if (timeoutId) clearTimeout(timeoutId)
+              resolved = true
+              auth.currentUser.getIdToken(false)
+                .then(resolve)
+                .catch(() => resolve(null))
+            } else if (!resolved) {
+              unsubscribe()
+              if (timeoutId) clearTimeout(timeoutId)
+              resolved = true
+              resolve(null)
+            }
+          }, 500)
         }
       })
 
-      // Timeout after 3 seconds (give more time for persistence to restore)
-      setTimeout(() => {
+      // Timeout after 5 seconds (give plenty of time for persistence to restore)
+      timeoutId = setTimeout(() => {
         if (!resolved) {
           unsubscribe()
           resolved = true
           // Final check - sometimes auth.currentUser is set but onAuthStateChanged hasn't fired yet
           if (auth.currentUser) {
-            auth.currentUser.getIdToken(true)
+            auth.currentUser.getIdToken(false)
               .then(resolve)
               .catch(() => resolve(null))
           } else {
             resolve(null)
           }
         }
-      }, 3000)
+      }, 5000)
     })
   } catch (error) {
     console.error('Error getting ID token:', error)

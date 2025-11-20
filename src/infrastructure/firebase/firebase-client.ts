@@ -42,11 +42,15 @@ const auth = getAuth(app)
 const db = getFirestore(app)
 const googleProvider = new GoogleAuthProvider()
 
-// Set persistence to localStorage (persists across browser sessions)
+// Set persistence to localStorage IMMEDIATELY after auth initialization
+// This MUST be done before any auth operations
 // This is critical for enterprise users who expect to stay logged in
-setPersistence(auth, browserLocalPersistence).catch((error) => {
+// Note: browserLocalPersistence is the default, but we set it explicitly to ensure it works
+try {
+  setPersistence(auth, browserLocalPersistence)
+} catch (error) {
   console.error('Error setting auth persistence:', error)
-})
+}
 
 // Auth functions
 export const signInWithGoogle = async () => {

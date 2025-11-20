@@ -27,6 +27,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let isMounted = true
+    let timeoutId: NodeJS.Timeout | null = null
     
     // Wait for auth state to be restored from persistence
     // This is critical for enterprise users who expect sessions to persist
@@ -34,36 +35,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (isMounted) {
         setUser(user)
         setLoading(false)
+        if (timeoutId) {
+          clearTimeout(timeoutId)
+          timeoutId = null
+        }
       }
     })
 
-    // Also check if there's a current user immediately (in case onAuthStateChanged hasn't fired yet)
-    // This helps with faster initial load
-    const checkCurrentUser = async () => {
-      // Give Firebase time to restore from localStorage (up to 1 second)
-      for (let i = 0; i < 10; i++) {
-        await new Promise(resolve => setTimeout(resolve, 100))
-        
-        const { auth } = await import('@/infrastructure/firebase/firebase-client')
-        if (auth.currentUser && isMounted) {
-          setUser(auth.currentUser)
-          setLoading(false)
-          return
-        }
-      }
-      
-      // If still no user after 1 second, mark as loaded (user is truly not authenticated)
+    // Set a timeout to mark as loaded even if onAuthStateChanged hasn't fired
+    // This prevents infinite loading states
+    timeoutId = setTimeout(() => {
       if (isMounted) {
-        setLoading(false)
+        // Check one final time if currentUser exists
+        import('@/infrastructure/firebase/firebase-client').then(({ auth }) => {
+          if (isMounted && auth.currentUser && !user) {
+            setUser(auth.currentUser)
+          }
+          setLoading(false)
+        })
       }
-    }
-    
-    // Run check immediately to allow persistence to restore
-    checkCurrentUser()
+    }, 2000) // Wait up to 2 seconds for persistence to restore
 
     return () => {
       isMounted = false
       unsubscribe()
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+      }
     }
   }, [])
 

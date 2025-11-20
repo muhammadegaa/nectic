@@ -63,11 +63,30 @@ export function DataPreview({ selectedCollections }: DataPreviewProps) {
 
     setIsLoading(true)
     try {
-      // Wait a bit for auth state to propagate
-      await new Promise(resolve => setTimeout(resolve, 100))
-      
       const { getAuthHeaders } = await import('@/lib/auth-client')
-      const authHeaders = await getAuthHeaders()
+      
+      // Retry logic for auth - sometimes token needs a moment to be ready
+      let authHeaders: HeadersInit | null = null
+      let retries = 3
+      
+      while (retries > 0 && !authHeaders) {
+        try {
+          authHeaders = await getAuthHeaders()
+        } catch (authError: any) {
+          retries--
+          if (retries > 0) {
+            // Wait a bit and retry
+            await new Promise(resolve => setTimeout(resolve, 200))
+          } else {
+            throw authError
+          }
+        }
+      }
+      
+      if (!authHeaders) {
+        throw new Error("Failed to get authentication token")
+      }
+      
       const response = await fetch("/api/data-preview", {
         method: "POST",
         headers: authHeaders,
@@ -88,14 +107,11 @@ export function DataPreview({ selectedCollections }: DataPreviewProps) {
       setPreviews(data.collections || [])
     } catch (error: any) {
       console.error("Error fetching data preview:", error)
-      // Don't show toast for auth errors - they're expected during initial load
-      if (!error.message?.includes("not authenticated")) {
-        toast({
-          title: "Error",
-          description: error.message || "Failed to load data preview",
-          variant: "destructive",
-        })
-      }
+      toast({
+        title: "Error",
+        description: error.message || "Failed to load data preview",
+        variant: "destructive",
+      })
       setPreviews([])
     } finally {
       setIsLoading(false)
