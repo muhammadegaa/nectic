@@ -63,7 +63,7 @@ export default function HeroSection() {
             isLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
           }`}
         >
-          Stop worrying about data leaks. Your sensitive data stays in your infrastructure, never exposed to third-party AI training.
+          Your data stays in your infrastructure. Zero leaks. Zero training.
         </div>
 
         {/* Main Headline - Large, Clean, Minimal */}
@@ -83,7 +83,7 @@ export default function HeroSection() {
             isLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
           }`}
         >
-          Stop worrying about data leaks. Your sensitive data stays in your infrastructure, never exposed to third-party AI training. Build secure AI assistants that connect directly to your private databases.
+          Your data stays in your infrastructure. Zero leaks. Zero training. Build secure AI assistants that connect directly to your private databases.
         </p>
 
         {/* Single CTA - Yellow/Amber button like in design */}
