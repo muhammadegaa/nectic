@@ -589,59 +589,18 @@ export default function AgentChatPage() {
                 {agent.description && <p className="text-xs sm:text-sm text-foreground/60 mt-0.5 sm:mt-1 line-clamp-1">{agent.description}</p>}
               </div>
             </div>
-            <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+            {/* Simplified - only essential actions */}
+            {currentConversationId && (
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
-                onClick={generateOpportunityReport}
-                disabled={isGeneratingReport}
-                className="text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3"
-                title="Generate AI Report"
+                onClick={startNewConversation}
+                className="h-8 w-8 p-0"
+                title="New Chat"
               >
-                {isGeneratingReport ? (
-                  <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2 animate-spin" />
-                ) : (
-                  <FileText className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
-                )}
-                <span className="hidden sm:inline">{isGeneratingReport ? "Generating..." : "AI Report"}</span>
+                <Plus className="w-4 h-4" />
               </Button>
-              {currentConversationId && (
-                <>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3"
-                        disabled={!currentConversationId}
-                        title="Export Conversation"
-                      >
-                        <Download className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
-                        <span className="hidden sm:inline">Export</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => exportConversation('json')}>
-                        Export as JSON
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => exportConversation('markdown')}>
-                        Export as Markdown
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={startNewConversation}
-                    className="text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3"
-                    title="New Chat"
-                  >
-                    <Plus className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
-                    <span className="hidden sm:inline">New Chat</span>
-                  </Button>
-                </>
-              )}
-            </div>
+            )}
           </div>
         </div>
 
