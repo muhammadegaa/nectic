@@ -37,7 +37,8 @@ export default function AgentChatPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingAgent, setIsLoadingAgent] = useState(true)
   const [isLoadingConversations, setIsLoadingConversations] = useState(true)
-  const [showConversations, setShowConversations] = useState(false)
+  // Default to showing sidebar on desktop, hidden on mobile
+  const [showConversations, setShowConversations] = useState(true)
   const [votedMessages, setVotedMessages] = useState<Set<string>>(new Set())
   const [isGeneratingReport, setIsGeneratingReport] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -486,7 +487,7 @@ export default function AgentChatPage() {
     <div className="flex h-screen bg-background overflow-hidden">
       {/* Conversations Sidebar */}
       <div className={`w-full sm:w-64 border-r border-border bg-card transition-all duration-300 fixed lg:static inset-0 lg:inset-auto z-40 ${
-        showConversations ? "block" : "hidden lg:block"
+        showConversations ? "block" : "hidden"
       }`}>
         <div className="p-3 sm:p-4 border-b border-border">
           <div className="flex items-center justify-between mb-3 sm:mb-4">
@@ -496,7 +497,8 @@ export default function AgentChatPage() {
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowConversations(false)}
-                className="lg:hidden h-8 w-8 p-0"
+                className="h-8 w-8 p-0"
+                title="Collapse sidebar"
               >
                 <ArrowLeft className="w-4 h-4" />
               </Button>
@@ -505,6 +507,7 @@ export default function AgentChatPage() {
                 size="sm"
                 onClick={startNewConversation}
                 className="h-8 w-8 p-0"
+                title="New conversation"
               >
                 <Plus className="w-4 h-4" />
               </Button>
@@ -566,7 +569,8 @@ export default function AgentChatPage() {
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowConversations(!showConversations)}
-                className="lg:hidden h-9 w-9 p-0 flex-shrink-0"
+                className="h-9 w-9 p-0 flex-shrink-0"
+                title={showConversations ? "Hide conversations" : "Show conversations"}
               >
                 <MessageSquare className="w-5 h-5" />
               </Button>

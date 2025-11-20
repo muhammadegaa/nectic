@@ -110,7 +110,11 @@ export const agentTools: ToolDefinition[] = [
         properties: {
           data: {
             type: "array",
-            description: "The data array to analyze (from query_collection results)"
+            description: "The data array to analyze (from query_collection results)",
+            items: {
+              type: "object",
+              description: "Data item from collection"
+            }
           },
           analysisType: {
             type: "string",
