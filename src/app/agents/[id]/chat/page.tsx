@@ -476,25 +476,35 @@ export default function AgentChatPage() {
   ]
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen bg-background overflow-hidden">
       {/* Conversations Sidebar */}
-      <div className={`w-64 border-r border-border bg-card transition-all duration-300 ${
+      <div className={`w-full sm:w-64 border-r border-border bg-card transition-all duration-300 fixed lg:static inset-0 lg:inset-auto z-40 ${
         showConversations ? "block" : "hidden lg:block"
       }`}>
-        <div className="p-4 border-b border-border">
-          <div className="flex items-center justify-between mb-4">
+        <div className="p-3 sm:p-4 border-b border-border">
+          <div className="flex items-center justify-between mb-3 sm:mb-4">
             <h2 className="text-sm font-medium text-foreground">Conversations</h2>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={startNewConversation}
-              className="h-8 w-8 p-0"
-            >
-              <Plus className="w-4 h-4" />
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowConversations(false)}
+                className="lg:hidden h-8 w-8 p-0"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={startNewConversation}
+                className="h-8 w-8 p-0"
+              >
+                <Plus className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         </div>
-        <div className="overflow-y-auto h-[calc(100vh-80px)]">
+        <div className="overflow-y-auto h-[calc(100vh-73px)] sm:h-[calc(100vh-80px)]">
           {isLoadingConversations ? (
             <div className="p-4 space-y-2">
               <Skeleton className="h-16 w-full" />
@@ -540,16 +550,16 @@ export default function AgentChatPage() {
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <div className="border-b border-border px-6 py-4 bg-card">
-          <div className="max-w-4xl mx-auto flex items-center justify-between">
-            <div className="flex items-center gap-4">
+        <div className="border-b border-border px-4 sm:px-6 py-3 sm:py-4 bg-card">
+          <div className="max-w-4xl mx-auto flex items-center justify-between gap-2 sm:gap-4">
+            <div className="flex items-center gap-2 sm:gap-4 min-w-0">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowConversations(!showConversations)}
-                className="lg:hidden"
+                className="lg:hidden h-9 w-9 p-0 flex-shrink-0"
               >
                 <MessageSquare className="w-5 h-5" />
               </Button>
@@ -561,20 +571,21 @@ export default function AgentChatPage() {
                 {agent.description && <p className="text-sm text-foreground/60 mt-1">{agent.description}</p>}
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={generateOpportunityReport}
                 disabled={isGeneratingReport}
-                className="text-sm"
+                className="text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3"
+                title="Generate AI Report"
               >
                 {isGeneratingReport ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2 animate-spin" />
                 ) : (
-                  <FileText className="w-4 h-4 mr-2" />
+                  <FileText className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
                 )}
-                {isGeneratingReport ? "Generating..." : "AI Report"}
+                <span className="hidden sm:inline">{isGeneratingReport ? "Generating..." : "AI Report"}</span>
               </Button>
               {currentConversationId && (
                 <>
@@ -583,11 +594,12 @@ export default function AgentChatPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="text-sm"
+                        className="text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3"
                         disabled={!currentConversationId}
+                        title="Export Conversation"
                       >
-                        <Download className="w-4 h-4 mr-2" />
-                        Export
+                        <Download className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+                        <span className="hidden sm:inline">Export</span>
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
@@ -603,10 +615,11 @@ export default function AgentChatPage() {
                     variant="outline"
                     size="sm"
                     onClick={startNewConversation}
-                    className="text-sm"
+                    className="text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3"
+                    title="New Chat"
                   >
-                    <Plus className="w-4 h-4 mr-2" />
-                    New Chat
+                    <Plus className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+                    <span className="hidden sm:inline">New Chat</span>
                   </Button>
                 </>
               )}
@@ -615,23 +628,23 @@ export default function AgentChatPage() {
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-6 py-6">
-          <div className="max-w-4xl mx-auto space-y-4">
+        <div className="flex-1 overflow-y-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6">
+          <div className="max-w-4xl mx-auto space-y-3 sm:space-y-4">
             {messages.map((message) => (
               <div key={message.id} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
                 <div
-                  className={`max-w-3xl rounded-lg px-4 py-3 ${
+                  className={`max-w-[85%] sm:max-w-2xl md:max-w-3xl rounded-lg px-3 sm:px-4 py-2 sm:py-3 ${
                     message.role === "user"
                       ? "bg-foreground text-background"
                       : "bg-card border border-border text-foreground"
                   }`}
                 >
-                  <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p>
-                  <div className="flex items-center justify-between mt-2">
-                    <p className="text-xs opacity-60">
+                  <p className="whitespace-pre-wrap text-sm sm:text-base leading-relaxed break-words">{message.content}</p>
+                  <div className="flex items-center justify-between mt-2 gap-2">
+                    <p className="text-xs opacity-60 flex-shrink-0">
                       {format(new Date(message.timestamp), "h:mm a")}
                     </p>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
                       {message.role === "user" && message.status && (
                         <span className="text-xs opacity-60">
                           {message.status === "sending" && "Sending..."}
@@ -685,10 +698,10 @@ export default function AgentChatPage() {
 
         {/* Example Questions */}
         {messages.length === 1 && !currentConversationId && (
-          <div className="px-6 py-4 border-t border-border bg-card">
+          <div className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-t border-border bg-card">
             <div className="max-w-4xl mx-auto">
-              <p className="text-sm font-medium text-foreground/60 mb-3">Try asking:</p>
-              <div className="flex flex-wrap gap-2">
+              <p className="text-xs sm:text-sm font-medium text-foreground/60 mb-2 sm:mb-3">Try asking:</p>
+              <div className="flex flex-wrap gap-1.5 sm:gap-2">
                 {exampleQuestions.map((question, idx) => (
                   <Button
                     key={idx}
@@ -696,7 +709,7 @@ export default function AgentChatPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => setInput(question)}
-                    className="text-sm"
+                    className="text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3"
                   >
                     {question}
                   </Button>
@@ -707,16 +720,16 @@ export default function AgentChatPage() {
         )}
 
         {/* Input */}
-        <div className="border-t border-border px-6 py-4 bg-card">
+        <div className="border-t border-border px-3 sm:px-4 md:px-6 py-3 sm:py-4 bg-card">
           <div className="max-w-4xl mx-auto">
-            <form onSubmit={handleSubmit} className="flex gap-3">
+            <form onSubmit={handleSubmit} className="flex gap-2 sm:gap-3">
               <Input
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Ask a question..."
+                className="text-sm sm:text-base h-10 sm:h-11 flex-1"
                 disabled={isLoading}
-                className="flex-1"
               />
               <Button type="submit" disabled={isLoading || !input.trim()} className="bg-foreground text-background hover:bg-foreground/90">
                 {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}

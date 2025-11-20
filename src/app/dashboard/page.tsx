@@ -63,97 +63,95 @@ function AgentCard({ agent }: { agent: Agent }) {
   }
 
   return (
-    <Card className="hover:border-foreground/20 transition-colors">
-      <CardHeader>
+    <Card className="hover:border-foreground/20 transition-colors h-full flex flex-col">
+      <CardHeader className="pb-3">
         <div className="flex justify-between items-start">
-          <div>
-            <CardTitle className="text-xl font-medium text-foreground mb-1">
+          <div className="min-w-0 flex-1">
+            <CardTitle className="text-lg sm:text-xl font-medium text-foreground mb-1 truncate">
               {agent.name}
             </CardTitle>
             {agent.description && (
-              <CardDescription className="mt-2">{agent.description}</CardDescription>
+              <CardDescription className="mt-1 sm:mt-2 text-xs sm:text-sm line-clamp-2">{agent.description}</CardDescription>
             )}
           </div>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
-          <div>
-            <p className="text-sm text-foreground/60 mb-1">Collections</p>
-            <div className="flex flex-wrap gap-2">
-              {agent.collections.map((col) => (
-                <span
-                  key={col}
-                  className="text-xs px-2 py-1 bg-muted rounded-md text-foreground/70"
-                >
-                  {col.replace(/_/g, " ")}
-                </span>
-              ))}
-            </div>
+      <CardContent className="flex-1 flex flex-col space-y-3">
+        <div>
+          <p className="text-xs sm:text-sm text-foreground/60 mb-1.5">Collections</p>
+          <div className="flex flex-wrap gap-1.5 sm:gap-2">
+            {agent.collections.map((col) => (
+              <span
+                key={col}
+                className="text-xs px-2 py-0.5 sm:py-1 bg-muted rounded-md text-foreground/70"
+              >
+                {col.replace(/_/g, " ")}
+              </span>
+            ))}
           </div>
-          <div>
-            <p className="text-sm text-foreground/60 mb-1">Intent Mappings</p>
-            <p className="text-sm text-foreground/80">{agent.intentMappings.length} configured</p>
-          </div>
-          {/* Analytics */}
-          {!analyticsLoading && analytics && (
-            <div className="pt-2 border-t border-border space-y-1.5">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-foreground/60">Last used:</span>
-                <span className="text-foreground/80">
-                  {analytics.lastUsedAt
-                    ? formatDistanceToNow(new Date(analytics.lastUsedAt), { addSuffix: true })
-                    : "Never"}
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-foreground/60">Queries:</span>
-                <span className="text-foreground/80">{analytics.totalQueries}</span>
-              </div>
-              {(analytics.positiveFeedbackCount > 0 || analytics.negativeFeedbackCount > 0) && (
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-foreground/60">Feedback:</span>
-                  <span className="text-foreground/80">
-                    {analytics.positiveFeedbackCount} 👍 / {analytics.negativeFeedbackCount} 👎
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
         </div>
+        <div>
+          <p className="text-xs sm:text-sm text-foreground/60 mb-1">Intent Mappings</p>
+          <p className="text-xs sm:text-sm text-foreground/80">{agent.intentMappings.length} configured</p>
+        </div>
+        {/* Analytics */}
+        {!analyticsLoading && analytics && (
+          <div className="pt-2 border-t border-border space-y-1.5">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-foreground/60">Last used:</span>
+              <span className="text-foreground/80">
+                {analytics.lastUsedAt
+                  ? formatDistanceToNow(new Date(analytics.lastUsedAt), { addSuffix: true })
+                  : "Never"}
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-foreground/60">Queries:</span>
+              <span className="text-foreground/80">{analytics.totalQueries}</span>
+            </div>
+            {(analytics.positiveFeedbackCount > 0 || analytics.negativeFeedbackCount > 0) && (
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-foreground/60">Feedback:</span>
+                <span className="text-foreground/80">
+                  {analytics.positiveFeedbackCount} 👍 / {analytics.negativeFeedbackCount} 👎
+                </span>
+              </div>
+            )}
+          </div>
+        )}
       </CardContent>
-                <CardContent className="pt-0 space-y-2">
-                  <Link href={`/agents/${agent.id}/chat`}>
-                    <Button
-                      variant="outline"
-                      className="w-full group"
-                    >
-                      Open Chat
-                      <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
-                    </Button>
-                  </Link>
-                  <Button
-                    variant="outline"
-                    className="w-full text-sm"
-                    onClick={generateOpportunityReport}
-                    disabled={isGeneratingReport}
-                  >
-                    {isGeneratingReport ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <FileText className="w-4 h-4 mr-2" />
-                    )}
-                    {isGeneratingReport ? "Generating..." : "AI Report"}
-                  </Button>
-                  <Link href={`/agents/${agent.id}/edit`}>
-                    <Button
-                      variant="ghost"
-                      className="w-full text-sm"
-                    >
-                      Edit
-                    </Button>
-                  </Link>
-                </CardContent>
+      <CardContent className="pt-0 space-y-2 mt-auto">
+        <Link href={`/agents/${agent.id}/chat`} className="block">
+          <Button
+            variant="outline"
+            className="w-full group h-9 sm:h-10 text-sm"
+          >
+            Open Chat
+            <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
+          </Button>
+        </Link>
+        <Button
+          variant="outline"
+          className="w-full text-xs sm:text-sm h-9 sm:h-10"
+          onClick={generateOpportunityReport}
+          disabled={isGeneratingReport}
+        >
+          {isGeneratingReport ? (
+            <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 mr-2 animate-spin" />
+          ) : (
+            <FileText className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
+          )}
+          {isGeneratingReport ? "Generating..." : "AI Report"}
+        </Button>
+        <Link href={`/agents/${agent.id}/edit`} className="block">
+          <Button
+            variant="ghost"
+            className="w-full text-xs sm:text-sm h-9 sm:h-10"
+          >
+            Edit Agent
+          </Button>
+        </Link>
+      </CardContent>
     </Card>
   )
 }
@@ -262,16 +260,16 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12">
         {/* Header */}
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
           <div>
-            <h1 className="text-4xl font-light text-foreground mb-2">Dashboard</h1>
-            <p className="text-foreground/60">Manage your AI agents</p>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-light text-foreground mb-1 sm:mb-2">Dashboard</h1>
+            <p className="text-sm sm:text-base text-foreground/60">Manage your AI agents</p>
           </div>
           <Button
             onClick={() => router.push("/agents/new")}
-            className="bg-foreground text-background hover:bg-foreground/90"
+            className="bg-foreground text-background hover:bg-foreground/90 w-full sm:w-auto h-10 sm:h-9"
           >
             <Plus className="w-4 h-4 mr-2" />
             New Agent
@@ -279,7 +277,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
           <Card>
             <CardHeader>
               <CardTitle className="text-sm font-medium text-foreground/60">Total Agents</CardTitle>
@@ -335,7 +333,7 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {agents.map((agent) => (
               <AgentCard key={agent.id} agent={agent} />
             ))}
