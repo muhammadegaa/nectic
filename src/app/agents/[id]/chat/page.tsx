@@ -99,7 +99,11 @@ export default function AgentChatPage() {
   const fetchConversations = async () => {
     if (!user) return
     try {
-      const response = await fetch(`/api/conversations?agentId=${agentId}&userId=${user.uid}`)
+      const { getAuthHeaders } = await import('@/lib/auth-client')
+      const headers = await getAuthHeaders()
+      const response = await fetch(`/api/conversations?agentId=${agentId}`, {
+        headers,
+      })
       if (!response.ok) throw new Error("Failed to fetch conversations")
       const data = await response.json()
       setConversations(data)
@@ -147,7 +151,12 @@ export default function AgentChatPage() {
     if (!confirm("Are you sure you want to delete this conversation?")) return
     
     try {
-      const response = await fetch(`/api/conversations/${convId}`, { method: "DELETE" })
+      const { getAuthHeaders } = await import('@/lib/auth-client')
+      const headers = await getAuthHeaders()
+      const response = await fetch(`/api/conversations/${convId}`, {
+        method: "DELETE",
+        headers,
+      })
       if (!response.ok) throw new Error("Failed to delete conversation")
       await fetchConversations()
       if (currentConversationId === convId) {

@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { FirebaseConversationRepository } from '@/infrastructure/repositories/firebase-conversation.repository'
+import { requireAuth } from '@/lib/auth-server'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,12 +16,22 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const agentId = searchParams.get('agentId')
-    const userId = searchParams.get('userId')
 
-    if (!agentId || !userId) {
+    if (!agentId) {
       return NextResponse.json(
-        { error: 'agentId and userId are required' },
+        { error: 'agentId is required' },
         { status: 400 }
+      )
+    }
+
+    // Authenticate user via server-side auth
+    let userId: string
+    try {
+      userId = await requireAuth(request)
+    } catch (error: any) {
+      return NextResponse.json(
+        { error: 'Unauthorized: Authentication required' },
+        { status: 401 }
       )
     }
 
@@ -38,12 +49,23 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { agentId, userId, title } = body
+    const { agentId, title } = body
 
-    if (!agentId || !userId) {
+    if (!agentId) {
       return NextResponse.json(
-        { error: 'agentId and userId are required' },
+        { error: 'agentId is required' },
         { status: 400 }
+      )
+    }
+
+    // Authenticate user via server-side auth
+    let userId: string
+    try {
+      userId = await requireAuth(request)
+    } catch (error: any) {
+      return NextResponse.json(
+        { error: 'Unauthorized: Authentication required' },
+        { status: 401 }
       )
     }
 
