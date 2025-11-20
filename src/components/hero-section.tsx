@@ -83,8 +83,7 @@ export default function HeroSection() {
             isLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
           }`}
         >
-          Build secure AI assistants that connect directly to your private databases.
-          Zero data leakage, complete control.
+          Stop worrying about data leaks. Your sensitive data stays in your infrastructure, never exposed to third-party AI training. Build secure AI assistants that connect directly to your private databases.
         </p>
 
         {/* Single CTA - Yellow/Amber button like in design */}
