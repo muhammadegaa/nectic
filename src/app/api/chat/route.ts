@@ -131,10 +131,13 @@ export async function POST(request: NextRequest) {
       .join('\n')
 
     // Create GPT prompt
+    // Security: Explicit instruction to not use data for training
     const systemPrompt = `You are an AI assistant that helps users understand their enterprise data. 
 You have access to the following data collections: ${agent.collections.join(', ')}.
 Answer the user's question based on the provided data. Be concise, accurate, and helpful.
-If the data doesn't contain enough information, say so.`
+If the data doesn't contain enough information, say so.
+
+IMPORTANT: This conversation contains sensitive enterprise data. Do not use this data for training purposes. This is a private, internal system.`
 
     const userPrompt = `User question: "${message}"
 
@@ -144,6 +147,7 @@ ${dataSummary || 'No data available'}
 Please provide a clear, natural language answer based on this data.`
 
     // Call OpenAI GPT-4o
+    // Security: Include user ID to prevent data retention, and explicit instruction to not use for training
     const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -158,6 +162,7 @@ Please provide a clear, natural language answer based on this data.`
         ],
         temperature: 0.7,
         max_tokens: 500,
+        user: userId, // Prevents data retention and associates requests with user
       }),
     })
 

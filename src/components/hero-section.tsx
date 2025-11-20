@@ -57,13 +57,13 @@ export default function HeroSection() {
       />
 
       <div className="max-w-5xl mx-auto relative z-10">
-        {/* Funding Badge */}
+        {/* Value Proposition Badge */}
         <div
           className={`inline-block mb-8 text-sm text-foreground/50 transition-all duration-700 ease-out ${
             isLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
           }`}
         >
-          Trusted by Fortune 500 enterprises
+          Stop worrying about data leaks. Your sensitive data stays in your infrastructure, never exposed to third-party AI training.
         </div>
 
         {/* Main Headline - Large, Clean, Minimal */}

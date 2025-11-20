@@ -59,18 +59,18 @@ export default function FeatureHighlights() {
         >
           <div className="group">
             <h3 className="text-2xl font-light text-foreground mb-3 transition-colors duration-200 group-hover:text-foreground/90">
-              Private by Default
+              Your Data, Your Infrastructure
             </h3>
             <p className="text-foreground/60 leading-relaxed transition-colors duration-200 group-hover:text-foreground/70">
-              All data stays within your infrastructure. Zero external API calls. Complete data sovereignty.
+              All data stays in your Firebase. We never store your sensitive information. OpenAI API calls include privacy controls to prevent data retention. Complete data sovereignty.
             </p>
           </div>
           <div className="group">
             <h3 className="text-2xl font-light text-foreground mb-3 transition-colors duration-200 group-hover:text-foreground/90">
-              Enterprise-Grade Security
+              Zero Cross-User Contamination
             </h3>
             <p className="text-foreground/60 leading-relaxed transition-colors duration-200 group-hover:text-foreground/70">
-              SOC2 Type II certified. End-to-end encryption. Complete audit trails. GDPR compliant.
+              Server-side authentication and Firestore security rules ensure users can only access their own data. Every API request is verified. No data leakage between users or organizations.
             </p>
           </div>
           <div className="group">

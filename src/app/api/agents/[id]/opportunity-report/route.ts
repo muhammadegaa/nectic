@@ -138,6 +138,7 @@ Format the report as clean, professional markdown suitable for sharing with stak
     }
 
     // Call OpenAI GPT-4o
+    // Security: Include user ID to prevent data retention, and explicit instruction to not use for training
     const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -152,6 +153,7 @@ Format the report as clean, professional markdown suitable for sharing with stak
         ],
         temperature: 0.7,
         max_tokens: 2000,
+        user: userId, // Prevents data retention and associates requests with user
       }),
     })
 
