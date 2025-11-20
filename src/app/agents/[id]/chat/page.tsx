@@ -54,9 +54,10 @@ export default function AgentChatPage() {
   }, [agentId, user, authLoading])
 
   useEffect(() => {
-    if (currentConversationId) {
+    // Only load conversation if we have a conversationId and no messages loaded yet
+    if (currentConversationId && messages.length === 0) {
       loadConversation(currentConversationId)
-    } else if (agent && messages.length === 0) {
+    } else if (!currentConversationId && agent && messages.length === 0) {
       // Show welcome message only if no conversation loaded
       setMessages([
         {
@@ -143,6 +144,7 @@ export default function AgentChatPage() {
   const startNewConversation = () => {
     setCurrentConversationId(null)
     setInput("") // Clear input field
+    // Clear messages to show welcome message
     if (agent) {
       setMessages([
         {
@@ -164,6 +166,8 @@ export default function AgentChatPage() {
       ])
     }
     router.replace(`/agents/${agentId}/chat`, { scroll: false })
+    // Refresh conversations list to ensure all conversations are visible
+    fetchConversations()
   }
 
   const deleteConversation = async (convId: string, e: React.MouseEvent) => {
@@ -404,8 +408,11 @@ export default function AgentChatPage() {
       if (!currentConversationId && data.conversationId) {
         setCurrentConversationId(data.conversationId)
         router.replace(`/agents/${agentId}/chat?conversation=${data.conversationId}`, { scroll: false })
-        await fetchConversations()
       }
+      
+      // Always refresh conversations list after sending a message
+      // This ensures new conversations appear and existing ones are updated
+      await fetchConversations()
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),

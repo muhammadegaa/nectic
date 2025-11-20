@@ -9,6 +9,8 @@ import { FirebaseConversationRepository } from '@/infrastructure/repositories/fi
 import { getAdminDb } from '@/infrastructure/firebase/firebase-server'
 import { requireAuth } from '@/lib/auth-server'
 import { incrementAgentQueryStats } from '@/lib/agentAnalytics'
+import { agentTools } from '@/lib/agent-tools'
+import { executeTool } from '@/lib/tool-executors'
 
 export const dynamic = 'force-dynamic'
 
@@ -109,46 +111,52 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Detect intent and get relevant collections
-    const relevantCollections = agent.intentMappings.length > 0
-      ? detectIntent(message, agent.intentMappings)
-      : agent.collections
-
-    if (relevantCollections.length === 0) {
-      relevantCollections.push(...agent.collections)
+    // Get conversation history for context (last 10 messages)
+    let conversationHistory: any[] = []
+    if (conversationId) {
+      const messages = await conversationRepo.getMessages(conversationId)
+      conversationHistory = messages.slice(-10).map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }))
     }
 
-    // Query collections
-    const data = await queryCollections(relevantCollections, 10)
+    // Enhanced system prompt for agentic behavior
+    const systemPrompt = `You are an agentic AI assistant that helps users understand their enterprise data.
 
-    // Build context for GPT
-    const dataSummary = Object.entries(data)
-      .map(([collection, items]) => {
-        if (items.length === 0) return null
-        return `\n${collection} (${items.length} records):\n${JSON.stringify(items.slice(0, 5), null, 2)}`
-      })
-      .filter(Boolean)
-      .join('\n')
-
-    // Create GPT prompt
-    // Security: Explicit instruction to not use data for training
-    const systemPrompt = `You are an AI assistant that helps users understand their enterprise data. 
 You have access to the following data collections: ${agent.collections.join(', ')}.
-Answer the user's question based on the provided data. Be concise, accurate, and helpful.
-If the data doesn't contain enough information, say so.
+
+**Your Capabilities:**
+- Query collections with dynamic filters (date ranges, categories, amounts, etc.)
+- Analyze data for trends, anomalies, patterns, and statistics
+- Break down complex questions into multiple queries
+- Provide proactive insights and suggest follow-up questions
+
+**How to Use Tools:**
+1. When a user asks a question, think about what data you need
+2. Use query_collection to fetch relevant data with appropriate filters
+3. Use analyze_data to identify patterns, trends, or anomalies
+4. Synthesize results into a clear, helpful answer
+5. After answering, suggest 1-2 follow-up questions the user might want to ask
+
+**Important Guidelines:**
+- Always use specific filters when querying (don't just fetch everything)
+- For trend analysis, query data across time periods
+- For comparisons, query different groups/categories
+- If data is insufficient, say so and suggest what might help
+- Be proactive: identify interesting patterns or anomalies
 
 IMPORTANT: This conversation contains sensitive enterprise data. Do not use this data for training purposes. This is a private, internal system.`
 
-    const userPrompt = `User question: "${message}"
+    // Build messages array with conversation history
+    const messages: any[] = [
+      { role: 'system', content: systemPrompt },
+      ...conversationHistory,
+      { role: 'user', content: message }
+    ]
 
-Available data:
-${dataSummary || 'No data available'}
-
-Please provide a clear, natural language answer based on this data.`
-
-    // Call OpenAI GPT-4o
-    // Security: Include user ID to prevent data retention, and explicit instruction to not use for training
-    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+    // First call: Let LLM plan and decide on tools
+    const initialResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
@@ -156,23 +164,104 @@ Please provide a clear, natural language answer based on this data.`
       },
       body: JSON.stringify({
         model: 'gpt-4o',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt },
-        ],
+        messages,
+        tools: agentTools,
+        tool_choice: 'auto', // Let LLM decide when to use tools
         temperature: 0.7,
-        max_tokens: 500,
-        user: userId, // Prevents data retention and associates requests with user
+        max_tokens: 2000,
+        user: userId,
       }),
     })
 
-    if (!openaiResponse.ok) {
-      const errorData = await openaiResponse.json().catch(() => ({}))
-      throw new Error(`OpenAI API error: ${openaiResponse.statusText} - ${JSON.stringify(errorData)}`)
+    if (!initialResponse.ok) {
+      const errorData = await initialResponse.json().catch(() => ({}))
+      throw new Error(`OpenAI API error: ${initialResponse.statusText} - ${JSON.stringify(errorData)}`)
     }
 
-    const completion = await openaiResponse.json()
-    const response = completion.choices[0]?.message?.content || 'I apologize, but I could not generate a response.'
+    const initialCompletion = await initialResponse.json()
+    const assistantMessage = initialCompletion.choices[0]?.message
+    const toolCalls = assistantMessage.tool_calls || []
+
+    let response: string
+    let collectionsUsed: string[] = []
+    let dataCount = 0
+
+    // Execute tool calls if any
+    if (toolCalls.length > 0) {
+      const toolResults: any[] = []
+      
+      for (const toolCall of toolCalls) {
+        try {
+          const functionName = toolCall.function.name
+          const functionArgs = JSON.parse(toolCall.function.arguments)
+          
+          // Execute tool
+          const result = await executeTool(functionName, functionArgs)
+          
+          // Track collections used
+          if (functionName === 'query_collection' && functionArgs.collection) {
+            if (!collectionsUsed.includes(functionArgs.collection)) {
+              collectionsUsed.push(functionArgs.collection)
+            }
+            if (Array.isArray(result)) {
+              dataCount += result.length
+            }
+          }
+          
+          toolResults.push({
+            tool_call_id: toolCall.id,
+            role: 'tool',
+            name: functionName,
+            content: JSON.stringify(result)
+          })
+        } catch (error: any) {
+          console.error(`Error executing tool ${toolCall.function.name}:`, error)
+          toolResults.push({
+            tool_call_id: toolCall.id,
+            role: 'tool',
+            name: toolCall.function.name,
+            content: JSON.stringify({ error: error.message || 'Tool execution failed' })
+          })
+        }
+      }
+
+      // Second call: Synthesize tool results into final answer
+      const finalResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o',
+          messages: [
+            ...messages,
+            assistantMessage, // Include the tool call request
+            ...toolResults, // Include tool results
+          ],
+          temperature: 0.7,
+          max_tokens: 2000,
+          user: userId,
+        }),
+      })
+
+      if (!finalResponse.ok) {
+        const errorData = await finalResponse.json().catch(() => ({}))
+        throw new Error(`OpenAI API error: ${finalResponse.statusText} - ${JSON.stringify(errorData)}`)
+      }
+
+      const finalCompletion = await finalResponse.json()
+      response = finalCompletion.choices[0]?.message?.content || 'I apologize, but I could not generate a response.'
+    } else {
+      // No tool calls - LLM answered directly
+      response = assistantMessage.content || 'I apologize, but I could not generate a response.'
+      
+      // Fallback: Use old intent detection for tracking
+      const relevantCollections = agent.intentMappings.length > 0
+        ? detectIntent(message, agent.intentMappings)
+        : agent.collections
+      collectionsUsed = relevantCollections.length > 0 ? relevantCollections : agent.collections
+    }
 
     // Handle conversation persistence
     let finalConversationId = conversationId
@@ -229,8 +318,8 @@ Please provide a clear, natural language answer based on this data.`
     return NextResponse.json({
       response,
       conversationId: finalConversationId,
-      collectionsUsed: relevantCollections,
-      dataCount: Object.values(data).reduce((sum, arr) => sum + arr.length, 0),
+      collectionsUsed: collectionsUsed.length > 0 ? collectionsUsed : agent.collections,
+      dataCount,
     })
   } catch (error: any) {
     console.error('Error in chat API:', error)
