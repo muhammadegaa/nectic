@@ -14,22 +14,30 @@ import { auth } from '@/infrastructure/firebase/firebase-client'
  */
 export async function getIdToken(): Promise<string | null> {
   try {
+    // DEBUG: Log current state
+    console.log('[getIdToken] auth.currentUser:', auth.currentUser?.uid || 'null')
+    
     // First check if currentUser is available (fast path)
     if (auth.currentUser) {
       try {
-        return await auth.currentUser.getIdToken(false) // Don't force refresh on fast path
+        const token = await auth.currentUser.getIdToken(false)
+        console.log('[getIdToken] Got token from currentUser:', token ? 'yes' : 'no')
+        return token
       } catch (error) {
-        console.error('Error getting token from currentUser:', error)
+        console.error('[getIdToken] Error getting token from currentUser:', error)
         // Fall through to wait for auth state
       }
     }
 
-    // Wait for auth state to be restored from persistence (up to 5 seconds)
+    // Wait for auth state to be restored from persistence
+    console.log('[getIdToken] Waiting for auth state...')
     return new Promise((resolve) => {
       let resolved = false
       let timeoutId: NodeJS.Timeout | null = null
       
       const unsubscribe = auth.onAuthStateChanged((user) => {
+        console.log('[getIdToken] onAuthStateChanged fired, user:', user?.uid || 'null')
+        
         if (resolved) return
         
         if (user) {
@@ -37,53 +45,47 @@ export async function getIdToken(): Promise<string | null> {
           if (timeoutId) clearTimeout(timeoutId)
           resolved = true
           
-          user.getIdToken(false) // Don't force refresh - use cached if available
+          user.getIdToken(false)
             .then((token) => {
+              console.log('[getIdToken] Got token from onAuthStateChanged:', token ? 'yes' : 'no')
               resolve(token)
             })
             .catch((error) => {
-              console.error('Error getting ID token after auth state change:', error)
+              console.error('[getIdToken] Error getting ID token after auth state change:', error)
               resolve(null)
             })
-        } else if (!resolved) {
-          // User is null - check one more time after a short delay
-          // Sometimes persistence takes a moment to restore
-          setTimeout(() => {
-            if (!resolved && auth.currentUser) {
-              unsubscribe()
-              if (timeoutId) clearTimeout(timeoutId)
-              resolved = true
-              auth.currentUser.getIdToken(false)
-                .then(resolve)
-                .catch(() => resolve(null))
-            } else if (!resolved) {
-              unsubscribe()
-              if (timeoutId) clearTimeout(timeoutId)
-              resolved = true
-              resolve(null)
-            }
-          }, 500)
+        } else {
+          // User is null - this might be the initial state before persistence restores
+          // Don't resolve yet, wait for timeout or another state change
         }
       })
 
-      // Timeout after 5 seconds (give plenty of time for persistence to restore)
+      // Timeout after 3 seconds
       timeoutId = setTimeout(() => {
         if (!resolved) {
+          console.log('[getIdToken] Timeout reached, checking currentUser one more time')
           unsubscribe()
           resolved = true
-          // Final check - sometimes auth.currentUser is set but onAuthStateChanged hasn't fired yet
+          // Final check
           if (auth.currentUser) {
             auth.currentUser.getIdToken(false)
-              .then(resolve)
-              .catch(() => resolve(null))
+              .then((token) => {
+                console.log('[getIdToken] Got token from timeout check:', token ? 'yes' : 'no')
+                resolve(token)
+              })
+              .catch(() => {
+                console.log('[getIdToken] Failed to get token from timeout check')
+                resolve(null)
+              })
           } else {
+            console.log('[getIdToken] No currentUser after timeout')
             resolve(null)
           }
         }
-      }, 5000)
+      }, 3000)
     })
   } catch (error) {
-    console.error('Error getting ID token:', error)
+    console.error('[getIdToken] Exception:', error)
     return null
   }
 }

@@ -46,11 +46,15 @@ const googleProvider = new GoogleAuthProvider()
 // This MUST be done before any auth operations
 // This is critical for enterprise users who expect to stay logged in
 // Note: browserLocalPersistence is the default, but we set it explicitly to ensure it works
-try {
-  setPersistence(auth, browserLocalPersistence)
-} catch (error) {
-  console.error('Error setting auth persistence:', error)
-}
+console.log('[Firebase] Setting auth persistence to browserLocalPersistence')
+setPersistence(auth, browserLocalPersistence)
+  .then(() => {
+    console.log('[Firebase] Auth persistence set successfully')
+  })
+  .catch((error) => {
+    console.error('[Firebase] Error setting auth persistence:', error)
+    // Don't throw - persistence might already be set or there might be an active user
+  })
 
 // Auth functions
 export const signInWithGoogle = async () => {

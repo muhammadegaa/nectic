@@ -28,38 +28,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let isMounted = true
     let timeoutId: NodeJS.Timeout | null = null
-    let hasReceivedAuthState = false
+    
+    console.log('[AuthProvider] Initializing auth state listener')
     
     // Wait for auth state to be restored from persistence
     // This is critical for enterprise users who expect sessions to persist
     const unsubscribe = onAuthStateChangedHelper((user) => {
-      hasReceivedAuthState = true
+      console.log('[AuthProvider] onAuthStateChanged fired, user:', user?.uid || 'null')
       
       if (isMounted) {
         setUser(user)
         
-        // Only set loading to false after we've received auth state AND waited a bit
-        // This ensures persistence has time to restore
+        // Clear any existing timeout
         if (timeoutId) {
           clearTimeout(timeoutId)
+          timeoutId = null
         }
         
-        // Wait a bit more to ensure persistence is fully restored
-        timeoutId = setTimeout(() => {
-          if (isMounted) {
-            setLoading(false)
-          }
-        }, 300) // Small delay to ensure persistence is fully restored
+        // Set loading to false immediately when we get auth state
+        // The user object will be set, and if it's null, that's the actual state
+        setLoading(false)
       }
     })
 
-    // Set a timeout to mark as loaded even if onAuthStateChanged hasn't fired
-    // This prevents infinite loading states, but give it time for persistence
+    // Fallback timeout - if onAuthStateChanged doesn't fire within 2 seconds,
+    // check currentUser directly and mark as loaded
     timeoutId = setTimeout(() => {
       if (isMounted) {
-        // Check one final time if currentUser exists (persistence might have restored it)
+        console.log('[AuthProvider] Timeout reached, checking currentUser')
         import('@/infrastructure/firebase/firebase-client').then(({ auth }) => {
           if (isMounted) {
+            console.log('[AuthProvider] currentUser:', auth.currentUser?.uid || 'null')
             if (auth.currentUser) {
               setUser(auth.currentUser)
             }
@@ -67,9 +66,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         })
       }
-    }, 3000) // Wait up to 3 seconds for persistence to restore
+    }, 2000)
 
     return () => {
+      console.log('[AuthProvider] Cleaning up')
       isMounted = false
       unsubscribe()
       if (timeoutId) {
