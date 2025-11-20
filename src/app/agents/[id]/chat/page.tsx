@@ -116,8 +116,15 @@ export default function AgentChatPage() {
 
   const loadConversation = async (convId: string) => {
     try {
-      const response = await fetch(`/api/conversations/${convId}`)
-      if (!response.ok) throw new Error("Failed to load conversation")
+      const { getAuthHeaders } = await import('@/lib/auth-client')
+      const headers = await getAuthHeaders()
+      const response = await fetch(`/api/conversations/${convId}`, {
+        headers,
+      })
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || errorData.message || "Failed to load conversation")
+      }
       const data = await response.json()
       setMessages(data.messages)
       setCurrentConversationId(convId)
@@ -135,14 +142,27 @@ export default function AgentChatPage() {
 
   const startNewConversation = () => {
     setCurrentConversationId(null)
-    setMessages([
-      {
-        id: "welcome",
-        role: "assistant",
-        content: `Hello! I'm ${agent?.name || "your assistant"}. ${agent?.description || "How can I help you today?"}`,
-        timestamp: new Date().toISOString(),
-      },
-    ])
+    setInput("") // Clear input field
+    if (agent) {
+      setMessages([
+        {
+          id: "welcome",
+          role: "assistant",
+          content: `Hello! I'm ${agent.name}. ${agent.description || "How can I help you today?"}`,
+          timestamp: new Date().toISOString(),
+        },
+      ])
+    } else {
+      // If agent not loaded yet, show generic welcome
+      setMessages([
+        {
+          id: "welcome",
+          role: "assistant",
+          content: "Hello! How can I help you today?",
+          timestamp: new Date().toISOString(),
+        },
+      ])
+    }
     router.replace(`/agents/${agentId}/chat`, { scroll: false })
   }
 
@@ -157,7 +177,10 @@ export default function AgentChatPage() {
         method: "DELETE",
         headers,
       })
-      if (!response.ok) throw new Error("Failed to delete conversation")
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || errorData.message || "Failed to delete conversation")
+      }
       await fetchConversations()
       if (currentConversationId === convId) {
         startNewConversation()
@@ -370,7 +393,9 @@ export default function AgentChatPage() {
       })
 
       if (!response.ok) {
-        throw new Error("Failed to get response")
+        const errorData = await response.json().catch(() => ({}))
+        const errorMessage = errorData.error || errorData.message || "Failed to get response. Please try again."
+        throw new Error(errorMessage)
       }
 
       const data = await response.json()
@@ -391,17 +416,18 @@ export default function AgentChatPage() {
       }
 
       setMessages((prev) => [...prev, assistantMessage])
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error sending message:", error)
+      const errorMsg = error?.message || "Failed to send message. Please check your connection and try again."
       toast({
         title: "Error",
-        description: "Failed to send message. Please try again.",
+        description: errorMsg,
         variant: "destructive",
       })
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: "Sorry, I encountered an error. Please try again.",
+        content: errorMsg,
         timestamp: new Date().toISOString(),
       }
       setMessages((prev) => [...prev, errorMessage])

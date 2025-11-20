@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import "./globals.css"
 import { AuthProvider } from "@/contexts/auth-context"
 import { Toaster } from "@/components/ui/toaster"
+import { ErrorBoundary } from "@/components/error-boundary"
 
 export const metadata: Metadata = {
   title: "Nectic - Secure Internal AI Assistants",
@@ -36,10 +37,12 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className="font-sans antialiased bg-background text-foreground">
-        <AuthProvider>
-          {children}
-          <Toaster />
-        </AuthProvider>
+        <ErrorBoundary>
+          <AuthProvider>
+            {children}
+            <Toaster />
+          </AuthProvider>
+        </ErrorBoundary>
       </body>
     </html>
   )
