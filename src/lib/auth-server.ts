@@ -18,20 +18,31 @@ export async function getAuthenticatedUserId(request: NextRequest): Promise<stri
     // Get Authorization header
     const authHeader = request.headers.get('authorization')
     
+    console.log('[auth-server] Authorization header present:', !!authHeader)
+    console.log('[auth-server] Authorization header starts with Bearer:', authHeader?.startsWith('Bearer '))
+    
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('[auth-server] No valid Authorization header')
       return null
     }
 
     // Extract token
     const idToken = authHeader.substring(7)
+    console.log('[auth-server] Token length:', idToken.length)
+    console.log('[auth-server] Token preview:', idToken.substring(0, 20) + '...')
 
     // Verify token with Firebase Admin
     const adminAuth = getAdminAuth()
+    console.log('[auth-server] AdminAuth initialized:', !!adminAuth)
+    
     const decodedToken = await adminAuth.verifyIdToken(idToken)
+    console.log('[auth-server] Token verified successfully, UID:', decodedToken.uid)
     
     return decodedToken.uid
-  } catch (error) {
-    console.error('Error verifying auth token:', error)
+  } catch (error: any) {
+    console.error('[auth-server] Error verifying auth token:', error.message)
+    console.error('[auth-server] Error code:', error.code)
+    console.error('[auth-server] Error stack:', error.stack)
     return null
   }
 }
