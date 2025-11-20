@@ -27,17 +27,18 @@ export async function getIdToken(): Promise<string | null> {
 /**
  * Get headers with Authorization token for API requests
  * @returns Headers object with Authorization header
+ * @throws Error if user is not authenticated
  */
 export async function getAuthHeaders(): Promise<HeadersInit> {
   const token = await getIdToken()
-  const headers: HeadersInit = {
+  
+  if (!token) {
+    throw new Error('User is not authenticated. Please log in.')
+  }
+  
+  return {
     'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`,
   }
-  
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`
-  }
-  
-  return headers
 }
 

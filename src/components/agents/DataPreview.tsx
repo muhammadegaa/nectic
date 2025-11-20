@@ -20,7 +20,7 @@ interface DataPreviewProps {
 }
 
 export function DataPreview({ selectedCollections }: DataPreviewProps) {
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const { toast } = useToast()
   const [previews, setPreviews] = useState<CollectionPreview[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -38,6 +38,11 @@ export function DataPreview({ selectedCollections }: DataPreviewProps) {
       return
     }
 
+    // Wait for auth to be ready
+    if (authLoading || !user) {
+      return
+    }
+
     // Debounce API call
     const timer = setTimeout(() => {
       fetchPreviews(selectedCollections)
@@ -48,36 +53,41 @@ export function DataPreview({ selectedCollections }: DataPreviewProps) {
     return () => {
       if (timer) clearTimeout(timer)
     }
-  }, [selectedCollections])
+  }, [selectedCollections, user, authLoading])
 
   const fetchPreviews = async (collections: string[]) => {
     if (!user || collections.length === 0) {
+      setPreviews([])
       return
     }
 
     setIsLoading(true)
     try {
       const { getAuthHeaders } = await import('@/lib/auth-client')
-      const headers = await getAuthHeaders()
+      const authHeaders = await getAuthHeaders()
       const response = await fetch("/api/data-preview", {
         method: "POST",
-        headers,
+        headers: authHeaders,
         body: JSON.stringify({
           collections,
         }),
       })
 
       if (!response.ok) {
-        throw new Error("Failed to fetch data preview")
+        const errorData = await response.json().catch(() => ({}))
+        if (response.status === 401) {
+          throw new Error("Authentication required. Please log in.")
+        }
+        throw new Error(errorData.message || errorData.error || "Failed to fetch data preview")
       }
 
       const data = await response.json()
       setPreviews(data.collections || [])
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching data preview:", error)
       toast({
         title: "Error",
-        description: "Failed to load data preview",
+        description: error.message || "Failed to load data preview",
         variant: "destructive",
       })
       setPreviews([])
