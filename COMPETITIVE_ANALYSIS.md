@@ -34,16 +34,18 @@
 
 ## The ONE High-Impact Improvement
 
-### 🎯 **Proactive Insight Generation with Multi-Step Reasoning**
+### 🎯 **Agentic AI with Tool Use & Multi-Step Reasoning**
 
-**The Problem**: Current system is purely reactive. Users must know what to ask.
+**The Problem**: Current system is purely reactive. Users must know what to ask. System uses static queries (always limit 10) and can't handle complex questions.
 
-**The Solution**: Transform from reactive Q&A to proactive agent that:
-1. **Analyzes conversation context** to understand user intent patterns
-2. **Generates follow-up questions** the user should ask
-3. **Identifies anomalies** in data without being asked
-4. **Suggests actionable insights** based on data patterns
-5. **Plans multi-step queries** to answer complex questions
+**The Solution**: Transform from reactive chatbot to agentic AI using:
+1. **OpenAI Function Calling** - LLM decides what data to fetch and how
+2. **Multi-Step Planning** - Breaks complex questions into sub-queries
+3. **ReAct Pattern** - Reasoning + Acting loop with reflection
+4. **Proactive Insights** - Generates follow-up questions and identifies anomalies
+5. **Dynamic Querying** - No more static limit 10, queries adapt to question
+
+**Research-Backed Approach**: Industry standard for agentic AI is OpenAI Function Calling + ReAct pattern. This is what LangChain, AutoGPT, and other agentic frameworks use.
 
 ### Why This Wins
 
