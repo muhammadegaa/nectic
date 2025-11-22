@@ -87,7 +87,8 @@ export const oauthProviders: OAuthProvider[] = [
     features: [
       'Get contact information',
       'Create and update contacts',
-      'Manage deals and pipelines'
+      'Get and create deals',
+      'Manage pipelines'
     ]
   },
   {
@@ -235,6 +236,7 @@ export const oauthProviders: OAuthProvider[] = [
     brandColor: '#635BFF',
     features: [
       'Get customer information',
+      'Create customers',
       'View subscriptions',
       'Create invoices'
     ]

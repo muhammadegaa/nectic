@@ -332,12 +332,12 @@ export const paymentTools: ToolDefinition[] = [
     type: "function",
     function: {
       name: "stripe_create_invoice",
-      description: "Create an invoice in Stripe. Requires Stripe API key.",
+      description: "Create an invoice in Stripe. Requires Stripe secret API key (not OAuth token).",
       parameters: {
         type: "object",
         properties: {
           customer_id: { type: "string", description: "Stripe customer ID" },
-          amount: { type: "number", description: "Invoice amount in cents" },
+          amount: { type: "number", description: "Invoice amount in dollars (will be converted to cents)" },
           currency: { type: "string", description: "Currency code (e.g., 'usd')", default: "usd" },
           description: { type: "string", description: "Invoice description" }
         },

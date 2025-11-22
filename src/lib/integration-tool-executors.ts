@@ -488,30 +488,211 @@ async function executeNotionTool(toolName: string, args: any, accessToken: strin
  * Execute Stripe tools
  */
 async function executeStripeTool(toolName: string, args: any, accessToken: string): Promise<any> {
-  switch (toolName) {
-    case 'stripe_create_customer': {
-      const response = await fetch('https://api.stripe.com/v1/customers', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          email: args.email,
-          name: args.name || '',
-        }).toString(),
-      })
+  // IMPORTANT: Stripe integration uses API keys (secret keys), not OAuth tokens
+  // For Stripe Connect (marketplace), OAuth is used, but for regular API operations,
+  // users need to provide their Stripe secret key as the "accessToken"
+  // In production, consider storing Stripe API keys separately from OAuth tokens
+  const baseUrl = 'https://api.stripe.com/v1'
 
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({}))
-        throw new Error(`Stripe API error: ${JSON.stringify(error)}`)
+  switch (toolName) {
+    case 'stripe_get_customer': {
+      const customerId = args.customer_id
+      const email = args.email
+
+      if (!customerId && !email) {
+        throw new Error('Customer ID or email is required')
       }
 
-      const data = await response.json()
-      return {
-        success: true,
-        customerId: data.id,
-        customer: data,
+      try {
+        let url = `${baseUrl}/customers`
+        if (customerId) {
+          url += `/${customerId}`
+        } else if (email) {
+          url += `/search?query=email:'${encodeURIComponent(email)}'`
+        }
+
+        const response = await apiRequest(url, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          retryOptions: {
+            maxRetries: 3,
+          },
+        })
+
+        if (customerId) {
+          return {
+            customer: response.data,
+          }
+        } else {
+          return {
+            customers: response.data.data || [],
+            hasMore: response.data.has_more || false,
+          }
+        }
+      } catch (error: any) {
+        if (error instanceof ApiError) {
+          throw new Error(`Stripe get customer failed: ${error.message}`)
+        }
+        throw error
+      }
+    }
+
+    case 'stripe_create_customer': {
+      const email = args.email
+      const name = args.name
+      const metadata = args.metadata || {}
+
+      if (!email) {
+        throw new Error('Email is required')
+      }
+
+      try {
+        const params = new URLSearchParams({
+          email,
+          ...(name ? { name } : {}),
+        })
+
+        // Add metadata if provided
+        Object.entries(metadata).forEach(([key, value]) => {
+          params.append(`metadata[${key}]`, String(value))
+        })
+
+        const response = await apiRequest(
+          `${baseUrl}/customers`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: params.toString(),
+            retryOptions: {
+              maxRetries: 2,
+            },
+          }
+        )
+
+        return {
+          success: true,
+          customerId: response.data.id,
+          customer: response.data,
+        }
+      } catch (error: any) {
+        if (error instanceof ApiError) {
+          throw new Error(`Stripe create customer failed: ${error.message}`)
+        }
+        throw error
+      }
+    }
+
+    case 'stripe_get_subscriptions': {
+      const customerId = args.customer_id
+      const status = args.status
+
+      if (!customerId) {
+        throw new Error('Customer ID is required')
+      }
+
+      try {
+        let url = `${baseUrl}/subscriptions?customer=${customerId}`
+        if (status) {
+          url += `&status=${status}`
+        }
+
+        const response = await apiRequest(url, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          retryOptions: {
+            maxRetries: 3,
+          },
+        })
+
+        return {
+          subscriptions: response.data.data || [],
+          hasMore: response.data.has_more || false,
+        }
+      } catch (error: any) {
+        if (error instanceof ApiError) {
+          throw new Error(`Stripe get subscriptions failed: ${error.message}`)
+        }
+        throw error
+      }
+    }
+
+    case 'stripe_create_invoice': {
+      const customerId = args.customer_id
+      let amount = args.amount
+      const currency = args.currency || 'usd'
+      const description = args.description
+
+      if (!customerId || amount === undefined) {
+        throw new Error('Customer ID and amount are required')
+      }
+
+      // Convert amount to cents if it's in dollars (assume > 1000 means it's already in cents)
+      if (amount < 1000) {
+        amount = Math.round(amount * 100)
+      }
+
+      try {
+        // Create invoice item first
+        const invoiceItemParams = new URLSearchParams({
+          customer: customerId,
+          amount: String(amount),
+          currency,
+          ...(description ? { description } : {}),
+        })
+
+        await apiRequest(
+          `${baseUrl}/invoiceitems`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: invoiceItemParams.toString(),
+            retryOptions: {
+              maxRetries: 2,
+            },
+          }
+        )
+
+        // Then create invoice
+        const invoiceParams = new URLSearchParams({
+          customer: customerId,
+          auto_advance: 'true',
+        })
+
+        const response = await apiRequest(
+          `${baseUrl}/invoices`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: invoiceParams.toString(),
+            retryOptions: {
+              maxRetries: 2,
+            },
+          }
+        )
+
+        return {
+          success: true,
+          invoiceId: response.data.id,
+          invoice: response.data,
+        }
+      } catch (error: any) {
+        if (error instanceof ApiError) {
+          throw new Error(`Stripe create invoice failed: ${error.message}`)
+        }
+        throw error
       }
     }
 
@@ -622,18 +803,26 @@ async function executeHubSpotTool(toolName: string, args: any, accessToken: stri
       }
     }
 
-    case 'hubspot_get_deals': {
+    case 'hubspot_get_deals':
+    case 'hubspot_get_deal': {
       const limit = args.limit || 100
       const after = args.after
+      const dealId = args.deal_id
 
       try {
-        const url = new URL(`${baseUrl}/crm/v3/objects/deals`)
-        url.searchParams.set('limit', String(limit))
-        if (after) {
-          url.searchParams.set('after', after)
+        let url: string
+        if (dealId) {
+          url = `${baseUrl}/crm/v3/objects/deals/${dealId}`
+        } else {
+          const urlObj = new URL(`${baseUrl}/crm/v3/objects/deals`)
+          urlObj.searchParams.set('limit', String(limit))
+          if (after) {
+            urlObj.searchParams.set('after', after)
+          }
+          url = urlObj.toString()
         }
 
-        const response = await apiRequest(url.toString(), {
+        const response = await apiRequest(url, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${accessToken}`,
@@ -643,13 +832,67 @@ async function executeHubSpotTool(toolName: string, args: any, accessToken: stri
           },
         })
 
-        return {
-          deals: response.data.results || [],
-          paging: response.data.paging,
+        if (dealId) {
+          return {
+            deal: response.data,
+          }
+        } else {
+          return {
+            deals: response.data.results || [],
+            paging: response.data.paging,
+          }
         }
       } catch (error: any) {
         if (error instanceof ApiError) {
           throw new Error(`HubSpot get deals failed: ${error.message}`)
+        }
+        throw error
+      }
+    }
+
+    case 'hubspot_create_deal': {
+      const dealName = args.deal_name
+      const amount = args.amount
+      const pipeline = args.pipeline
+      const stage = args.stage
+      const properties = args.properties || {}
+
+      if (!dealName || amount === undefined) {
+        throw new Error('Deal name and amount are required')
+      }
+
+      try {
+        const dealProperties = {
+          dealname: dealName,
+          amount: String(amount),
+          ...(pipeline ? { pipeline } : {}),
+          ...(stage ? { dealstage: stage } : {}),
+          ...properties,
+        }
+
+        const response = await apiRequest(
+          `${baseUrl}/crm/v3/objects/deals`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ properties: dealProperties }),
+            retryOptions: {
+              maxRetries: 2,
+            },
+          }
+        )
+
+        return {
+          success: true,
+          dealId: response.data.id,
+          deal: response.data,
+        }
+      } catch (error: any) {
+        if (error instanceof ApiError) {
+          throw new Error(`HubSpot create deal failed: ${error.message}`)
         }
         throw error
       }
@@ -664,12 +907,17 @@ async function executeHubSpotTool(toolName: string, args: any, accessToken: stri
  * Execute Zendesk tools
  */
 async function executeZendeskTool(toolName: string, args: any, accessToken: string, userId: string): Promise<any> {
-  // Get subdomain from stored token metadata
+  // Get subdomain from stored token metadata, args, or env
   const token = await getOAuthTokenWithMetadata(userId, 'zendesk')
   const subdomain = token?.metadata?.subdomain || args.subdomain || process.env.ZENDESK_SUBDOMAIN
 
   if (!subdomain) {
-    throw new Error('Zendesk subdomain is required. Please reconnect your Zendesk account.')
+    throw new Error('Zendesk subdomain is required. Please reconnect your Zendesk account with your subdomain (e.g., "yourcompany" for yourcompany.zendesk.com).')
+  }
+
+  // Validate subdomain format (basic check)
+  if (!/^[a-z0-9-]+$/.test(subdomain)) {
+    throw new Error('Invalid Zendesk subdomain format. Subdomain should only contain lowercase letters, numbers, and hyphens.')
   }
 
   const baseUrl = `https://${subdomain}.zendesk.com/api/v2`
