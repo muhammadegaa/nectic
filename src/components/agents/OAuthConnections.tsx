@@ -58,6 +58,10 @@ export function OAuthConnections({
   const categories = Array.from(new Set(oauthProviders.map(p => p.category)))
 
   const filteredProviders = oauthProviders.filter(provider => {
+    // Only show functional integrations (ones with working tool executors)
+    if (provider.isFunctional !== true) {
+      return false
+    }
     const matchesSearch = provider.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          provider.description.toLowerCase().includes(searchQuery.toLowerCase())
     const matchesCategory = selectedCategory === null || provider.category === selectedCategory

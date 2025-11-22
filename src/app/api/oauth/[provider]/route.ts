@@ -40,6 +40,21 @@ export async function GET(
       )
     }
 
+    // Check if required environment variables are set
+    const clientIdEnv = `${providerId.toUpperCase()}_CLIENT_ID`
+    const clientSecretEnv = `${providerId.toUpperCase()}_CLIENT_SECRET`
+    const clientId = process.env[clientIdEnv]
+    const clientSecret = process.env[clientSecretEnv]
+
+    if (!clientId || !clientSecret) {
+      return NextResponse.json(
+        { 
+          error: `Integration not configured: Missing ${clientIdEnv} and ${clientSecretEnv} environment variables. Please contact your administrator.` 
+        },
+        { status: 503 }
+      )
+    }
+
     // Get redirect URI from query params or use default
     const redirectUri = request.nextUrl.searchParams.get('redirect_uri') || 
                        `${request.nextUrl.origin}/api/oauth/${providerId}/callback`

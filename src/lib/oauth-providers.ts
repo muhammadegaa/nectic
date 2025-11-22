@@ -12,6 +12,7 @@ export interface OAuthProvider {
   scopes: string[]
   icon?: string
   category: 'communication' | 'crm' | 'storage' | 'productivity' | 'analytics' | 'payment' | 'project'
+  isFunctional?: boolean // True if tool executors exist and work
 }
 
 export const oauthProviders: OAuthProvider[] = [
@@ -23,7 +24,8 @@ export const oauthProviders: OAuthProvider[] = [
     authUrl: 'https://slack.com/oauth/v2/authorize',
     tokenUrl: 'https://slack.com/api/oauth.v2.access',
     scopes: ['chat:write', 'channels:read', 'users:read'],
-    category: 'communication'
+    category: 'communication',
+    isFunctional: true
   },
   {
     id: 'microsoft-teams',
@@ -32,7 +34,8 @@ export const oauthProviders: OAuthProvider[] = [
     authUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
     tokenUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/token',
     scopes: ['https://graph.microsoft.com/ChannelMessage.Send', 'https://graph.microsoft.com/Channel.ReadBasic.All'],
-    category: 'communication'
+    category: 'communication',
+    isFunctional: false
   },
   {
     id: 'discord',
@@ -41,7 +44,8 @@ export const oauthProviders: OAuthProvider[] = [
     authUrl: 'https://discord.com/api/oauth2/authorize',
     tokenUrl: 'https://discord.com/api/oauth2/token',
     scopes: ['bot', 'messages.read', 'messages.write'],
-    category: 'communication'
+    category: 'communication',
+    isFunctional: false
   },
   
   // CRM & Sales
@@ -52,7 +56,8 @@ export const oauthProviders: OAuthProvider[] = [
     authUrl: 'https://login.salesforce.com/services/oauth2/authorize',
     tokenUrl: 'https://login.salesforce.com/services/oauth2/token',
     scopes: ['api', 'refresh_token', 'offline_access'],
-    category: 'crm'
+    category: 'crm',
+    isFunctional: true
   },
   {
     id: 'hubspot',
@@ -61,7 +66,8 @@ export const oauthProviders: OAuthProvider[] = [
     authUrl: 'https://app.hubspot.com/oauth/authorize',
     tokenUrl: 'https://api.hubapi.com/oauth/v1/token',
     scopes: ['contacts', 'content', 'reports', 'sales-email-read'],
-    category: 'crm'
+    category: 'crm',
+    isFunctional: true
   },
   {
     id: 'pipedrive',
@@ -70,7 +76,8 @@ export const oauthProviders: OAuthProvider[] = [
     authUrl: 'https://oauth.pipedrive.com/oauth/authorize',
     tokenUrl: 'https://oauth.pipedrive.com/oauth/token',
     scopes: ['base'],
-    category: 'crm'
+    category: 'crm',
+    isFunctional: false
   },
   {
     id: 'zendesk',
@@ -79,7 +86,8 @@ export const oauthProviders: OAuthProvider[] = [
     authUrl: 'https://{subdomain}.zendesk.com/oauth/authorizations/new',
     tokenUrl: 'https://{subdomain}.zendesk.com/oauth/tokens',
     scopes: ['read', 'write'],
-    category: 'crm'
+    category: 'crm',
+    isFunctional: true
   },
   
   // Storage & Files
@@ -90,7 +98,8 @@ export const oauthProviders: OAuthProvider[] = [
     authUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
     tokenUrl: 'https://oauth2.googleapis.com/token',
     scopes: ['https://www.googleapis.com/auth/drive.readonly', 'https://www.googleapis.com/auth/drive.file'],
-    category: 'storage'
+    category: 'storage',
+    isFunctional: false
   },
   {
     id: 'dropbox',
@@ -99,7 +108,8 @@ export const oauthProviders: OAuthProvider[] = [
     authUrl: 'https://www.dropbox.com/oauth2/authorize',
     tokenUrl: 'https://api.dropbox.com/oauth2/token',
     scopes: ['files.content.read', 'files.content.write'],
-    category: 'storage'
+    category: 'storage',
+    isFunctional: false
   },
   {
     id: 'aws-s3',
@@ -108,7 +118,8 @@ export const oauthProviders: OAuthProvider[] = [
     authUrl: 'https://signin.aws.amazon.com/oauth',
     tokenUrl: 'https://signin.aws.amazon.com/oauth/token',
     scopes: ['s3:GetObject', 's3:PutObject'],
-    category: 'storage'
+    category: 'storage',
+    isFunctional: false
   },
   
   // Productivity
@@ -124,7 +135,8 @@ export const oauthProviders: OAuthProvider[] = [
       'https://www.googleapis.com/auth/documents',
       'https://www.googleapis.com/auth/spreadsheets'
     ],
-    category: 'productivity'
+    category: 'productivity',
+    isFunctional: true
   },
   {
     id: 'notion',
@@ -133,7 +145,8 @@ export const oauthProviders: OAuthProvider[] = [
     authUrl: 'https://api.notion.com/v1/oauth/authorize',
     tokenUrl: 'https://api.notion.com/v1/oauth/token',
     scopes: ['read', 'update'],
-    category: 'productivity'
+    category: 'productivity',
+    isFunctional: true
   },
   {
     id: 'confluence',
@@ -142,7 +155,8 @@ export const oauthProviders: OAuthProvider[] = [
     authUrl: 'https://auth.atlassian.com/authorize',
     tokenUrl: 'https://auth.atlassian.com/oauth/token',
     scopes: ['read:confluence-content.all', 'write:confluence-content'],
-    category: 'productivity'
+    category: 'productivity',
+    isFunctional: false
   },
   
   // Analytics
@@ -153,7 +167,8 @@ export const oauthProviders: OAuthProvider[] = [
     authUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
     tokenUrl: 'https://oauth2.googleapis.com/token',
     scopes: ['https://www.googleapis.com/auth/analytics.readonly'],
-    category: 'analytics'
+    category: 'analytics',
+    isFunctional: false
   },
   {
     id: 'mixpanel',
@@ -162,7 +177,8 @@ export const oauthProviders: OAuthProvider[] = [
     authUrl: 'https://mixpanel.com/oauth/authorize',
     tokenUrl: 'https://mixpanel.com/api/2.0/oauth/token',
     scopes: ['read', 'export'],
-    category: 'analytics'
+    category: 'analytics',
+    isFunctional: false
   },
   
   // Payment
@@ -173,7 +189,8 @@ export const oauthProviders: OAuthProvider[] = [
     authUrl: 'https://connect.stripe.com/oauth/authorize',
     tokenUrl: 'https://connect.stripe.com/oauth/token',
     scopes: ['read', 'write'],
-    category: 'payment'
+    category: 'payment',
+    isFunctional: true
   },
   {
     id: 'paypal',
@@ -182,7 +199,8 @@ export const oauthProviders: OAuthProvider[] = [
     authUrl: 'https://www.paypal.com/connect',
     tokenUrl: 'https://api.paypal.com/v1/oauth2/token',
     scopes: ['https://uri.paypal.com/services/invoicing'],
-    category: 'payment'
+    category: 'payment',
+    isFunctional: false
   },
   
   // Project Management
@@ -193,7 +211,8 @@ export const oauthProviders: OAuthProvider[] = [
     authUrl: 'https://auth.atlassian.com/authorize',
     tokenUrl: 'https://auth.atlassian.com/oauth/token',
     scopes: ['read:jira-work', 'write:jira-work'],
-    category: 'project'
+    category: 'project',
+    isFunctional: false
   },
   {
     id: 'asana',
@@ -202,7 +221,8 @@ export const oauthProviders: OAuthProvider[] = [
     authUrl: 'https://app.asana.com/-/oauth_authorize',
     tokenUrl: 'https://app.asana.com/-/oauth_token',
     scopes: ['default'],
-    category: 'project'
+    category: 'project',
+    isFunctional: false
   },
   {
     id: 'trello',
@@ -211,7 +231,8 @@ export const oauthProviders: OAuthProvider[] = [
     authUrl: 'https://trello.com/1/OAuthAuthorizeToken',
     tokenUrl: 'https://trello.com/1/OAuthGetAccessToken',
     scopes: ['read', 'write'],
-    category: 'project'
+    category: 'project',
+    isFunctional: false
   },
   
   // Marketing
@@ -222,7 +243,8 @@ export const oauthProviders: OAuthProvider[] = [
     authUrl: 'https://login.mailchimp.com/oauth2/authorize',
     tokenUrl: 'https://login.mailchimp.com/oauth2/token',
     scopes: ['campaign_read', 'list_read'],
-    category: 'analytics'
+    category: 'analytics',
+    isFunctional: false
   },
   
   // Data Warehouses
@@ -233,7 +255,8 @@ export const oauthProviders: OAuthProvider[] = [
     authUrl: 'https://{account}.snowflakecomputing.com/oauth/authorize',
     tokenUrl: 'https://{account}.snowflakecomputing.com/oauth/token',
     scopes: ['session:role-any'],
-    category: 'analytics'
+    category: 'analytics',
+    isFunctional: false
   },
   {
     id: 'bigquery',
@@ -242,7 +265,8 @@ export const oauthProviders: OAuthProvider[] = [
     authUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
     tokenUrl: 'https://oauth2.googleapis.com/token',
     scopes: ['https://www.googleapis.com/auth/bigquery'],
-    category: 'analytics'
+    category: 'analytics',
+    isFunctional: false
   }
 ]
 
