@@ -12,6 +12,8 @@ import { incrementAgentQueryStats } from '@/lib/agentAnalytics'
 import { agentTools } from '@/lib/agent-tools'
 import { powerfulTools } from '@/lib/powerful-tools'
 import { executeTool } from '@/lib/tool-executors'
+import { buildSystemPrompt, filterTools } from '@/lib/agentic-prompt-builder'
+import { smartEngage } from '@/lib/cost-optimizer'
 
 export const dynamic = 'force-dynamic'
 
@@ -112,49 +114,48 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get conversation history for context (last 10 messages)
+    // Get conversation history for context
     let conversationHistory: any[] = []
+    const contextWindow = agent.agenticConfig?.contextMemory?.contextWindow || 10
     if (conversationId) {
       const messages = await conversationRepo.getMessages(conversationId)
-      conversationHistory = messages.slice(-10).map(msg => ({
+      conversationHistory = messages.slice(-contextWindow).map(msg => ({
         role: msg.role,
         content: msg.content
       }))
     }
 
-    // Agentic system prompt - real step-by-step reasoning
-    const systemPrompt = `You are an intelligent AI agent that analyzes enterprise data. Think step-by-step before responding.
+    // Cost Optimization: Pre-screen message with Smart Engage
+    const costOptimizationEnabled = agent.agenticConfig?.costOptimization?.enabled !== false
+    if (costOptimizationEnabled) {
+      const smartEngageResult = await smartEngage(
+        message,
+        agent.collections,
+        conversationHistory,
+        true
+      )
 
-Available collections: ${agent.collections.join(', ')}.
+      if (!smartEngageResult.useFullLLM && smartEngageResult.response) {
+        // Return cached/template response without calling expensive LLM
+        return NextResponse.json({
+          response: smartEngageResult.response,
+          reasoningSteps: [{
+            step: smartEngageResult.reason,
+            tool: 'smart_engage',
+            result: 'Message pre-screened, using optimized response'
+          }],
+          collectionsUsed: [],
+          dataCount: 0,
+          costOptimized: true
+        })
+      }
+    }
 
-**Your Thinking Process:**
-1. Understand: What is the user really asking? What do they need to know?
-2. Plan: What data do I need? What filters should I use? Do I need multiple queries?
-3. Execute: Query the data with appropriate filters, analyze if needed
-4. Synthesize: Combine findings into a clear, useful answer
-5. Reflect: What else might be useful? What patterns did I notice?
-
-**Response Style:**
-- Be direct and conversational (like talking to a colleague)
-- Use specific numbers: "$50,000" not "a large amount"
-- Show your reasoning briefly: "I found X transactions totaling $Y"
-- If you notice something interesting (anomaly, trend), mention it naturally
-- End with 1-2 relevant follow-up questions if they add value
-
-**Tool Strategy:**
-- Always use filters - don't fetch everything
-- For "total revenue": query with type='income' and sum amounts
-- For trends: query across time periods, use analyze_data
-- For comparisons: query different groups separately
-- Chain queries for complex questions
-
-**Example Reasoning:**
-User: "What's our total revenue?"
-Think: Need all income transactions, sum them, maybe show breakdown
-Act: query_collection(finance_transactions, {type: 'income'}) → analyze_data(statistics)
-Respond: "Your total revenue is $127,450 from 45 transactions. The largest single transaction was $46,411 in February. Revenue has been steady over the past 3 months. Want me to break this down by category or show you the trend over time?"
-
-IMPORTANT: This contains sensitive enterprise data. Do not use for training.`
+    // Build system prompt based on agentic configuration
+    const systemPrompt = buildSystemPrompt(agent.collections, agent.agenticConfig)
+    
+    // Filter tools based on agentic configuration
+    const availableTools = filterTools(agent.agenticConfig)
 
     // Build messages array with conversation history
     const messages: any[] = [
@@ -173,7 +174,7 @@ IMPORTANT: This contains sensitive enterprise data. Do not use for training.`
       body: JSON.stringify({
         model: 'gpt-4o',
         messages,
-        tools: [...agentTools, ...powerfulTools], // Combine basic and powerful tools
+        tools: availableTools.length > 0 ? availableTools : [...agentTools, ...powerfulTools], // Use filtered tools or fallback to all
         tool_choice: 'auto', // Let LLM decide when to use tools
           temperature: 0.3, // Lower temperature for more focused responses
           max_tokens: 1500,
@@ -387,12 +388,15 @@ IMPORTANT: This contains sensitive enterprise data. Do not use for training.`
       console.error('Error tracking analytics:', analyticsError)
     }
 
+    // Only include reasoning steps if configured to show them
+    const showReasoning = agent.agenticConfig?.reasoning?.showReasoning !== false
+    
     return NextResponse.json({
       response,
       conversationId: finalConversationId,
       collectionsUsed: collectionsUsed.length > 0 ? collectionsUsed : agent.collections,
       dataCount,
-      reasoningSteps: reasoningSteps.length > 0 ? reasoningSteps : undefined, // Include reasoning steps
+      reasoningSteps: showReasoning && reasoningSteps.length > 0 ? reasoningSteps : undefined, // Include reasoning steps only if enabled
     })
   } catch (error: any) {
     console.error('Error in chat API:', error)

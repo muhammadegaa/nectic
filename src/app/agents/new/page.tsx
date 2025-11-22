@@ -9,12 +9,21 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Plus, Trash2, Loader2, ArrowLeft } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Plus, Trash2, Loader2, ArrowLeft, Settings, Zap, Workflow, Play } from "lucide-react"
 import Link from "next/link"
 import { useToast } from "@/components/ui/use-toast"
 import { DataPreview } from "@/components/agents/DataPreview"
 import { DatabaseConnectionForm } from "@/components/agents/DatabaseConnection"
+import { AgenticConfigForm } from "@/components/agents/AgenticConfig"
+import { ToolMarketplace } from "@/components/agents/ToolMarketplace"
+import { VisualWorkflowBuilder } from "@/components/agents/VisualWorkflowBuilder"
+import { AgentPreview } from "@/components/agents/AgentPreview"
+import { AgentConfiguration } from "@/components/agents/AgentConfiguration"
+import { OAuthConnections } from "@/components/agents/OAuthConnections"
 import type { DatabaseConnection } from "@/lib/db-adapters/base-adapter"
+import type { AgenticConfig } from "@/domain/entities/agent.entity"
+import type { Node, Edge } from "reactflow"
 
 const AVAILABLE_COLLECTIONS = [
   { id: "finance_transactions", label: "Finance Transactions", description: "Financial transactions data" },
@@ -31,6 +40,17 @@ export default function NewAgentPage() {
   const [selectedCollections, setSelectedCollections] = useState<string[]>([])
   const [intentMappings, setIntentMappings] = useState<Array<{ intent: string; keywords: string; collections: string[] }>>([])
   const [databaseConnection, setDatabaseConnection] = useState<DatabaseConnection | null>(null)
+  const [agenticConfig, setAgenticConfig] = useState<Partial<AgenticConfig> | undefined>(undefined)
+  const [selectedTools, setSelectedTools] = useState<Set<string>>(new Set())
+  const [workflowNodes, setWorkflowNodes] = useState<Node[]>([])
+  const [workflowEdges, setWorkflowEdges] = useState<Edge[]>([])
+  const [connectedOAuthProviders, setConnectedOAuthProviders] = useState<string[]>([])
+  const [agentConfig, setAgentConfig] = useState<any>({
+    model: { provider: 'openai', model: 'gpt-4', temperature: 0.7, maxTokens: 2000 },
+    systemPrompt: '',
+    memory: { type: 'session', maxTurns: 20, enableLearning: false },
+    deployment: { channels: ['web'] }
+  })
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Wait for auth to be ready before checking user
@@ -74,6 +94,56 @@ export default function NewAgentPage() {
   const removeIntentMapping = (index: number) => {
     setIntentMappings((prev) => prev.filter((_, i) => i !== index))
   }
+
+  const handleToolToggle = (toolName: string) => {
+    setSelectedTools((prev) => {
+      const next = new Set(prev)
+      if (next.has(toolName)) {
+        next.delete(toolName)
+      } else {
+        next.add(toolName)
+      }
+      return next
+    })
+  }
+
+  const handleWorkflowChange = (nodes: Node[], edges: Edge[]) => {
+    setWorkflowNodes(nodes)
+    setWorkflowEdges(edges)
+  }
+
+  // Auto-select basic tools when collections are selected
+  useEffect(() => {
+    const basicTools = new Set(["query_collection", "analyze_data", "get_collection_schema"])
+    setSelectedTools((prev) => {
+      const next = new Set(prev)
+      basicTools.forEach(tool => next.add(tool))
+      return next
+    })
+  }, [selectedCollections])
+
+  // Update agenticConfig based on selected tools
+  useEffect(() => {
+    if (selectedTools.size > 0) {
+      const hasFinance = Array.from(selectedTools).some(t => t.includes("budget") || t.includes("cash") || t.includes("revenue") || t.includes("expense") || t.includes("financial"))
+      const hasSales = Array.from(selectedTools).some(t => t.includes("pipeline") || t.includes("win") || t.includes("sales") || t.includes("deal") || t.includes("conversion"))
+      const hasHR = Array.from(selectedTools).some(t => t.includes("team") || t.includes("performance") || t.includes("retention") || t.includes("hiring"))
+      const hasCrossCollection = Array.from(selectedTools).some(t => t.includes("correlate") || t.includes("department"))
+      const hasAdvanced = Array.from(selectedTools).some(t => t.includes("trend_") || t.includes("what_if") || t.includes("pattern_"))
+
+      setAgenticConfig((prev) => ({
+        ...prev,
+        toolUse: {
+          enableBasicTools: Array.from(selectedTools).some(t => ["query_collection", "analyze_data", "get_collection_schema"].includes(t)),
+          enablePowerfulFinanceTools: hasFinance,
+          enablePowerfulSalesTools: hasSales,
+          enablePowerfulHRTools: hasHR,
+          enablePowerfulCrossCollectionTools: hasCrossCollection,
+          enablePowerfulAdvancedTools: hasAdvanced,
+        },
+      }))
+    }
+  }, [selectedTools])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -125,6 +195,7 @@ export default function NewAgentPage() {
           collections: selectedCollections,
           intentMappings: finalMappings,
           databaseConnection: databaseConnection || undefined,
+          agenticConfig: agenticConfig || undefined,
         }),
       })
 
@@ -153,7 +224,7 @@ export default function NewAgentPage() {
 
   return (
     <div className="min-h-screen bg-background py-12 px-6 lg:px-8">
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         <Link href="/dashboard" className="inline-flex items-center text-foreground/60 hover:text-foreground mb-6 transition-colors">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Dashboard
@@ -161,7 +232,28 @@ export default function NewAgentPage() {
 
         <h1 className="text-4xl font-light text-foreground mb-8">Create New AI Agent</h1>
 
+        <Tabs defaultValue="basic" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-flex">
+            <TabsTrigger value="basic" className="gap-2">
+              <Settings className="w-4 h-4" />
+              Basic Info
+            </TabsTrigger>
+            <TabsTrigger value="tools" className="gap-2">
+              <Zap className="w-4 h-4" />
+              Tools
+            </TabsTrigger>
+            <TabsTrigger value="workflow" className="gap-2">
+              <Workflow className="w-4 h-4" />
+              Workflow
+            </TabsTrigger>
+            <TabsTrigger value="preview" className="gap-2">
+              <Play className="w-4 h-4" />
+              Preview
+            </TabsTrigger>
+          </TabsList>
+
         <form onSubmit={handleSubmit} className="space-y-6">
+          <TabsContent value="basic" className="space-y-6 mt-6">
           <Card>
             <CardHeader>
               <CardTitle>Agent Details</CardTitle>
@@ -193,9 +285,20 @@ export default function NewAgentPage() {
             </CardContent>
           </Card>
 
+          <AgentConfiguration
+            config={agentConfig}
+            onConfigChange={setAgentConfig}
+          />
+
           <DatabaseConnectionForm
             connection={databaseConnection}
             onConnectionChange={setDatabaseConnection}
+          />
+
+          <AgenticConfigForm
+            config={agenticConfig}
+            onConfigChange={setAgenticConfig}
+            selectedCollections={selectedCollections}
           />
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -316,6 +419,38 @@ export default function NewAgentPage() {
               </div>
             </CardContent>
           </Card>
+          </TabsContent>
+
+          <TabsContent value="tools" className="space-y-6 mt-6">
+            <OAuthConnections
+              connectedProviders={connectedOAuthProviders}
+              onProviderConnect={(id) => setConnectedOAuthProviders(prev => [...prev, id])}
+              onProviderDisconnect={(id) => setConnectedOAuthProviders(prev => prev.filter(p => p !== id))}
+            />
+            <ToolMarketplace
+              selectedTools={selectedTools}
+              onToolToggle={handleToolToggle}
+              selectedCollections={selectedCollections}
+            />
+          </TabsContent>
+
+          <TabsContent value="workflow" className="space-y-6 mt-6">
+            <VisualWorkflowBuilder
+              selectedTools={selectedTools}
+              onWorkflowChange={handleWorkflowChange}
+            />
+          </TabsContent>
+
+          <TabsContent value="preview" className="space-y-6 mt-6">
+            <AgentPreview
+              agentName={name}
+              agentDescription={description}
+              selectedCollections={selectedCollections}
+              selectedTools={selectedTools}
+              agenticConfig={agenticConfig}
+              databaseConnection={databaseConnection}
+            />
+          </TabsContent>
 
           <div className="flex items-center justify-end space-x-4 pt-4 border-t border-border">
             <Button type="button" variant="outline" onClick={() => router.back()}>
@@ -333,6 +468,7 @@ export default function NewAgentPage() {
             </Button>
           </div>
         </form>
+        </Tabs>
       </div>
     </div>
   )
