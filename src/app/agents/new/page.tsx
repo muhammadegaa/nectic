@@ -368,7 +368,7 @@ export default function NewAgentPage() {
       <div className="py-6 sm:py-8 lg:py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-[1800px] mx-auto">
           <div className="mb-6 sm:mb-8">
-          <div className="flex items-start justify-between gap-4 mb-4">
+            <div className="flex items-start justify-between gap-4 mb-4">
             <div>
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-light text-foreground mb-2">Create New AI Agent</h1>
               <p className="text-sm sm:text-base text-foreground/60">Configure your agent's capabilities, tools, and deployment options</p>
@@ -379,9 +379,9 @@ export default function NewAgentPage() {
                 {lastSaved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </div>
             )}
-          </div>
+            </div>
 
-          {/* Progress Indicator */}
+            {/* Progress Indicator */}
           <div className="mb-6">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm text-foreground/60">
