@@ -241,21 +241,29 @@ export async function getValidAccessToken(userId: string, providerId: string): P
  */
 function encryptToken(token: string): string {
   // In production, use proper encryption (e.g., AES-256-GCM)
-  // For now, use base64 encoding (NOT secure, but works for development)
-  const key = process.env.ENCRYPTION_KEY || 'default-key-change-in-production'
-  const cipher = crypto.createCipher('aes-256-cbc', key)
+  // For MVP: use createCipheriv with proper key derivation
+  const key = process.env.ENCRYPTION_KEY || 'default-key-change-in-production-32-chars!!'
+  const iv = crypto.randomBytes(16)
+  const cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(key.slice(0, 32).padEnd(32)), iv)
   let encrypted = cipher.update(token, 'utf8', 'hex')
   encrypted += cipher.final('hex')
-  return encrypted
+  // Prepend IV for decryption
+  return iv.toString('hex') + ':' + encrypted
 }
 
 /**
  * Decrypt token
  */
 function decryptToken(encryptedToken: string): string {
-  const key = process.env.ENCRYPTION_KEY || 'default-key-change-in-production'
-  const decipher = crypto.createDecipher('aes-256-cbc', key)
-  let decrypted = decipher.update(encryptedToken, 'hex', 'utf8')
+  const key = process.env.ENCRYPTION_KEY || 'default-key-change-in-production-32-chars!!'
+  const parts = encryptedToken.split(':')
+  if (parts.length !== 2) {
+    throw new Error('Invalid encrypted token format')
+  }
+  const iv = Buffer.from(parts[0], 'hex')
+  const encrypted = parts[1]
+  const decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(key.slice(0, 32).padEnd(32)), iv)
+  let decrypted = decipher.update(encrypted, 'hex', 'utf8')
   decrypted += decipher.final('utf8')
   return decrypted
 }

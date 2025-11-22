@@ -179,6 +179,28 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Handle conversation persistence (needed for workflow too)
+    let finalConversationId = conversationId
+    let conversationTitle = ''
+
+    if (!conversationId) {
+      // Create new conversation with title from first message
+      conversationTitle = message.length > 50 ? message.substring(0, 50) + '...' : message
+      const newConversation = await conversationRepo.create({
+        agentId,
+        userId,
+        title: conversationTitle,
+      })
+      finalConversationId = newConversation.id
+    } else {
+      // Update conversation title if this is the first user message
+      const existingConversation = await conversationRepo.findById(conversationId)
+      if (existingConversation && existingConversation.messageCount === 0) {
+        conversationTitle = message.length > 50 ? message.substring(0, 50) + '...' : message
+        await conversationRepo.update(conversationId, { title: conversationTitle })
+      }
+    }
+
     // Check if workflow is configured - if so, execute workflow instead of LLM
     if (agent.workflowConfig && agent.workflowConfig.nodes && agent.workflowConfig.nodes.length > 0) {
       try {
@@ -194,6 +216,21 @@ export async function POST(request: NextRequest) {
         )
 
         if (workflowResult.success) {
+          // Save messages
+          await conversationRepo.addMessage({
+            conversationId: finalConversationId,
+            role: 'user',
+            content: message,
+            status: 'sent',
+          })
+
+          await conversationRepo.addMessage({
+            conversationId: finalConversationId,
+            role: 'assistant',
+            content: JSON.stringify(workflowResult.output) || 'Workflow executed successfully',
+            status: 'sent',
+          })
+
           return NextResponse.json({
             response: JSON.stringify(workflowResult.output) || 'Workflow executed successfully',
             conversationId: finalConversationId,
@@ -398,27 +435,6 @@ export async function POST(request: NextRequest) {
       collectionsUsed = relevantCollections.length > 0 ? relevantCollections : agent.collections
     }
 
-    // Handle conversation persistence
-    let finalConversationId = conversationId
-    let conversationTitle = ''
-
-    if (!conversationId) {
-      // Create new conversation with title from first message
-      conversationTitle = message.length > 50 ? message.substring(0, 50) + '...' : message
-      const newConversation = await conversationRepo.create({
-        agentId,
-        userId,
-        title: conversationTitle,
-      })
-      finalConversationId = newConversation.id
-    } else {
-      // Update conversation title if this is the first user message
-      const existingConversation = await conversationRepo.findById(conversationId)
-      if (existingConversation && existingConversation.messageCount === 0) {
-        conversationTitle = message.length > 50 ? message.substring(0, 50) + '...' : message
-        await conversationRepo.update(conversationId, { title: conversationTitle })
-      }
-    }
 
     // Track start time for response time calculation
     const userMessageStartTime = Date.now()

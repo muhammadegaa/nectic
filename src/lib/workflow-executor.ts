@@ -53,7 +53,7 @@ export async function executeWorkflow(
   
   // Execute workflow starting from start node
   try {
-    const output = await executeNode(startNode.id, nodes, graph, context, visited, steps)
+    const output = await executeNode(startNode.id, nodes, edges, graph, context, visited, steps)
     
     return {
       success: true,
@@ -94,6 +94,7 @@ function buildGraph(nodes: Node[], edges: Edge[]): Map<string, string[]> {
 async function executeNode(
   nodeId: string,
   nodes: Node[],
+  edges: Edge[],
   graph: Map<string, string[]>,
   context: WorkflowContext,
   visited: Set<string>,
@@ -146,13 +147,13 @@ async function executeNode(
         const falseEdge = edges.find(e => e.source === nodeId && e.label === 'false')
         
         if (conditionResult && trueEdge) {
-          result = await executeNode(trueEdge.target, nodes, graph, context, visited, steps)
+          result = await executeNode(trueEdge.target, nodes, edges, graph, context, visited, steps)
         } else if (!conditionResult && falseEdge) {
-          result = await executeNode(falseEdge.target, nodes, graph, context, visited, steps)
+          result = await executeNode(falseEdge.target, nodes, edges, graph, context, visited, steps)
         } else {
           // No matching edge, use first neighbor
           if (neighbors.length > 0) {
-            result = await executeNode(neighbors[0], nodes, graph, context, visited, steps)
+            result = await executeNode(neighbors[0], nodes, edges, graph, context, visited, steps)
           }
         }
         break
@@ -168,7 +169,7 @@ async function executeNode(
             context.variables['item'] = item
             const neighbors = graph.get(nodeId) || []
             if (neighbors.length > 0) {
-              const loopResult = await executeNode(neighbors[0], nodes, graph, context, visited, steps)
+              const loopResult = await executeNode(neighbors[0], nodes, edges, graph, context, visited, steps)
               loopResults.push(loopResult)
             }
           }
@@ -202,7 +203,7 @@ async function executeNode(
       for (const nextNodeId of neighbors) {
         // Skip if already visited (unless it's a loop)
         if (!visited.has(nextNodeId) || node.type === 'loop') {
-          await executeNode(nextNodeId, nodes, graph, context, visited, steps)
+          await executeNode(nextNodeId, nodes, edges, graph, context, visited, steps)
         }
       }
     }
