@@ -203,7 +203,7 @@ export function OAuthConnections({
           ))}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[600px] overflow-y-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[600px] overflow-y-auto auto-rows-fr">
           {filteredProviders.map(provider => {
             const isConnected = connectedProviders.includes(provider.id)
             const brandColor = provider.brandColor || '#6B7280'
@@ -211,7 +211,7 @@ export function OAuthConnections({
             return (
               <div
                 key={provider.id}
-                className={`group relative p-5 border-2 rounded-xl transition-all duration-200 ${
+                className={`group relative p-5 border-2 rounded-xl transition-all duration-200 flex flex-col h-full ${
                   isConnected 
                     ? "border-primary/30 bg-primary/5 shadow-sm" 
                     : "border-border hover:border-primary/50 hover:bg-muted/30 hover:shadow-md"
@@ -254,11 +254,11 @@ export function OAuthConnections({
 
                 {/* Features List */}
                 {provider.features && provider.features.length > 0 && (
-                  <div className="mb-4 space-y-1.5">
+                  <div className="mb-4 space-y-1.5 flex-1">
                     {provider.features.slice(0, 3).map((feature, idx) => (
                       <div key={idx} className="flex items-center gap-2 text-xs text-foreground/60">
-                        <Circle className="w-1.5 h-1.5 fill-current" />
-                        <span>{feature}</span>
+                        <Circle className="w-1.5 h-1.5 fill-current flex-shrink-0" />
+                        <span className="line-clamp-1">{feature}</span>
                       </div>
                     ))}
                     {provider.features.length > 3 && (
@@ -270,7 +270,7 @@ export function OAuthConnections({
                 )}
 
                 {/* Trust Signals */}
-                <div className="flex items-center gap-2 mb-4 pb-3 border-b border-border/50">
+                <div className="flex items-center gap-2 mb-4 pb-3 border-b border-border/50 flex-shrink-0">
                   <Badge variant="outline" className="text-xs py-0.5 px-2">
                     <Shield className="w-3 h-3 mr-1" />
                     OAuth 2.0
@@ -281,8 +281,8 @@ export function OAuthConnections({
                   </Badge>
                 </div>
 
-                {/* Action Buttons */}
-                <div className="flex gap-2">
+                {/* Action Buttons - Always at bottom */}
+                <div className="flex gap-2 mt-auto flex-shrink-0">
                   <Dialog>
                     <DialogTrigger asChild>
                       <Button
