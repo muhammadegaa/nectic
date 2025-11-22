@@ -196,7 +196,7 @@ async function executeNode(
     // Record step
     steps.push({
       nodeId,
-      nodeType: node.type,
+      nodeType: node.type || 'unknown',
       result,
     })
 
@@ -215,7 +215,7 @@ async function executeNode(
   } catch (error: any) {
     steps.push({
       nodeId,
-      nodeType: node.type,
+      nodeType: node.type || 'unknown',
       error: error.message,
     })
     throw error
