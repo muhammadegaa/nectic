@@ -65,6 +65,12 @@
 - Token metadata for provider-specific configs
 - API version management
 
+## Recent Fixes
+
+### ✅ Build Error Fixed
+- Fixed `router.replace()` TypeScript error (Next.js 13+ API change)
+- Removed invalid 3-argument call, using single argument
+
 ## Next Task
 
 **Test**: Integration tools end-to-end with real OAuth connections

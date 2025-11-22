@@ -74,7 +74,7 @@ export default function NewAgentPage() {
       })
       setConnectedOAuthProviders(prev => [...prev, oauthSuccess])
       // Clean URL
-      router.replace('/agents/new', undefined, { shallow: true })
+      router.replace('/agents/new')
     }
     
     if (oauthError) {
@@ -84,7 +84,7 @@ export default function NewAgentPage() {
         variant: "destructive",
       })
       // Clean URL
-      router.replace('/agents/new', undefined, { shallow: true })
+      router.replace('/agents/new')
     }
   }, [router, toast])
 
