@@ -265,7 +265,10 @@ export default function NewAgentPage() {
           Back to Dashboard
         </Link>
 
-        <h1 className="text-4xl font-light text-foreground mb-8">Create New AI Agent</h1>
+        <div className="mb-8">
+          <h1 className="text-4xl font-light text-foreground mb-2">Create New AI Agent</h1>
+          <p className="text-foreground/60">Configure your agent's capabilities, tools, and deployment options</p>
+        </div>
 
         {/* Split Layout: Configuration on left, Live Preview on right */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

@@ -46,12 +46,44 @@ export async function processSlackEvent(
   }
 
   // Process message through chat API
-  // In production, this would call the chat API internally
-  const response = `I received your message: "${message}". This is a placeholder response. Full Slack integration coming soon!`
+  try {
+    // Call internal chat API
+    const chatResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        // Use service account or system user for Slack requests
+        'x-slack-user-id': userId,
+      },
+      body: JSON.stringify({
+        agentId,
+        message: message.replace(/<@[^>]+>/g, '').trim(), // Remove Slack user mentions
+        conversationId: `slack-${channel}-${userId}`, // Persistent conversation per channel+user
+        source: 'slack',
+        metadata: {
+          slackChannel: channel,
+          slackUser: userId,
+          slackThread: threadTs,
+        },
+      }),
+    })
 
-  return {
-    text: response,
-    thread_ts: threadTs
+    if (!chatResponse.ok) {
+      const error = await chatResponse.json().catch(() => ({}))
+      throw new Error(error.error || 'Chat API error')
+    }
+
+    const data = await chatResponse.json()
+    return {
+      text: data.response || 'I apologize, but I could not generate a response.',
+      thread_ts: threadTs,
+    }
+  } catch (error: any) {
+    console.error('Slack chat processing error:', error)
+    return {
+      text: 'I encountered an error processing your request. Please try again.',
+      thread_ts: threadTs,
+    }
   }
 }
 
@@ -95,14 +127,29 @@ export function verifySlackSignature(
   body: string,
   signingSecret: string
 ): boolean {
-  // Implementation of Slack signature verification
-  // This is a simplified version - in production, use crypto.timingSafeEqual
   const crypto = require('crypto')
-  const hmac = crypto.createHmac('sha256', signingSecret)
+  
+  // Check timestamp (prevent replay attacks)
+  const currentTime = Math.floor(Date.now() / 1000)
+  if (Math.abs(currentTime - parseInt(timestamp)) > 300) { // 5 minutes
+    return false
+  }
+
+  // Verify signature
   const [version, hash] = signature.split('=')
-  const sigBaseString = `${version}:${timestamp}:${body}`
+  if (version !== 'v0') {
+    return false
+  }
+
+  const sigBaseString = `v0:${timestamp}:${body}`
+  const hmac = crypto.createHmac('sha256', signingSecret)
   hmac.update(sigBaseString)
   const computedHash = hmac.digest('hex')
-  return computedHash === hash
+
+  // Use timing-safe comparison
+  return crypto.timingSafeEqual(
+    Buffer.from(hash),
+    Buffer.from(computedHash)
+  )
 }
 

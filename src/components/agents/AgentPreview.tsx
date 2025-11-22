@@ -258,15 +258,15 @@ export function AgentPreview({
           )}
 
           {/* Chat Messages */}
-          <div className="flex-1 overflow-y-auto border border-border rounded-lg p-4 bg-background space-y-4 min-h-0">
+          <div className="flex-1 overflow-y-auto border border-border rounded-lg p-4 bg-background space-y-4 min-h-0 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
             {messages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-center">
-                <MessageSquare className="w-12 h-12 text-foreground/20 mb-4" />
-                <p className="text-sm text-foreground/60">
-                  Start a conversation to test your agent
-                </p>
-                <p className="text-xs text-foreground/40 mt-2">
-                  Try asking: "What's our total revenue?" or "Show me the sales pipeline"
+              <div className="flex flex-col items-center justify-center h-full text-center px-4">
+                <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
+                  <MessageSquare className="w-8 h-8 text-foreground/40" />
+                </div>
+                <h4 className="text-sm font-medium text-foreground mb-2">Ready to test</h4>
+                <p className="text-xs text-foreground/60 max-w-sm">
+                  Start a conversation to preview how your agent will respond. The preview uses your current configuration.
                 </p>
               </div>
             ) : (
@@ -276,12 +276,12 @@ export function AgentPreview({
                   className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
                 >
                   <div
-                    className={`max-w-[80%] rounded-lg p-3 ${
+                    className={`max-w-[85%] rounded-lg p-3 shadow-sm ${
                       message.role === "user"
                         ? "bg-primary text-primary-foreground"
                         : message.role === "thinking"
-                        ? "bg-muted border border-border"
-                        : "bg-muted/80"
+                        ? "bg-muted/50 border border-border/50"
+                        : "bg-muted/90 border border-border/30"
                     }`}
                   >
                     {message.role === "thinking" && (
@@ -316,16 +316,21 @@ export function AgentPreview({
           </div>
 
           {/* Input */}
-          <div className="flex gap-2 flex-shrink-0">
+          <div className="flex gap-2 flex-shrink-0 pt-2 border-t border-border">
             <Input
-              placeholder="Type your message to test the agent..."
+              placeholder="Type a message to test your agent..."
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={handleKeyPress}
               disabled={isLoading}
-              className="text-sm"
+              className="text-sm flex-1"
             />
-            <Button onClick={handleSend} disabled={isLoading || !input.trim()} size="sm">
+            <Button 
+              onClick={handleSend} 
+              disabled={isLoading || !input.trim() || selectedCollections.length === 0} 
+              size="sm"
+              className="min-w-[44px]"
+            >
               {isLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (

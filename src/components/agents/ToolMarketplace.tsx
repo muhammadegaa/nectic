@@ -353,12 +353,12 @@ export function ToolMarketplace({ selectedTools, onToolToggle, selectedCollectio
                         <div key={toolName} className="relative">
                           <div
                             className={`
-                              relative p-4 border rounded-lg cursor-pointer transition-all
+                              relative p-4 border rounded-lg cursor-pointer transition-all duration-200
                               ${isSelected 
-                                ? "border-primary bg-primary/5 shadow-sm" 
-                                : "border-border hover:border-primary/50 hover:bg-muted/50"
+                                ? "border-primary bg-primary/5 shadow-md ring-2 ring-primary/20" 
+                                : "border-border hover:border-primary/50 hover:bg-muted/50 hover:shadow-sm"
                               }
-                              ${!isRelevant ? "opacity-50" : ""}
+                              ${!isRelevant ? "opacity-50 cursor-not-allowed" : ""}
                             `}
                             onClick={() => isRelevant && onToolToggle(toolName)}
                           >

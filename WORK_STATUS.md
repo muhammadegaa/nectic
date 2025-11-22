@@ -26,22 +26,30 @@
 - Core agent chat API
 - Basic tool execution
 - Conversation persistence
+- Agent preview (calls real API)
+- Slack integration (calls chat API, no placeholder)
 
 ### ⚠️ IMPLEMENTED (Needs Testing)
-- Agent configuration
-- Agent preview
+- Agent configuration (model, memory, system prompt)
 - Workflow execution
-- OAuth
-- Integration tools
+- OAuth infrastructure
+- Integration tools (5 providers)
 
 ### ❌ BUGS
 - Workflow condition eval uses `eval()` (security risk)
+
+### ✅ UI POLISH COMPLETED
+- Removed "coming soon" text
+- Polished AgentPreview component
+- Enhanced ToolMarketplace styling
+- Improved empty states
+- Better error handling
 
 ---
 
 ## Next Task
 
-**Test**: Core chat flow
-**File**: `src/app/api/chat/route.ts`
+**Fix**: Workflow condition evaluation (replace eval with safe parser)
+**File**: `src/lib/workflow-executor.ts`
 **Status**: Pending
 

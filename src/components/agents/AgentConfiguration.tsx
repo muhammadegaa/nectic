@@ -141,9 +141,9 @@ const MEMORY_TYPES = [
 
 const DEPLOYMENT_CHANNELS = [
   { id: 'web', name: 'Web Interface', description: 'Deploy as a web chat interface' },
-  { id: 'slack', name: 'Slack', description: 'Deploy as a Slack bot (coming soon)' },
+  { id: 'slack', name: 'Slack', description: 'Deploy as a Slack bot via OAuth integration' },
   { id: 'api', name: 'API', description: 'Deploy as REST API endpoint' },
-  { id: 'webhook', name: 'Webhook', description: 'Trigger via webhook' },
+  { id: 'webhook', name: 'Webhook', description: 'Trigger via webhook endpoint' },
 ]
 
 export function AgentConfiguration({ config, onConfigChange }: AgentConfigurationProps) {
