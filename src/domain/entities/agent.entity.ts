@@ -4,6 +4,7 @@
  */
 
 import type { DatabaseConnection } from '@/lib/db-adapters/base-adapter'
+import type { AllowedCollectionConfig } from '@/domain/firestore'
 
 export interface Agent {
   id: string
@@ -12,6 +13,12 @@ export interface Agent {
   collections: string[] // e.g., ['finance_transactions', 'sales_deals'] or table/collection names
   intentMappings: IntentMapping[] // Intent keywords → collections (legacy, kept for backward compatibility)
   userId: string // User who owns this agent
+  // Firestore access configuration (optional - if not provided, derived from collections)
+  firestoreAccess?: {
+    collections: AllowedCollectionConfig[]
+  }
+  // Allowed tools (optional - if not provided, all tools allowed)
+  allowedTools?: string[] // e.g., ['query_collection', 'analyze_data', 'powerful_budget_vs_actual']
   // Database connection (optional - if not provided, uses Firestore)
   databaseConnection?: DatabaseConnection
   // Agentic AI Configuration

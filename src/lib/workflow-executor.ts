@@ -12,6 +12,7 @@ export interface WorkflowContext {
   variables: Record<string, any>
   results: Record<string, any>
   userId?: string
+  agentId?: string
   databaseConnection?: DatabaseConnection
 }
 
@@ -132,7 +133,8 @@ async function executeNode(
           toolName,
           resolvedArgs,
           context.databaseConnection,
-          context.userId
+          context.userId,
+          context.agentId
         )
         break
 

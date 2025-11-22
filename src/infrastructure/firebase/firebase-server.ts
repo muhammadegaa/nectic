@@ -16,6 +16,13 @@ function initializeFirebaseAdmin() {
   if (app) {
     return // Already initialized
   }
+  
+  // Skip initialization during build phase to prevent timeouts
+  const isBuildPhase = process.env.NEXT_PHASE === 'phase-production-build'
+  if (isBuildPhase && !process.env.FIREBASE_SERVICE_ACCOUNT_KEY && !process.env.FIREBASE_ADMIN_SDK_KEY) {
+    // During build without credentials, return early to prevent blocking
+    return
+  }
 
   if (getApps().length > 0) {
     app = getApps()[0]
@@ -164,6 +171,11 @@ export function getApp(): App {
 }
 
 export function getAdminAuth() {
+  const isBuildPhase = process.env.NEXT_PHASE === 'phase-production-build'
+  if (isBuildPhase) {
+    throw new Error('Firebase Admin SDK: Cannot initialize during build. This route must be dynamic.')
+  }
+  
   if (!adminAuth) {
     initializeFirebaseAdmin()
     if (!adminAuth) {
@@ -174,6 +186,12 @@ export function getAdminAuth() {
 }
 
 export function getAdminDb() {
+  const isBuildPhase = process.env.NEXT_PHASE === 'phase-production-build'
+  if (isBuildPhase) {
+    // During build, throw a clear error that will be caught by Next.js
+    throw new Error('Firebase Admin SDK: Cannot initialize during build. This route must be dynamic.')
+  }
+  
   if (!adminDb) {
     initializeFirebaseAdmin()
     if (!adminDb) {

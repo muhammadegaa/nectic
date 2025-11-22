@@ -55,10 +55,14 @@ export default function AgentChatPage() {
   }, [agentId, user, authLoading])
 
   useEffect(() => {
-    // Only load conversation if we have a conversationId and no messages loaded yet
-    if (currentConversationId && messages.length === 0) {
+    if (!agent || !user || isLoadingAgent) return
+    
+    // Load conversation from URL if present and no messages loaded
+    if (conversationIdFromUrl && messages.length === 0 && !isLoading) {
+      loadConversation(conversationIdFromUrl)
+    } else if (currentConversationId && messages.length === 0 && !isLoading) {
       loadConversation(currentConversationId)
-    } else if (!currentConversationId && agent && messages.length === 0) {
+    } else if (!currentConversationId && !conversationIdFromUrl && messages.length === 0 && !isLoading) {
       // Show welcome message only if no conversation loaded
       setMessages([
         {
@@ -69,7 +73,8 @@ export default function AgentChatPage() {
         },
       ])
     }
-  }, [currentConversationId, agent])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [agent, user, conversationIdFromUrl, isLoadingAgent])
 
   useEffect(() => {
     scrollToBottom()
@@ -436,7 +441,7 @@ export default function AgentChatPage() {
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: data.response,
+        content: data.answer || data.response, // Use 'answer' per MVP requirement, fallback to 'response' for compatibility
         timestamp: new Date().toISOString(),
         status: "sent",
       }

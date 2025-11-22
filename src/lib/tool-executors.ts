@@ -9,6 +9,11 @@ import { executePowerfulTool } from './powerful-tool-executors'
 import { createAdapter } from './db-adapters/adapter-factory'
 import { executeIntegrationTool } from './integration-tool-executors'
 import type { DatabaseConnection } from './db-adapters/base-adapter'
+import { safeQueryFirestore } from '@/infrastructure/firestore/safeQuery'
+import { logToolCall } from '@/infrastructure/audit-log.repository'
+import { FirebaseAgentRepository } from '@/infrastructure/repositories/firebase-agent.repository'
+import type { Agent } from '@/domain/entities/agent.entity'
+import { AccessDeniedError } from '@/domain/errors/access-errors'
 
 export interface QueryFilters {
   dateRange?: { start: string; end: string }
@@ -23,15 +28,125 @@ export interface QueryFilters {
 }
 
 /**
+ * Get allowed tools for an agent
+ */
+async function getAllowedTools(agentId: string, userId: string): Promise<string[] | null> {
+  if (!agentId || !userId) return null
+  
+  try {
+    const agentRepo = new FirebaseAgentRepository()
+    const agent: Agent | null = await agentRepo.findById(agentId)
+    if (!agent || agent.userId !== userId) return null
+    
+    // If explicit allowedTools is set, use it
+    // Type assertion needed because TypeScript may not infer optional property correctly
+    const agentWithTools = agent as Agent & { allowedTools?: string[] }
+    if (agentWithTools.allowedTools && Array.isArray(agentWithTools.allowedTools) && agentWithTools.allowedTools.length > 0) {
+      return agentWithTools.allowedTools
+    }
+    
+    // Otherwise, derive from agenticConfig
+    if (agent.agenticConfig?.tools) {
+      const tools: string[] = []
+      if (agent.agenticConfig.tools.basic.queryCollection) tools.push('query_collection')
+      if (agent.agenticConfig.tools.basic.analyzeData) tools.push('analyze_data')
+      if (agent.agenticConfig.tools.basic.getCollectionSchema) tools.push('get_collection_schema')
+      
+      // Add powerful tools
+      const powerfulTools = [
+        ...(agent.agenticConfig.tools.powerful.finance || []),
+        ...(agent.agenticConfig.tools.powerful.sales || []),
+        ...(agent.agenticConfig.tools.powerful.hr || []),
+        ...(agent.agenticConfig.tools.powerful.crossCollection || []),
+        ...(agent.agenticConfig.tools.powerful.advanced || []),
+      ].map(t => `powerful_${t}`)
+      tools.push(...powerfulTools)
+      
+      return tools.length > 0 ? tools : null
+    }
+    
+    // No restrictions if no config
+    return null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Create safe input summary for logging (no sensitive data)
+ */
+function createInputSummary(toolName: string, args: any): string {
+  try {
+    if (toolName === 'query_collection') {
+      return JSON.stringify({
+        collection: args.collection,
+        filterFields: args.filters ? Object.keys(args.filters) : [],
+        limit: args.filters?.limit,
+      })
+    }
+    if (toolName === 'analyze_data') {
+      return JSON.stringify({
+        collection: args.collection,
+        analysisType: args.analysisType,
+        groupBy: args.groupBy,
+      })
+    }
+    if (toolName.startsWith('powerful_')) {
+      return JSON.stringify({
+        tool: toolName,
+        argsKeys: Object.keys(args || {}),
+      })
+    }
+    // For integration tools, be very conservative
+    if (toolName.includes('_')) {
+      return JSON.stringify({
+        tool: toolName,
+        hasArgs: !!args,
+      })
+    }
+    return JSON.stringify({ tool: toolName })
+  } catch {
+    return `tool: ${toolName}`
+  }
+}
+
+/**
  * Execute a tool call from the LLM
  */
 export async function executeTool(
   toolName: string, 
   args: any, 
   databaseConnection?: DatabaseConnection,
-  userId?: string
+  userId?: string,
+  agentId?: string
 ): Promise<any> {
+  const startTime = Date.now()
+  const timestamp = new Date()
+  const inputSummary = createInputSummary(toolName, args)
+  
+  // Check tool allowlist if agentId/userId provided
+  if (agentId && userId) {
+    const allowedTools = await getAllowedTools(agentId, userId)
+    if (allowedTools !== null && !allowedTools.includes(toolName)) {
+      const errorMsg = `Tool ${toolName} is not allowed for this agent. Allowed tools: ${allowedTools.join(', ')}`
+      await logToolCall({
+        userId,
+        agentId,
+        toolName,
+        inputSummary,
+        success: false,
+        errorMessage: errorMsg,
+        timestamp,
+        durationMs: Date.now() - startTime,
+      })
+      throw new AccessDeniedError(errorMsg)
+    }
+  }
+  
+  let result: any
+  
   try {
+    
     // Check if it's an integration tool (external service)
     if (toolName.includes('_') && (
       toolName.startsWith('slack_') ||
@@ -47,147 +162,211 @@ export async function executeTool(
       toolName.startsWith('asana_') ||
       toolName.startsWith('trello_')
     )) {
-      if (!userId) {
-        throw new Error('User ID required for integration tools')
-      }
-      return await executeIntegrationTool(toolName, args, userId)
+      result = await executeIntegrationTool(toolName, args, userId || '')
     }
-
     // Check if it's a powerful tool
-    const powerfulToolNames = [
-      'budget_vs_actual', 'cash_flow_forecast', 'revenue_trend_analysis',
-      'expense_categorization_analysis', 'financial_health_score',
-      'pipeline_health', 'win_rate_analysis', 'sales_forecast',
-      'at_risk_deals_detection', 'conversion_funnel_analysis',
-      'team_capacity_analysis', 'performance_trends', 'retention_risk_analysis',
-      'hiring_needs_prediction', 'correlate_finance_sales',
-      'department_performance_comparison', 'trend_forecasting',
-      'what_if_scenario', 'pattern_recognition'
-    ]
-    
-    if (powerfulToolNames.includes(toolName)) {
-      return await executePowerfulTool(toolName, args)
+    // Note: Powerful tools may do direct Firestore queries for complex business logic
+    // This is acceptable as they implement domain-specific analytics, not raw data access
+    else if (toolName.startsWith('powerful_')) {
+      result = await executePowerfulTool(toolName, args, agentId || undefined, userId || undefined)
     }
-    
-    // Basic tools
-    switch (toolName) {
-      case "query_collection":
-        return await queryCollectionWithFilters(args.collection, args.filters || {}, databaseConnection)
-      
-      case "analyze_data":
-        return await analyzeData(args.data, args.analysisType, args.groupBy, args.metric)
-      
-      case "get_collection_schema":
-        return await getCollectionSchema(args.collection)
-      
-      default:
-        throw new Error(`Unknown tool: ${toolName}`)
-    }
-  } catch (error: any) {
-    return {
-      error: error.message || "Tool execution failed",
-      tool: toolName,
-      args
-    }
-  }
-}
 
-/**
- * Query a collection/table with dynamic filters
- * Supports Firestore and external databases via adapters
- */
-async function queryCollectionWithFilters(
-  collection: CollectionName | string,
-  filters: QueryFilters,
-  databaseConnection?: DatabaseConnection
-): Promise<any[]> {
-  // If database connection provided, use adapter
-  if (databaseConnection && databaseConnection.type !== 'firestore') {
-    const adapter = createAdapter(databaseConnection)
-    try {
-      await adapter.connect(databaseConnection)
-      const result = await adapter.query(collection, filters)
-      return result.data
-    } catch (error: any) {
-      console.error(`Database query error for ${collection}:`, error)
-      throw new Error(`Failed to query ${collection}: ${error.message || 'Database connection error'}`)
-    } finally {
-      try {
-        await adapter.disconnect()
-      } catch (e) {
-        // Ignore disconnect errors
+    // Handle database adapter queries
+    if (databaseConnection && databaseConnection.type !== 'firestore') {
+      const adapter = createAdapter(databaseConnection)
+      if (toolName === 'query_collection' || toolName === 'query_table') {
+        const result = await adapter.query(args.collection || args.table, args.filters || {})
+        return result.data // Return the data array from QueryResult
+      }
+      if (toolName === 'analyze_data') {
+        const result = await adapter.query(args.collection || args.table, {})
+        return await analyzeData(
+          result.data, // Use data array from QueryResult
+          args.analysisType,
+          args.groupBy,
+          args.metric
+        )
       }
     }
-  }
 
-  // Default: Use Firestore
-  const adminDb = getAdminDb()
-  let query: FirebaseFirestore.Query = adminDb.collection(collection as string)
-  
-  // Apply filters dynamically
-  if (filters.dateRange) {
-    const startDate = new Date(filters.dateRange.start)
-    const endDate = new Date(filters.dateRange.end)
+    // Default: Firestore queries - use S-DAL
+    if (toolName === 'query_collection') {
+      const collection = args.collection as CollectionName
+      const filters: QueryFilters = args.filters || {}
+      
+      // Use S-DAL if agentId and userId are provided (Firestore queries)
+      if (agentId && userId && (!databaseConnection || databaseConnection.type === 'firestore')) {
+        // Convert QueryFilters to S-DAL filter format
+        const safeFilters: Array<{ field: string; op: string; value: unknown }> = []
+        
+        if (filters.dateRange) {
+          const dateField = collection === "finance_transactions" ? "date" : 
+                           collection === "sales_deals" ? "expectedCloseDate" : 
+                           collection === "hr_employees" ? "hireDate" : "createdAt"
+          safeFilters.push({ field: dateField, op: ">=", value: filters.dateRange.start })
+          safeFilters.push({ field: dateField, op: "<=", value: filters.dateRange.end })
+        }
+        
+        if (filters.category) {
+          safeFilters.push({ field: "category", op: "==", value: filters.category })
+        }
+        
+        if (filters.status) {
+          safeFilters.push({ field: "status", op: "==", value: filters.status })
+        }
+        
+        if (filters.department) {
+          safeFilters.push({ field: "department", op: "==", value: filters.department })
+        }
+        
+        if (filters.minAmount !== undefined) {
+          const amountField = collection === "finance_transactions" ? "amount" : "value"
+          safeFilters.push({ field: amountField, op: ">=", value: filters.minAmount })
+        }
+        
+        if (filters.maxAmount !== undefined) {
+          const amountField = collection === "finance_transactions" ? "amount" : "value"
+          safeFilters.push({ field: amountField, op: "<=", value: filters.maxAmount })
+        }
+        
+        const queryResult = await safeQueryFirestore({
+          agentId,
+          userId,
+          collection,
+          filters: safeFilters,
+          limit: filters.limit || 50,
+          orderBy: filters.orderBy ? {
+            field: filters.orderBy,
+            direction: filters.orderDirection || 'desc'
+          } : undefined,
+        })
+        
+        result = queryResult.rows
+      } else {
+        // Fallback to direct query if no agentId/userId (legacy support, not recommended)
+      const adminDb = getAdminDb()
+      let query: FirebaseFirestore.Query = adminDb.collection(collection)
+      
+      if (filters.dateRange) {
+        const startDate = new Date(filters.dateRange.start)
+        const endDate = new Date(filters.dateRange.end)
+        const dateField = collection === "finance_transactions" ? "date" : 
+                         collection === "sales_deals" ? "expectedCloseDate" : 
+                         collection === "hr_employees" ? "hireDate" : "createdAt"
+        query = query.where(dateField, ">=", startDate.toISOString())
+                     .where(dateField, "<=", endDate.toISOString())
+      }
+      
+      if (filters.category) {
+        query = query.where("category", "==", filters.category)
+      }
+      
+      if (filters.status) {
+        query = query.where("status", "==", filters.status)
+      }
+      
+      if (filters.department) {
+        query = query.where("department", "==", filters.department)
+      }
+      
+      if (filters.minAmount !== undefined) {
+        const amountField = collection === "finance_transactions" ? "amount" : "value"
+        query = query.where(amountField, ">=", filters.minAmount)
+      }
+      
+      if (filters.maxAmount !== undefined) {
+        const amountField = collection === "finance_transactions" ? "amount" : "value"
+        query = query.where(amountField, "<=", filters.maxAmount)
+      }
+      
+      // Apply ordering
+      if (filters.orderBy) {
+        const orderField = filters.orderBy === "date" 
+          ? (collection === "finance_transactions" ? "date" : 
+             collection === "sales_deals" ? "expectedCloseDate" : "hireDate")
+          : filters.orderBy
+        
+        query = query.orderBy(
+          orderField,
+          filters.orderDirection || "desc"
+        )
+      } else {
+        // Default ordering by date/createdAt
+        const defaultOrderField = collection === "finance_transactions" ? "date" :
+                                 collection === "sales_deals" ? "createdAt" :
+                                 collection === "hr_employees" ? "hireDate" : "createdAt"
+        query = query.orderBy(defaultOrderField, "desc")
+      }
+      
+      // Apply limit
+      const limit = filters.limit || 50
+      query = query.limit(limit)
+      
+      const snapshot = await query.get()
+      result = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }))
+      }
+    } else if (toolName === 'analyze_data') {
+      const collection = args.collection as CollectionName
+      
+      // Use S-DAL if agentId and userId are provided (Firestore queries)
+      if (agentId && userId && (!databaseConnection || databaseConnection.type === 'firestore')) {
+        const queryResult = await safeQueryFirestore({
+          agentId,
+          userId,
+          collection,
+          filters: [],
+          limit: 100,
+        })
+        result = await analyzeData(queryResult.rows, args.analysisType, args.groupBy, args.metric)
+      } else {
+        // Fallback for non-Firestore or legacy paths
+        const adminDb = getAdminDb()
+        const snapshot = await adminDb.collection(collection).limit(100).get()
+        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+        result = await analyzeData(data, args.analysisType, args.groupBy, args.metric)
+      }
+    } else if (toolName === 'get_collection_schema') {
+      result = await getCollectionSchema(args.collection as CollectionName)
+    } else {
+      throw new Error(`Unknown tool: ${toolName}`)
+    }
+    // Log successful execution
+    if (agentId && userId) {
+      await logToolCall({
+        userId,
+        agentId,
+        toolName,
+        inputSummary,
+        success: true,
+        timestamp,
+        durationMs: Date.now() - startTime,
+      })
+    }
     
-    // Determine date field based on collection
-    const dateField = collection === "finance_transactions" ? "date" :
-                     collection === "sales_deals" ? "expectedCloseDate" :
-                     collection === "hr_employees" ? "hireDate" : "createdAt"
+    return result
+  } catch (error: any) {
+    console.error(`Error executing tool ${toolName}:`, error)
     
-    query = query.where(dateField, ">=", startDate.toISOString().split('T')[0])
-    query = query.where(dateField, "<=", endDate.toISOString().split('T')[0])
-  }
-  
-  if (filters.category) {
-    query = query.where("category", "==", filters.category)
-  }
-  
-  if (filters.status) {
-    query = query.where("status", "==", filters.status)
-  }
-  
-  if (filters.department) {
-    query = query.where("department", "==", filters.department)
-  }
-  
-  if (filters.minAmount !== undefined) {
-    const amountField = collection === "finance_transactions" ? "amount" : "value"
-    query = query.where(amountField, ">=", filters.minAmount)
-  }
-  
-  if (filters.maxAmount !== undefined) {
-    const amountField = collection === "finance_transactions" ? "amount" : "value"
-    query = query.where(amountField, "<=", filters.maxAmount)
-  }
-  
-  // Apply ordering
-  if (filters.orderBy) {
-    const orderField = filters.orderBy === "date" 
-      ? (collection === "finance_transactions" ? "date" : 
-         collection === "sales_deals" ? "expectedCloseDate" : "hireDate")
-      : filters.orderBy
+    // Log failed execution
+    if (agentId && userId) {
+      const errorMessage = error.message || 'Tool execution failed'
+      await logToolCall({
+        userId,
+        agentId,
+        toolName,
+        inputSummary,
+        success: false,
+        errorMessage,
+        timestamp,
+        durationMs: Date.now() - startTime,
+      })
+    }
     
-    query = query.orderBy(
-      orderField,
-      filters.orderDirection || "desc"
-    )
-  } else {
-    // Default ordering by date/createdAt
-    const defaultOrderField = collection === "finance_transactions" ? "date" :
-                             collection === "sales_deals" ? "createdAt" :
-                             collection === "hr_employees" ? "hireDate" : "createdAt"
-    query = query.orderBy(defaultOrderField, "desc")
+    return { error: error.message || 'Tool execution failed' }
   }
-  
-  // Apply limit
-  const limit = filters.limit || 50
-  query = query.limit(limit)
-  
-  const snapshot = await query.get()
-  return snapshot.docs.map(doc => ({
-    id: doc.id,
-    ...doc.data()
-  }))
 }
 
 /**

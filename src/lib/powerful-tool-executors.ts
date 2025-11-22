@@ -8,8 +8,10 @@ import { COLLECTIONS } from '@/infrastructure/database/schema'
 
 /**
  * Execute a powerful tool
+ * Note: Powerful tools may access Firestore directly for complex business logic.
+ * For simple data queries, use query_collection tool which goes through S-DAL.
  */
-export async function executePowerfulTool(toolName: string, args: any): Promise<any> {
+export async function executePowerfulTool(toolName: string, args: any, agentId?: string, userId?: string): Promise<any> {
   try {
     // Finance tools
     if (toolName.startsWith('budget_') || toolName.startsWith('cash_') || 

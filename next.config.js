@@ -1,18 +1,29 @@
-const { withSentryConfig } = require("@sentry/nextjs")
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '2mb',
+    },
+  },
 }
 
 const sentryEnabled = process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN
 
-module.exports = sentryEnabled
-  ? withSentryConfig(nextConfig, { 
+// Only use Sentry if enabled and module is available
+if (sentryEnabled) {
+  try {
+    const { withSentryConfig } = require("@sentry/nextjs")
+    module.exports = withSentryConfig(nextConfig, { 
       silent: true,
       hideSourceMaps: true,
-      // Disable Prisma integration since we're not using it
       disableServerWebpackPlugin: false,
       disableClientWebpackPlugin: false,
     })
-  : nextConfig
+  } catch (error) {
+    // Sentry not installed, use default config
+    module.exports = nextConfig
+  }
+} else {
+  module.exports = nextConfig
+}
