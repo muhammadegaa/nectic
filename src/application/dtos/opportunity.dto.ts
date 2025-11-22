@@ -47,3 +47,4 @@ export interface OpportunityDetailDTO extends OpportunityListDTO {
 
 
 
+
