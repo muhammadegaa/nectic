@@ -224,7 +224,7 @@ export default function NewAgentPage() {
 
   return (
     <div className="min-h-screen bg-background py-12 px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-[1800px] mx-auto">
         <Link href="/dashboard" className="inline-flex items-center text-foreground/60 hover:text-foreground mb-6 transition-colors">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Dashboard
@@ -232,27 +232,34 @@ export default function NewAgentPage() {
 
         <h1 className="text-4xl font-light text-foreground mb-8">Create New AI Agent</h1>
 
-        <Tabs defaultValue="basic" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-flex">
-            <TabsTrigger value="basic" className="gap-2">
-              <Settings className="w-4 h-4" />
-              Basic Info
-            </TabsTrigger>
-            <TabsTrigger value="tools" className="gap-2">
-              <Zap className="w-4 h-4" />
-              Tools
-            </TabsTrigger>
-            <TabsTrigger value="workflow" className="gap-2">
-              <Workflow className="w-4 h-4" />
-              Workflow
-            </TabsTrigger>
-            <TabsTrigger value="preview" className="gap-2">
-              <Play className="w-4 h-4" />
-              Preview
-            </TabsTrigger>
-          </TabsList>
+        {/* Split Layout: Configuration on left, Live Preview on right */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Left Side: Configuration */}
+          <div className="space-y-6">
+            <Tabs defaultValue="basic" className="space-y-6">
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="basic" className="gap-2 text-xs sm:text-sm">
+                  <Settings className="w-4 h-4" />
+                  <span className="hidden sm:inline">Basic Info</span>
+                  <span className="sm:hidden">Basic</span>
+                </TabsTrigger>
+                <TabsTrigger value="tools" className="gap-2 text-xs sm:text-sm">
+                  <Zap className="w-4 h-4" />
+                  Tools
+                </TabsTrigger>
+                <TabsTrigger value="workflow" className="gap-2 text-xs sm:text-sm">
+                  <Workflow className="w-4 h-4" />
+                  <span className="hidden sm:inline">Workflow</span>
+                  <span className="sm:hidden">Flow</span>
+                </TabsTrigger>
+                <TabsTrigger value="config" className="gap-2 text-xs sm:text-sm">
+                  <Settings className="w-4 h-4" />
+                  <span className="hidden sm:inline">Config</span>
+                  <span className="sm:hidden">Cfg</span>
+                </TabsTrigger>
+              </TabsList>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-6">
           <TabsContent value="basic" className="space-y-6 mt-6">
           <Card>
             <CardHeader>
@@ -285,10 +292,6 @@ export default function NewAgentPage() {
             </CardContent>
           </Card>
 
-          <AgentConfiguration
-            config={agentConfig}
-            onConfigChange={setAgentConfig}
-          />
 
           <DatabaseConnectionForm
             connection={databaseConnection}
@@ -441,34 +444,66 @@ export default function NewAgentPage() {
             />
           </TabsContent>
 
-          <TabsContent value="preview" className="space-y-6 mt-6">
-            <AgentPreview
-              agentName={name}
-              agentDescription={description}
-              selectedCollections={selectedCollections}
-              selectedTools={selectedTools}
-              agenticConfig={agenticConfig}
-              databaseConnection={databaseConnection}
-            />
-          </TabsContent>
+              <TabsContent value="config" className="space-y-6 mt-6">
+                <AgentConfiguration
+                  config={agentConfig}
+                  onConfigChange={setAgentConfig}
+                />
+              </TabsContent>
 
-          <div className="flex items-center justify-end space-x-4 pt-4 border-t border-border">
-            <Button type="button" variant="outline" onClick={() => router.back()}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting || !name.trim() || selectedCollections.length === 0} className="bg-foreground text-background hover:bg-foreground/90">
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Creating...
-                </>
-              ) : (
-                "Create Agent"
-              )}
-            </Button>
+              <div className="flex items-center justify-end space-x-4 pt-4 border-t border-border">
+                <Button type="button" variant="outline" onClick={() => router.back()}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isSubmitting || !name.trim() || selectedCollections.length === 0} className="bg-foreground text-background hover:bg-foreground/90">
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    "Create Agent"
+                  )}
+                </Button>
+              </div>
+            </form>
+            </Tabs>
           </div>
-        </form>
-        </Tabs>
+
+          {/* Right Side: Live Preview */}
+          <div className="lg:sticky lg:top-6 lg:h-[calc(100vh-6rem)]">
+            <Card className="h-full flex flex-col">
+              <CardHeader className="border-b border-border">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Play className="w-5 h-5" />
+                      Live Preview
+                    </CardTitle>
+                    <CardDescription>
+                      Test your agent configuration in real-time
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="flex-1 overflow-hidden p-0">
+                <div className="h-full">
+                  <AgentPreview
+                    agentName={name || "Untitled Agent"}
+                    agentDescription={description}
+                    selectedCollections={selectedCollections}
+                    selectedTools={selectedTools}
+                    agenticConfig={agenticConfig}
+                    databaseConnection={databaseConnection}
+                    workflowNodes={workflowNodes}
+                    workflowEdges={workflowEdges}
+                    agentConfig={agentConfig}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     </div>
   )

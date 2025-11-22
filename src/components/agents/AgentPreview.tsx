@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -16,6 +16,9 @@ interface AgentPreviewProps {
   selectedTools: Set<string>
   agenticConfig?: any
   databaseConnection?: any
+  workflowNodes?: any[]
+  workflowEdges?: any[]
+  agentConfig?: any
 }
 
 interface Message {
@@ -32,6 +35,9 @@ export function AgentPreview({
   selectedTools,
   agenticConfig,
   databaseConnection,
+  workflowNodes = [],
+  workflowEdges = [],
+  agentConfig,
 }: AgentPreviewProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
@@ -130,55 +136,52 @@ Once created, you can interact with your agent in real-time!`
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
+    <div className="h-full flex flex-col">
+      <div className="flex-shrink-0 p-4 border-b border-border">
+        <div className="flex items-center justify-between mb-2">
           <div>
-            <CardTitle className="text-base">Agent Preview & Test</CardTitle>
-            <CardDescription className="text-xs mt-1">
-              Test your agent before deploying. This uses your current configuration.
-            </CardDescription>
+            <h3 className="text-sm font-semibold text-foreground">{agentName || "Untitled Agent"}</h3>
+            {agentDescription && (
+              <p className="text-xs text-foreground/60 mt-1">{agentDescription}</p>
+            )}
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={clearChat}>
+            <Button variant="outline" size="sm" onClick={clearChat} className="h-7 text-xs">
               Clear
             </Button>
             <Button 
               variant={debugMode ? "default" : "outline"} 
               size="sm" 
               onClick={() => setDebugMode(!debugMode)}
+              className="h-7 text-xs"
             >
-              <Bug className="w-4 h-4 mr-2" />
+              <Bug className="w-3 h-3 mr-1" />
               Debug
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleSend} disabled={isLoading || !input.trim()}>
-              <Play className="w-4 h-4 mr-2" />
-              Test
             </Button>
           </div>
         </div>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {/* Agent Info */}
-          <div className="p-3 bg-muted/50 rounded-lg border border-border">
-            <div className="flex items-center gap-2 mb-2">
-              <MessageSquare className="w-4 h-4 text-foreground/60" />
-              <span className="text-sm font-medium text-foreground">{agentName || "Unnamed Agent"}</span>
-            </div>
-            {agentDescription && (
-              <p className="text-xs text-foreground/60">{agentDescription}</p>
-            )}
-            <div className="flex flex-wrap gap-2 mt-2">
-              <span className="text-xs text-foreground/60">
-                {selectedCollections.length} collection{selectedCollections.length !== 1 ? "s" : ""}
-              </span>
-              <span className="text-xs text-foreground/60">•</span>
-              <span className="text-xs text-foreground/60">
-                {selectedTools.size} tool{selectedTools.size !== 1 ? "s" : ""}
-              </span>
-            </div>
-          </div>
+        {/* Quick Stats */}
+        <div className="flex flex-wrap gap-3 text-xs text-foreground/60">
+          <span>{selectedCollections.length} collection{selectedCollections.length !== 1 ? "s" : ""}</span>
+          <span>•</span>
+          <span>{selectedTools.size} tool{selectedTools.size !== 1 ? "s" : ""}</span>
+          {workflowNodes.length > 0 && (
+            <>
+              <span>•</span>
+              <span>{workflowNodes.length} workflow node{workflowNodes.length !== 1 ? "s" : ""}</span>
+            </>
+          )}
+          {agentConfig?.model?.model && (
+            <>
+              <span>•</span>
+              <span>{agentConfig.model.model}</span>
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-hidden flex flex-col p-4">
+        <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
 
           {/* Debug Panel */}
           {debugMode && executionSteps.length > 0 && (
@@ -214,7 +217,7 @@ Once created, you can interact with your agent in real-time!`
           )}
 
           {/* Chat Messages */}
-          <div className="h-[400px] overflow-y-auto border border-border rounded-lg p-4 bg-background space-y-4">
+          <div className="flex-1 overflow-y-auto border border-border rounded-lg p-4 bg-background space-y-4 min-h-0">
             {messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center">
                 <MessageSquare className="w-12 h-12 text-foreground/20 mb-4" />
@@ -272,15 +275,16 @@ Once created, you can interact with your agent in real-time!`
           </div>
 
           {/* Input */}
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-shrink-0">
             <Input
-              placeholder="Type your message..."
+              placeholder="Type your message to test the agent..."
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={handleKeyPress}
               disabled={isLoading}
+              className="text-sm"
             />
-            <Button onClick={handleSend} disabled={isLoading || !input.trim()}>
+            <Button onClick={handleSend} disabled={isLoading || !input.trim()} size="sm">
               {isLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
@@ -289,8 +293,8 @@ Once created, you can interact with your agent in real-time!`
             </Button>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }
 
