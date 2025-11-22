@@ -3,18 +3,12 @@
 import { useState, useEffect, useRef } from "react"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Send, Loader2, MessageSquare, Plus, Trash2, Download, ThumbsUp, ThumbsDown, FileText, FileSearch } from "lucide-react"
+import { ArrowLeft, Send, Loader2, MessageSquare, Plus, Trash2, ThumbsUp, ThumbsDown, FileSearch } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/components/ui/use-toast"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { format, formatDistanceToNow } from "date-fns"
 import { useAuth } from "@/contexts/auth-context"
 import type { Agent } from "@/domain/entities/agent.entity"
