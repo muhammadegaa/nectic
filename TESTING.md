@@ -248,6 +248,10 @@ This is the **only** testing guide you need. It covers everything from basic set
 - **Data Source**: Firestore `audit_logs` collection
 - **Authentication**: Firebase Auth
 - **Authorization**: User can only see their own agents' logs
+- **Firestore Indexes**: Required composite indexes for audit_logs queries:
+  - `(agentId, userId, timestamp)` - for basic queries
+  - `(agentId, userId, type, timestamp)` - for filtered queries
+  - See `firestore.indexes.json` for configuration
 
 ---
 

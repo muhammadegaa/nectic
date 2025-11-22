@@ -114,6 +114,8 @@ export async function listAuditLogsByAgent(params: ListAuditLogsParams): Promise
     const { agentId, userId, type, limit = 50 } = params
     const adminDb = getAdminDb()
     
+    // Build query with proper index requirements
+    // Note: Requires composite index on (agentId, userId, timestamp) or (agentId, userId, type, timestamp)
     let query: FirebaseFirestore.Query = adminDb.collection(AUDIT_COLLECTION)
       .where('agentId', '==', agentId)
       .where('userId', '==', userId) // Ensure user can only see their own agents' logs
@@ -122,6 +124,7 @@ export async function listAuditLogsByAgent(params: ListAuditLogsParams): Promise
       query = query.where('type', '==', type)
     }
     
+    // Order by timestamp (requires composite index - see firestore.indexes.json)
     query = query.orderBy('timestamp', 'desc').limit(limit)
     
     const snapshot = await query.get()

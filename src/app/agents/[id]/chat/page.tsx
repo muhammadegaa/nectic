@@ -34,8 +34,10 @@ export default function AgentChatPage() {
   // Default to showing sidebar on desktop, hidden on mobile
   const [showConversations, setShowConversations] = useState(true)
   const [votedMessages, setVotedMessages] = useState<Set<string>>(new Set())
-  const [isGeneratingReport, setIsGeneratingReport] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  
+  // Note: generateOpportunityReport and exportConversation are defined but not currently used in UI
+  // They may be used in future features or removed if not needed
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -208,7 +210,6 @@ export default function AgentChatPage() {
       return
     }
 
-    setIsGeneratingReport(true)
     try {
       const { getAuthHeaders } = await import('@/lib/auth-client')
       const headers = await getAuthHeaders()
@@ -246,8 +247,6 @@ export default function AgentChatPage() {
         description: error.message || "Failed to generate report. Please try again.",
         variant: "destructive",
       })
-    } finally {
-      setIsGeneratingReport(false)
     }
   }
 
@@ -290,6 +289,8 @@ export default function AgentChatPage() {
     }
   }
 
+  // TODO: This function is defined but not currently used in the UI
+  // Remove if not needed, or wire it up to a UI button if this feature is planned
   const exportConversation = async (format: 'json' | 'markdown') => {
     if (!currentConversationId || !user) {
       toast({

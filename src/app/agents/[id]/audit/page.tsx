@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/components/ui/use-toast"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { format, formatDistanceToNow } from "date-fns"
 import { useAuth } from "@/contexts/auth-context"
 import type { Agent } from "@/domain/entities/agent.entity"
@@ -47,10 +47,11 @@ export default function AgentAuditPage() {
       router.push("/auth/login")
       return
     }
-    if (user) {
+    if (user && agentId) {
       fetchAgent()
       fetchLogs()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [agentId, user, authLoading, filterType])
 
   const fetchAgent = async () => {
@@ -68,6 +69,8 @@ export default function AgentAuditPage() {
   }
 
   const fetchLogs = async () => {
+    if (!user) return
+    
     setIsLoading(true)
     try {
       const { getAuthHeaders } = await import('@/lib/auth-client')
@@ -77,6 +80,19 @@ export default function AgentAuditPage() {
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
+        
+        // Handle specific error cases
+        if (response.status === 401) {
+          router.push('/auth/login')
+          return
+        }
+        if (response.status === 403) {
+          throw new Error('You do not have access to this agent')
+        }
+        if (response.status === 404) {
+          throw new Error('Agent not found')
+        }
+        
         throw new Error(errorData.error || 'Failed to fetch audit logs')
       }
 
@@ -207,17 +223,17 @@ export default function AgentAuditPage() {
                           <span className="text-muted-foreground">Collection: {log.collection}</span>
                         )}
                         {log.inputSummary && (
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-xs text-muted-foreground" title={log.inputSummary}>
                             {truncateText(log.inputSummary, 40)}
                           </span>
                         )}
-                        {log.rowCount !== undefined && (
+                        {log.rowCount !== undefined && log.rowCount > 0 && (
                           <span className="text-xs text-muted-foreground">
                             Rows: {log.rowCount}
                           </span>
                         )}
                         {log.errorMessage && (
-                          <span className="text-xs text-red-500">
+                          <span className="text-xs text-red-500" title={log.errorMessage}>
                             Error: {truncateText(log.errorMessage, 40)}
                           </span>
                         )}
