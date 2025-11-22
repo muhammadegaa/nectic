@@ -61,6 +61,33 @@ export default function NewAgentPage() {
     }
   }, [authLoading, user, router])
 
+  // Handle OAuth callback
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const oauthSuccess = params.get('oauth_success')
+    const oauthError = params.get('error')
+    
+    if (oauthSuccess) {
+      toast({
+        title: "Connection Successful",
+        description: `Successfully connected to ${oauthSuccess}`,
+      })
+      setConnectedOAuthProviders(prev => [...prev, oauthSuccess])
+      // Clean URL
+      router.replace('/agents/new', undefined, { shallow: true })
+    }
+    
+    if (oauthError) {
+      toast({
+        title: "Connection Failed",
+        description: `Failed to connect: ${oauthError}`,
+        variant: "destructive",
+      })
+      // Clean URL
+      router.replace('/agents/new', undefined, { shallow: true })
+    }
+  }, [router, toast])
+
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -196,6 +223,10 @@ export default function NewAgentPage() {
           intentMappings: finalMappings,
           databaseConnection: databaseConnection || undefined,
           agenticConfig: agenticConfig || undefined,
+          modelConfig: agentConfig.model || undefined,
+          memoryConfig: agentConfig.memory || undefined,
+          systemPrompt: agentConfig.systemPrompt || undefined,
+          deploymentConfig: agentConfig.deployment || undefined,
         }),
       })
 

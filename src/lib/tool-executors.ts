@@ -7,6 +7,7 @@ import { getAdminDb } from '@/infrastructure/firebase/firebase-server'
 import { CollectionName, collectionSchemas } from './agent-tools'
 import { executePowerfulTool } from './powerful-tool-executors'
 import { createAdapter } from './db-adapters/adapter-factory'
+import { executeIntegrationTool } from './integration-tool-executors'
 import type { DatabaseConnection } from './db-adapters/base-adapter'
 
 export interface QueryFilters {
@@ -24,9 +25,35 @@ export interface QueryFilters {
 /**
  * Execute a tool call from the LLM
  */
-export async function executeTool(toolName: string, args: any, databaseConnection?: DatabaseConnection): Promise<any> {
+export async function executeTool(
+  toolName: string, 
+  args: any, 
+  databaseConnection?: DatabaseConnection,
+  userId?: string
+): Promise<any> {
   try {
-    // Check if it's a powerful tool first
+    // Check if it's an integration tool (external service)
+    if (toolName.includes('_') && (
+      toolName.startsWith('slack_') ||
+      toolName.startsWith('google_') ||
+      toolName.startsWith('sheets_') ||
+      toolName.startsWith('gmail_') ||
+      toolName.startsWith('salesforce_') ||
+      toolName.startsWith('notion_') ||
+      toolName.startsWith('stripe_') ||
+      toolName.startsWith('hubspot_') ||
+      toolName.startsWith('zendesk_') ||
+      toolName.startsWith('jira_') ||
+      toolName.startsWith('asana_') ||
+      toolName.startsWith('trello_')
+    )) {
+      if (!userId) {
+        throw new Error('User ID required for integration tools')
+      }
+      return await executeIntegrationTool(toolName, args, userId)
+    }
+
+    // Check if it's a powerful tool
     const powerfulToolNames = [
       'budget_vs_actual', 'cash_flow_forecast', 'revenue_trend_analysis',
       'expense_categorization_analysis', 'financial_health_score',

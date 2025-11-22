@@ -50,6 +50,15 @@ export function AgentPreview({
   const handleSend = async () => {
     if (!input.trim() || isLoading) return
 
+    if (selectedCollections.length === 0) {
+      toast({
+        title: "Configuration Required",
+        description: "Please select at least one collection to test the agent.",
+        variant: "destructive",
+      })
+      return
+    }
+
     const userMessage: Message = {
       role: "user",
       content: input,
@@ -57,45 +66,77 @@ export function AgentPreview({
     }
 
     setMessages((prev) => [...prev, userMessage])
+    const currentInput = input
     setInput("")
     setIsLoading(true)
 
     try {
-      // Create a temporary agent ID for preview
-      const previewAgentId = "preview-agent"
-
       // Simulate execution steps for debug mode
       if (debugMode) {
         setExecutionSteps([
-          { type: "input", name: "User Message", details: input },
+          { type: "input", name: "User Message", details: currentInput },
           { type: "reasoning", name: "Analyzing Request", details: "Understanding user intent..." },
           { type: "planning", name: "Planning", details: "Determining required tools..." },
-          { type: "execution", name: "Executing Tools", details: "Running queries..." },
-          { type: "synthesis", name: "Synthesizing", details: "Combining results..." },
         ])
       }
 
-      // For preview, show helpful message
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      // Call preview API with actual configuration
+      const { getAuthHeaders } = await import('@/lib/auth-client')
+      const headers = await getAuthHeaders()
       
-      const mockResponse = `I understand you want to test: "${input}"
+      const response = await fetch("/api/agents/preview", {
+        method: "POST",
+        headers: { ...headers, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: currentInput,
+          collections: selectedCollections,
+          selectedTools: Array.from(selectedTools),
+          agenticConfig,
+          databaseConnection,
+          modelConfig: agentConfig?.model,
+          memoryConfig: agentConfig?.memory,
+          systemPrompt: agentConfig?.systemPrompt,
+        }),
+      })
 
-To fully test your agent, please:
-1. Complete all required fields (Agent Name, Collections)
-2. Create the agent
-3. Test it in the chat interface
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || errorData.message || "Failed to get preview response")
+      }
 
-Your current configuration:
-- Collections: ${selectedCollections.join(", ") || "None selected"}
-- Tools: ${selectedTools.size} selected
-- Model: ${agenticConfig?.model?.model || "Not configured"}
+      const data = await response.json()
 
-Once created, you can interact with your agent in real-time!`
+      // Add reasoning steps as thinking messages
+      if (data.reasoningSteps && data.reasoningSteps.length > 0) {
+        if (debugMode) {
+          setExecutionSteps(prev => [
+            ...prev,
+            ...data.reasoningSteps.map((step: any) => ({
+              type: step.tool ? "execution" : "reasoning",
+              name: step.step,
+              details: step.result ? JSON.stringify(step.result) : step.tool || "",
+            }))
+          ])
+        }
 
-      // Add assistant response
+        const thinkingMessages: Message[] = data.reasoningSteps.map((step: any, index: number) => ({
+          role: "thinking" as const,
+          content: step.step,
+          timestamp: new Date(),
+          toolCalls: step.tool ? [{
+            name: step.tool,
+            args: step.args,
+            result: step.result
+          }] : undefined,
+        }))
+        
+        setMessages((prev) => [...prev, ...thinkingMessages])
+      }
+
+      // Add final assistant response
       const assistantMessage: Message = {
         role: "assistant",
-        content: mockResponse,
+        content: data.response,
         timestamp: new Date(),
       }
 
@@ -108,7 +149,7 @@ Once created, you can interact with your agent in real-time!`
       console.error("Preview error:", error)
       toast({
         title: "Preview Error",
-        description: error.message || "Failed to test agent. Make sure all required fields are filled.",
+        description: error.message || "Failed to test agent. Please check your configuration.",
         variant: "destructive",
       })
 

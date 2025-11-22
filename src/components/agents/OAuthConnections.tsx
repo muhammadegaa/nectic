@@ -65,9 +65,15 @@ export function OAuthConnections({
   })
 
   const handleConnect = async (provider: OAuthProvider) => {
-    // In production, this would redirect to OAuth flow
-    // For now, simulate connection
-    onProviderConnect(provider.id)
+    try {
+      // Redirect to OAuth initiation endpoint
+      const redirectUri = `${window.location.origin}/api/oauth/${provider.id}`
+      window.location.href = redirectUri
+    } catch (error: any) {
+      console.error('OAuth connection error:', error)
+      // Fallback: still call the callback for UI state
+      onProviderConnect(provider.id)
+    }
   }
 
   return (

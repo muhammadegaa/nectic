@@ -14,6 +14,7 @@ import { powerfulTools } from '@/lib/powerful-tools'
 import { executeTool } from '@/lib/tool-executors'
 import { buildSystemPrompt, filterTools } from '@/lib/agentic-prompt-builder'
 import { smartEngage } from '@/lib/cost-optimizer'
+import { callLLM } from '@/lib/llm-client'
 
 export const dynamic = 'force-dynamic'
 
@@ -116,7 +117,10 @@ export async function POST(request: NextRequest) {
 
     // Get conversation history for context
     let conversationHistory: any[] = []
-    const contextWindow = agent.agenticConfig?.contextMemory?.contextWindow || 10
+    // Use memoryConfig if available, otherwise use agenticConfig
+    const contextWindow = agent.memoryConfig?.maxTurns || 
+                         agent.agenticConfig?.contextMemory?.contextWindow || 
+                         10
     if (conversationId) {
       const messages = await conversationRepo.getMessages(conversationId)
       conversationHistory = messages.slice(-contextWindow).map(msg => ({
@@ -151,11 +155,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Build system prompt based on agentic configuration
-    const systemPrompt = buildSystemPrompt(agent.collections, agent.agenticConfig)
+    // Build system prompt - use custom systemPrompt if provided, otherwise build from config
+    const systemPrompt = agent.systemPrompt || buildSystemPrompt(agent.collections, agent.agenticConfig)
     
     // Filter tools based on agentic configuration
     const availableTools = filterTools(agent.agenticConfig)
+
+    // Get model configuration (default to OpenAI gpt-4o if not configured)
+    const modelProvider = agent.modelConfig?.provider || 'openai'
+    const model = agent.modelConfig?.model || 'gpt-4o'
+    const temperature = agent.modelConfig?.temperature ?? 0.3
+    const maxTokens = agent.modelConfig?.maxTokens || 1500
 
     // Build messages array with conversation history
     const messages: any[] = [
@@ -165,31 +175,33 @@ export async function POST(request: NextRequest) {
     ]
 
     // First call: Let LLM plan and decide on tools
-    const initialResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o',
-        messages,
-        tools: availableTools.length > 0 ? availableTools : [...agentTools, ...powerfulTools], // Use filtered tools or fallback to all
-        tool_choice: 'auto', // Let LLM decide when to use tools
-          temperature: 0.3, // Lower temperature for more focused responses
-          max_tokens: 1500,
+    let assistantMessage: any
+    let toolCalls: any[] = []
+
+    try {
+      const llmResponse = await callLLM(
+        modelProvider,
+        model,
+        {
+          messages,
+          tools: availableTools.length > 0 ? availableTools : [...agentTools, ...powerfulTools],
+          tool_choice: 'auto',
+          temperature,
+          max_tokens: maxTokens,
           user: userId,
-      }),
-    })
+        },
+        agent.modelConfig?.apiKey
+      )
 
-    if (!initialResponse.ok) {
-      const errorData = await initialResponse.json().catch(() => ({}))
-      throw new Error(`OpenAI API error: ${initialResponse.statusText} - ${JSON.stringify(errorData)}`)
+      assistantMessage = {
+        role: 'assistant',
+        content: llmResponse.content,
+        tool_calls: llmResponse.tool_calls,
+      }
+      toolCalls = llmResponse.tool_calls || []
+    } catch (error: any) {
+      throw new Error(`LLM API error: ${error.message}`)
     }
-
-    const initialCompletion = await initialResponse.json()
-    const assistantMessage = initialCompletion.choices[0]?.message
-    const toolCalls = assistantMessage.tool_calls || []
 
     let response: string
     let collectionsUsed: string[] = []
@@ -236,10 +248,10 @@ export async function POST(request: NextRequest) {
             })
           }
           
-          // Execute tool (pass agent's database connection if available)
+          // Execute tool (pass agent's database connection and userId if available)
           let result
           try {
-            result = await executeTool(functionName, functionArgs, agent.databaseConnection)
+            result = await executeTool(functionName, functionArgs, agent.databaseConnection, userId)
             
             // Check for errors in result
             if (result && result.error) {
@@ -297,32 +309,23 @@ export async function POST(request: NextRequest) {
       })
 
       // Second call: Synthesize tool results into final answer
-      const finalResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o',
+      const finalLLMResponse = await callLLM(
+        modelProvider,
+        model,
+        {
           messages: [
             ...messages,
             assistantMessage, // Include the tool call request
             ...toolResults, // Include tool results
           ],
-          temperature: 0.3, // Lower temperature for more focused, consistent responses
-          max_tokens: 1500,
+          temperature,
+          max_tokens: maxTokens,
           user: userId,
-        }),
-      })
+        },
+        agent.modelConfig?.apiKey
+      )
 
-      if (!finalResponse.ok) {
-        const errorData = await finalResponse.json().catch(() => ({}))
-        throw new Error(`OpenAI API error: ${finalResponse.statusText} - ${JSON.stringify(errorData)}`)
-      }
-
-      const finalCompletion = await finalResponse.json()
-      response = finalCompletion.choices[0]?.message?.content || 'I apologize, but I could not generate a response.'
+      response = finalLLMResponse.content || 'I apologize, but I could not generate a response.'
       
       // Let the LLM handle insights naturally - don't append manually
     } else {

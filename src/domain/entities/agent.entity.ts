@@ -16,6 +16,27 @@ export interface Agent {
   databaseConnection?: DatabaseConnection
   // Agentic AI Configuration
   agenticConfig?: AgenticConfig
+  // Model & Runtime Configuration
+  modelConfig?: {
+    provider: 'openai' | 'anthropic' | 'google' | 'custom'
+    model: string
+    apiKey?: string // Optional custom API key
+    temperature?: number
+    maxTokens?: number
+  }
+  // Memory Configuration
+  memoryConfig?: {
+    type: 'session' | 'persistent' | 'episodic'
+    maxTurns?: number
+    enableLearning?: boolean
+  }
+  // System Prompt (custom)
+  systemPrompt?: string
+  // Deployment Configuration
+  deploymentConfig?: {
+    channels: string[]
+    webhookUrl?: string
+  }
   createdAt: string
   updatedAt: string
 }
