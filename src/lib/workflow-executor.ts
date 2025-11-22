@@ -142,16 +142,19 @@ async function executeNode(
         const conditionResult = evaluateCondition(condition, context.variables)
         
         // Find edges from this node
-        const neighbors = graph.get(nodeId) || []
-        const trueEdge = edges.find(e => e.source === nodeId && e.label === 'true')
-        const falseEdge = edges.find(e => e.source === nodeId && e.label === 'false')
+        const decisionEdges = edges.filter(e => e.source === nodeId)
+        // For MVP: first edge = true path, second edge = false path
+        // Or use edge.data.label if available
+        const trueEdge = decisionEdges.find(e => e.data?.label === 'true' || e.label === 'true') || decisionEdges[0]
+        const falseEdge = decisionEdges.find(e => e.data?.label === 'false' || e.label === 'false') || decisionEdges[1]
         
         if (conditionResult && trueEdge) {
           result = await executeNode(trueEdge.target, nodes, edges, graph, context, visited, steps)
         } else if (!conditionResult && falseEdge) {
           result = await executeNode(falseEdge.target, nodes, edges, graph, context, visited, steps)
         } else {
-          // No matching edge, use first neighbor
+          // Fallback: use first neighbor
+          const neighbors = graph.get(nodeId) || []
           if (neighbors.length > 0) {
             result = await executeNode(neighbors[0], nodes, edges, graph, context, visited, steps)
           }
