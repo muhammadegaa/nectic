@@ -227,7 +227,7 @@ export const oauthProviders: OAuthProvider[] = [
   {
     id: 'stripe',
     name: 'Stripe',
-    description: 'Payment processing',
+    description: 'Payment processing (uses API keys, not OAuth)',
     authUrl: 'https://connect.stripe.com/oauth/authorize',
     tokenUrl: 'https://connect.stripe.com/oauth/token',
     scopes: ['read', 'write'],
