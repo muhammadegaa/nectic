@@ -16,10 +16,10 @@ export function buildSystemPrompt(
   agenticConfig?: Partial<AgenticConfig>
 ): string {
   const config = agenticConfig || {}
-  const reasoning = config.reasoning || {}
-  const responseStyle = config.responseStyle || {}
-  const domainKnowledge = config.domainKnowledge || {}
-  const proactiveInsights = config.proactiveInsights || {}
+  const reasoning = config.reasoning || ({} as Partial<AgenticConfig['reasoning']>)
+  const responseStyle = config.responseStyle || ({} as Partial<AgenticConfig['responseStyle']>)
+  const domainKnowledge = config.domainKnowledge || ({} as Partial<AgenticConfig['domainKnowledge']>)
+  const proactiveInsights = config.proactiveInsights || ({} as Partial<AgenticConfig['proactiveInsights']>)
 
   // Base prompt
   let prompt = `You are an intelligent AI agent that analyzes enterprise data.`
