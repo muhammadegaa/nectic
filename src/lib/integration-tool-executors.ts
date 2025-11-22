@@ -562,11 +562,11 @@ async function executeStripeTool(toolName: string, args: any, accessToken: strin
         const response = await apiRequest(
           `${baseUrl}/customers`,
           {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${accessToken}`,
-              'Content-Type': 'application/x-www-form-urlencoded',
-            },
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
             body: params.toString(),
             retryOptions: {
               maxRetries: 2,
@@ -683,8 +683,8 @@ async function executeStripeTool(toolName: string, args: any, accessToken: strin
           }
         )
 
-        return {
-          success: true,
+      return {
+        success: true,
           invoiceId: response.data.id,
           invoice: response.data,
         }
@@ -816,7 +816,7 @@ async function executeHubSpotTool(toolName: string, args: any, accessToken: stri
         } else {
           const urlObj = new URL(`${baseUrl}/crm/v3/objects/deals`)
           urlObj.searchParams.set('limit', String(limit))
-          if (after) {
+        if (after) {
             urlObj.searchParams.set('after', after)
           }
           url = urlObj.toString()
@@ -837,9 +837,9 @@ async function executeHubSpotTool(toolName: string, args: any, accessToken: stri
             deal: response.data,
           }
         } else {
-          return {
-            deals: response.data.results || [],
-            paging: response.data.paging,
+        return {
+          deals: response.data.results || [],
+          paging: response.data.paging,
           }
         }
       } catch (error: any) {

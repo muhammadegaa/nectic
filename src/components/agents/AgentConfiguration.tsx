@@ -59,6 +59,7 @@ const MODEL_PROVIDERS = [
 const PROMPT_TEMPLATES = [
   {
     name: 'Data Analyst',
+    description: 'Expert data analyst that analyzes enterprise data with precision, provides actionable insights, and identifies trends and opportunities.',
     prompt: `You are an expert data analyst AI agent. Your role is to:
 - Analyze enterprise data with precision and clarity
 - Provide actionable insights based on data patterns
@@ -70,6 +71,7 @@ Always show your reasoning process and cite specific data points.`
   },
   {
     name: 'Business Advisor',
+    description: 'Strategic business advisor that provides insights based on business data, connects data to outcomes, and recommends actionable next steps.',
     prompt: `You are a strategic business advisor AI agent. Your role is to:
 - Provide strategic insights based on business data
 - Connect data points to business outcomes
@@ -81,6 +83,7 @@ Be concise, data-driven, and focus on business impact.`
   },
   {
     name: 'Finance Specialist',
+    description: 'Finance specialist that analyzes financial data accurately, calculates budgets and forecasts, and identifies cost optimization opportunities.',
     prompt: `You are a finance specialist AI agent. Your role is to:
 - Analyze financial data with accuracy
 - Calculate budgets, forecasts, and variances
@@ -92,6 +95,7 @@ Always use specific numbers, percentages, and timeframes.`
   },
   {
     name: 'Sales Analyst',
+    description: 'Sales analyst that analyzes sales pipeline and performance, identifies conversion opportunities, and forecasts revenue accurately.',
     prompt: `You are a sales analyst AI agent. Your role is to:
 - Analyze sales pipeline and performance
 - Identify conversion opportunities
@@ -103,6 +107,7 @@ Focus on actionable insights that drive revenue.`
   },
   {
     name: 'HR Assistant',
+    description: 'HR assistant that analyzes team capacity and performance, identifies hiring needs and retention risks, and provides workforce insights.',
     prompt: `You are an HR assistant AI agent. Your role is to:
 - Analyze team capacity and performance
 - Identify hiring needs and retention risks
@@ -114,6 +119,7 @@ Be empathetic, data-driven, and focused on people outcomes.`
   },
   {
     name: 'Custom',
+    description: 'Create your own custom prompt tailored to your specific needs and use case.',
     prompt: ''
   }
 ]
@@ -387,22 +393,20 @@ export function AgentConfiguration({ config, onConfigChange }: AgentConfiguratio
                   )}
                 </Button>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {PROMPT_TEMPLATES.map(template => (
-                  <Button
+                  <button
                     key={template.name}
-                    variant="outline"
-                    size="sm"
                     onClick={() => applyTemplate(template)}
-                    className="h-auto py-2 flex flex-col items-start"
+                    className="group relative h-auto min-h-[120px] p-4 rounded-lg border border-border bg-card hover:bg-accent/60 hover:border-primary/40 transition-all duration-200 flex flex-col items-start text-left cursor-pointer shadow-sm hover:shadow-md"
                   >
-                    <span className="font-medium text-sm">{template.name}</span>
-                    {template.name !== 'Custom' && (
-                      <span className="text-xs text-foreground/60 mt-1 line-clamp-2">
-                        {template.prompt.substring(0, 60)}...
-                      </span>
-                    )}
-                  </Button>
+                    <span className="font-semibold text-sm text-foreground mb-2.5 group-hover:text-foreground">
+                      {template.name}
+                    </span>
+                    <span className="text-xs text-muted-foreground group-hover:text-foreground/90 leading-relaxed">
+                      {template.description}
+                    </span>
+                  </button>
                 ))}
               </div>
             </div>

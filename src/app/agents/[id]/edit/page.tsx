@@ -18,6 +18,7 @@ import Link from "next/link"
 import type { Agent } from "@/domain/entities/agent.entity"
 import { DataPreview } from "@/components/agents/DataPreview"
 import { useAgentAnalytics } from "@/presentation/hooks/use-agent-analytics"
+import { AppNavigation } from "@/components/app-navigation"
 
 const AVAILABLE_COLLECTIONS = [
   { id: "finance_transactions", label: "Finance Transactions" },
@@ -197,7 +198,13 @@ export default function EditAgentPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background py-12 px-6 lg:px-8">
+    <div className="min-h-screen bg-background">
+      <AppNavigation breadcrumbs={[
+        { label: "Dashboard", href: "/dashboard" },
+        { label: "Agent", href: `/agents/${agentId}/chat` },
+        { label: "Edit" }
+      ]} />
+      <div className="py-12 px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
         <Link href="/dashboard" className="inline-flex items-center text-foreground/60 hover:text-foreground mb-6 transition-colors">
           <ArrowLeft className="w-4 h-4 mr-2" />

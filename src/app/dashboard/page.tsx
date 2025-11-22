@@ -16,10 +16,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Plus, MessageSquare, Loader2, ArrowRight, FileText, Search, X, Sparkles } from "lucide-react"
+import { Plus, MessageSquare, Loader2, ArrowRight, FileText, Search, X, Sparkles, TrendingUp, Activity, Clock } from "lucide-react"
+import { AppNavigation } from "@/components/app-navigation"
 import { formatDistanceToNow } from "date-fns"
 import type { Agent } from "@/domain/entities/agent.entity"
 import { useAgentAnalytics } from "@/presentation/hooks/use-agent-analytics"
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts"
 
 function AgentCard({ agent }: { agent: Agent }) {
   const { analytics, loading: analyticsLoading } = useAgentAnalytics(agent.id, true)
@@ -304,21 +306,13 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      <AppNavigation breadcrumbs={[{ label: "Dashboard" }]} />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
-          <div className="flex items-center gap-3 sm:gap-4">
-            <Link href="/" className="flex items-center gap-2 group transition-opacity duration-200 hover:opacity-80">
-              <img 
-                src="/logo-icon.svg" 
-                alt="Nectic" 
-                className="w-7 h-7 sm:w-8 sm:h-8 transition-transform duration-200 group-hover:scale-105"
-              />
-            </Link>
             <div>
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-light text-foreground mb-1 sm:mb-2">Dashboard</h1>
               <p className="text-sm sm:text-base text-foreground/60">Manage your AI agents</p>
-            </div>
           </div>
           <Button
             onClick={() => router.push("/agents/new")}
@@ -374,6 +368,7 @@ export default function DashboardPage() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10 pr-10 h-10"
+                  aria-label="Search agents"
                 />
                 {searchQuery && (
                   <button
@@ -415,31 +410,45 @@ export default function DashboardPage() {
               </Select>
             </div>
 
-            {/* Results count */}
-            {searchQuery || filterCollection !== "all" ? (
+            {/* Results count - only show when filters are active */}
+            {(searchQuery || filterCollection !== "all") && filteredAndSortedAgents.length > 0 && (
               <div className="text-sm text-foreground/60">
                 Showing {filteredAndSortedAgents.length} of {agents.length} agents
-                {(searchQuery || filterCollection !== "all") && (
-                  <button
-                    onClick={() => {
-                      setSearchQuery("")
-                      setFilterCollection("all")
-                    }}
-                    className="ml-2 text-foreground hover:underline"
-                  >
-                    Clear filters
-                  </button>
-                )}
+                <button
+                  onClick={() => {
+                    setSearchQuery("")
+                    setFilterCollection("all")
+                  }}
+                  className="ml-2 text-foreground hover:underline"
+                >
+                  Clear filters
+                </button>
               </div>
-            ) : null}
+            )}
           </div>
         )}
 
         {/* Error State */}
         {error && (
-          <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive">
-            {error}
-          </div>
+          <Card className="mb-6 border-destructive/20">
+            <CardContent className="p-6">
+              <div className="flex items-start gap-4">
+                <div className="flex-1">
+                  <h3 className="text-sm font-medium text-destructive mb-1">Failed to load agents</h3>
+                  <p className="text-sm text-destructive/80 mb-4">{error}</p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={fetchAgents}
+                    className="text-sm"
+                  >
+                    <Loader2 className="w-4 h-4 mr-2" />
+                    Retry
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {/* Empty States */}
@@ -471,7 +480,46 @@ export default function DashboardPage() {
           </Card>
         ) : filteredAndSortedAgents.length === 0 ? (
           <Card className="border-2 border-dashed">
-            <CardContent className="flex flex-col items-center justify-center py-16 sm:py-20 px-4">
+            <CardContent className="flex flex-col items-center justify-center py-12 sm:py-16 px-4">
+              <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-muted mb-4">
+                <Search className="w-7 h-7 text-muted-foreground" />
+              </div>
+              <h3 className="text-lg sm:text-xl font-medium text-foreground mb-2 text-center">
+                No agents match your filters
+              </h3>
+              <p className="text-sm text-muted-foreground mb-6 text-center max-w-md">
+                Try adjusting your search query or collection filter to see more results.
+              </p>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSearchQuery("")
+                  setFilterCollection("all")
+                }}
+                className="h-9"
+              >
+                <X className="w-4 h-4 mr-2" />
+                Clear Filters
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            <p className="text-sm text-foreground/60 mb-4">
+              Showing {filteredAndSortedAgents.length} of {agents.length} agents
+            </p>
+            <div className="grid gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {filteredAndSortedAgents.map((agent) => (
+                <AgentCard key={agent.id} agent={agent} />
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
               <Search className="w-12 h-12 sm:w-16 sm:h-16 text-foreground/20 mb-4" />
               <h3 className="text-xl sm:text-2xl font-light text-foreground mb-2 text-center">
                 No agents found

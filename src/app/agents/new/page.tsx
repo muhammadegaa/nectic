@@ -10,17 +10,22 @@ import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Plus, Trash2, Loader2, ArrowLeft, Settings, Zap, Workflow, Play } from "lucide-react"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Plus, Trash2, Loader2, ArrowLeft, Settings, Zap, Workflow, Play, CheckCircle2, Circle } from "lucide-react"
 import Link from "next/link"
 import { useToast } from "@/components/ui/use-toast"
+import { lazy, Suspense } from "react"
 import { DataPreview } from "@/components/agents/DataPreview"
 import { DatabaseConnectionForm } from "@/components/agents/DatabaseConnection"
 import { AgenticConfigForm } from "@/components/agents/AgenticConfig"
-import { ToolMarketplace } from "@/components/agents/ToolMarketplace"
-import { VisualWorkflowBuilder } from "@/components/agents/VisualWorkflowBuilder"
 import { AgentPreview } from "@/components/agents/AgentPreview"
-import { AgentConfiguration } from "@/components/agents/AgentConfiguration"
-import { OAuthConnections } from "@/components/agents/OAuthConnections"
+
+// Lazy load heavy components for better performance
+const ToolMarketplace = lazy(() => import("@/components/agents/ToolMarketplace").then(m => ({ default: m.ToolMarketplace })))
+const VisualWorkflowBuilder = lazy(() => import("@/components/agents/VisualWorkflowBuilder").then(m => ({ default: m.VisualWorkflowBuilder })))
+const AgentConfiguration = lazy(() => import("@/components/agents/AgentConfiguration").then(m => ({ default: m.AgentConfiguration })))
+const OAuthConnections = lazy(() => import("@/components/agents/OAuthConnections").then(m => ({ default: m.OAuthConnections })))
+import { AppNavigation } from "@/components/app-navigation"
 import type { DatabaseConnection } from "@/lib/db-adapters/base-adapter"
 import type { AgenticConfig } from "@/domain/entities/agent.entity"
 import type { Node, Edge } from "reactflow"
@@ -52,6 +57,10 @@ export default function NewAgentPage() {
     deployment: { channels: ['web'] }
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [activeTab, setActiveTab] = useState("basic")
+  const [lastSaved, setLastSaved] = useState<Date | null>(null)
+
+  const STORAGE_KEY = 'nectic_agent_draft'
 
   // Wait for auth to be ready before checking user
   // This prevents redirecting to login when auth is still restoring from persistence
@@ -90,8 +99,37 @@ export default function NewAgentPage() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-foreground/60" />
+      <div className="min-h-screen bg-background">
+        <AppNavigation />
+        <div className="py-6 sm:py-8 lg:py-12 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-[1800px] mx-auto space-y-6">
+            <Skeleton className="h-10 w-48 mb-2" />
+            <Skeleton className="h-6 w-96 mb-8" />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="space-y-6">
+                <Skeleton className="h-10 w-full" />
+                <Card>
+                  <CardHeader>
+                    <Skeleton className="h-6 w-32 mb-2" />
+                    <Skeleton className="h-4 w-64" />
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-24 w-full" />
+                  </CardContent>
+                </Card>
+              </div>
+              <Card>
+                <CardHeader>
+                  <Skeleton className="h-6 w-32" />
+                </CardHeader>
+                <CardContent>
+                  <Skeleton className="h-64 w-full" />
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
       </div>
     )
   }
@@ -148,6 +186,67 @@ export default function NewAgentPage() {
       return next
     })
   }, [selectedCollections])
+
+  // Load draft from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY)
+        if (saved) {
+          const draft = JSON.parse(saved)
+          if (draft.name) setName(draft.name)
+          if (draft.description) setDescription(draft.description)
+          if (draft.selectedCollections?.length) setSelectedCollections(draft.selectedCollections)
+          if (draft.intentMappings?.length) setIntentMappings(draft.intentMappings)
+          if (draft.databaseConnection) setDatabaseConnection(draft.databaseConnection)
+          if (draft.agenticConfig) setAgenticConfig(draft.agenticConfig)
+          if (draft.selectedTools?.length) setSelectedTools(new Set(draft.selectedTools))
+          if (draft.workflowNodes?.length) setWorkflowNodes(draft.workflowNodes)
+          if (draft.workflowEdges?.length) setWorkflowEdges(draft.workflowEdges)
+          if (draft.agentConfig) setAgentConfig(draft.agentConfig)
+          if (draft.activeTab) setActiveTab(draft.activeTab)
+          if (draft.lastSaved) setLastSaved(new Date(draft.lastSaved))
+          
+          toast({
+            title: "Draft restored",
+            description: "Your previous work has been restored.",
+          })
+        }
+      } catch (error) {
+        console.error('Failed to load draft:', error)
+      }
+    }
+  }, [toast])
+
+  // Auto-save to localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined' && (name || description || selectedCollections.length > 0)) {
+      const saveTimeout = setTimeout(() => {
+        try {
+          const draft = {
+            name,
+            description,
+            selectedCollections,
+            intentMappings,
+            databaseConnection,
+            agenticConfig,
+            selectedTools: Array.from(selectedTools),
+            workflowNodes,
+            workflowEdges,
+            agentConfig,
+            activeTab,
+            lastSaved: new Date().toISOString(),
+          }
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(draft))
+          setLastSaved(new Date())
+        } catch (error) {
+          console.error('Failed to save draft:', error)
+        }
+      }, 1000) // Debounce: save 1 second after last change
+
+      return () => clearTimeout(saveTimeout)
+    }
+  }, [name, description, selectedCollections, intentMappings, databaseConnection, agenticConfig, selectedTools, workflowNodes, workflowEdges, agentConfig, activeTab])
 
   // Update agenticConfig based on selected tools
   useEffect(() => {
@@ -240,6 +339,12 @@ export default function NewAgentPage() {
       }
 
       const agent = await response.json()
+      
+      // Clear draft on successful creation
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(STORAGE_KEY)
+      }
+      
       toast({
         title: "Success",
         description: "Agent created successfully",
@@ -258,45 +363,103 @@ export default function NewAgentPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background py-6 sm:py-8 lg:py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-background">
+      <AppNavigation breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "New Agent" }]} />
+      <div className="py-6 sm:py-8 lg:py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-[1800px] mx-auto">
-        <Link href="/dashboard" className="inline-flex items-center text-sm sm:text-base text-foreground/60 hover:text-foreground mb-4 sm:mb-6 transition-colors">
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Dashboard
-        </Link>
 
         <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-light text-foreground mb-2">Create New AI Agent</h1>
-          <p className="text-sm sm:text-base text-foreground/60">Configure your agent's capabilities, tools, and deployment options</p>
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <div>
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-light text-foreground mb-2">Create New AI Agent</h1>
+              <p className="text-sm sm:text-base text-foreground/60">Configure your agent's capabilities, tools, and deployment options</p>
+            </div>
+            {lastSaved && (
+              <div className="text-xs text-foreground/50 whitespace-nowrap pt-1">
+                <span className="hidden sm:inline">Last saved: </span>
+                {lastSaved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </div>
+            )}
+          </div>
+
+          {/* Progress Indicator */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm text-foreground/60">
+                Step {activeTab === 'basic' ? '1' : activeTab === 'tools' ? '2' : activeTab === 'workflow' ? '3' : '4'} of 4
+              </span>
+              <span className="text-xs text-foreground/50">
+                {activeTab === 'basic' ? 'Basic Info' : activeTab === 'tools' ? 'Tools & Integrations' : activeTab === 'workflow' ? 'Workflow' : 'Configuration'}
+              </span>
+            </div>
+            <div className="w-full bg-muted rounded-full h-2">
+              <div
+                className="bg-foreground h-2 rounded-full transition-all duration-300"
+                style={{
+                  width: `${activeTab === 'basic' ? '25' : activeTab === 'tools' ? '50' : activeTab === 'workflow' ? '75' : '100'}%`
+                }}
+              />
+            </div>
+            <div className="flex items-center justify-between mt-3">
+              {['basic', 'tools', 'workflow', 'config'].map((tab, index) => {
+                const stepNum = index + 1
+                const isActive = activeTab === tab
+                const isCompleted = ['basic', 'tools', 'workflow', 'config'].indexOf(activeTab) > index
+                
+                return (
+                  <div key={tab} className="flex items-center gap-2">
+                    <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-medium transition-colors ${
+                      isActive 
+                        ? 'bg-foreground text-background' 
+                        : isCompleted 
+                        ? 'bg-foreground/20 text-foreground' 
+                        : 'bg-muted text-foreground/40'
+                    }`}>
+                      {isCompleted ? (
+                        <CheckCircle2 className="w-4 h-4" />
+                      ) : (
+                        stepNum
+                      )}
+                    </div>
+                    <span className={`text-xs hidden sm:inline ${
+                      isActive ? 'text-foreground font-medium' : 'text-foreground/50'
+                    }`}>
+                      {tab === 'basic' ? 'Basic' : tab === 'tools' ? 'Tools' : tab === 'workflow' ? 'Workflow' : 'Config'}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
         </div>
 
         {/* Split Layout: Configuration on left, Live Preview on right */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Left Side: Configuration */}
           <div className="space-y-6">
-            <Tabs defaultValue="basic" className="space-y-6">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
               <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
                 <TabsList className="grid w-full grid-cols-4 min-w-[400px] sm:min-w-0">
                   <TabsTrigger value="basic" className="gap-1.5 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
                     <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
-                    <span className="hidden sm:inline">Basic Info</span>
-                    <span className="sm:hidden">Basic</span>
-                  </TabsTrigger>
+                  <span className="hidden sm:inline">Basic Info</span>
+                  <span className="sm:hidden">Basic</span>
+                </TabsTrigger>
                   <TabsTrigger value="tools" className="gap-1.5 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
                     <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
-                    Tools
-                  </TabsTrigger>
+                  Tools
+                </TabsTrigger>
                   <TabsTrigger value="workflow" className="gap-1.5 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
                     <Workflow className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
-                    <span className="hidden sm:inline">Workflow</span>
-                    <span className="sm:hidden">Flow</span>
-                  </TabsTrigger>
+                  <span className="hidden sm:inline">Workflow</span>
+                  <span className="sm:hidden">Flow</span>
+                </TabsTrigger>
                   <TabsTrigger value="config" className="gap-1.5 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
                     <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
-                    <span className="hidden sm:inline">Config</span>
-                    <span className="sm:hidden">Cfg</span>
-                  </TabsTrigger>
-                </TabsList>
+                  <span className="hidden sm:inline">Config</span>
+                  <span className="sm:hidden">Cfg</span>
+                </TabsTrigger>
+              </TabsList>
               </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -465,31 +628,39 @@ export default function NewAgentPage() {
           </TabsContent>
 
           <TabsContent value="tools" className="space-y-6 mt-6">
-            <OAuthConnections
-              connectedProviders={connectedOAuthProviders}
-              onProviderConnect={(id) => setConnectedOAuthProviders(prev => [...prev, id])}
-              onProviderDisconnect={(id) => setConnectedOAuthProviders(prev => prev.filter(p => p !== id))}
-            />
-            <ToolMarketplace
-              selectedTools={selectedTools}
-              onToolToggle={handleToolToggle}
-              selectedCollections={selectedCollections}
-            />
+            <Suspense fallback={<Card><CardContent className="p-6"><Skeleton className="h-64 w-full" /></CardContent></Card>}>
+              <OAuthConnections
+                connectedProviders={connectedOAuthProviders}
+                onProviderConnect={(id) => setConnectedOAuthProviders(prev => [...prev, id])}
+                onProviderDisconnect={(id) => setConnectedOAuthProviders(prev => prev.filter(p => p !== id))}
+              />
+            </Suspense>
+            <Suspense fallback={<Card><CardContent className="p-6"><Skeleton className="h-64 w-full" /></CardContent></Card>}>
+              <ToolMarketplace
+                selectedTools={selectedTools}
+                onToolToggle={handleToolToggle}
+                selectedCollections={selectedCollections}
+              />
+            </Suspense>
           </TabsContent>
 
           <TabsContent value="workflow" className="space-y-6 mt-6">
-            <VisualWorkflowBuilder
-              selectedTools={selectedTools}
-              onWorkflowChange={handleWorkflowChange}
-            />
+            <Suspense fallback={<Card><CardContent className="p-6"><Skeleton className="h-96 w-full" /></CardContent></Card>}>
+              <VisualWorkflowBuilder
+                selectedTools={selectedTools}
+                onWorkflowChange={handleWorkflowChange}
+              />
+            </Suspense>
           </TabsContent>
 
-              <TabsContent value="config" className="space-y-6 mt-6">
-                <AgentConfiguration
-                  config={agentConfig}
-                  onConfigChange={setAgentConfig}
-                />
-              </TabsContent>
+          <TabsContent value="config" className="space-y-6 mt-6">
+            <Suspense fallback={<Card><CardContent className="p-6"><Skeleton className="h-64 w-full" /></CardContent></Card>}>
+              <AgentConfiguration
+                config={agentConfig}
+                onConfigChange={setAgentConfig}
+              />
+            </Suspense>
+          </TabsContent>
 
               <div className="flex items-center justify-end space-x-4 pt-4 border-t border-border">
                 <Button type="button" variant="outline" onClick={() => router.back()}>

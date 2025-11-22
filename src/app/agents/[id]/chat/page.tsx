@@ -3,13 +3,20 @@
 import { useState, useEffect, useRef } from "react"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Send, Loader2, MessageSquare, Plus, Trash2, ThumbsUp, ThumbsDown, FileSearch } from "lucide-react"
+import { ArrowLeft, Send, Loader2, MessageSquare, Plus, Trash2, ThumbsUp, ThumbsDown, FileSearch, Download, MoreVertical, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/components/ui/use-toast"
-import { format, formatDistanceToNow } from "date-fns"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { format as formatDate, formatDistanceToNow } from "date-fns"
 import { useAuth } from "@/contexts/auth-context"
 import type { Agent } from "@/domain/entities/agent.entity"
 import type { Conversation, Message } from "@/domain/entities/conversation.entity"
@@ -75,7 +82,7 @@ export default function AgentChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
 
-  const fetchAgent = async () => {
+  const fetchAgent = async (retry = false) => {
     try {
       const response = await fetch(`/api/agents/${agentId}`)
       if (!response.ok) throw new Error("Failed to fetch agent")
@@ -83,18 +90,35 @@ export default function AgentChatPage() {
       setAgent(data)
     } catch (error) {
       console.error("Error fetching agent:", error)
-      toast({
-        title: "Error",
-        description: "Failed to load agent",
-        variant: "destructive",
-      })
-      router.push("/dashboard")
+      if (!retry) {
+        toast({
+          title: "Error",
+          description: "Failed to load agent. Click to retry.",
+          variant: "destructive",
+          action: (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchAgent(true)}
+            >
+              Retry
+            </Button>
+          ),
+        })
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to load agent",
+          variant: "destructive",
+        })
+        router.push("/dashboard")
+      }
     } finally {
       setIsLoadingAgent(false)
     }
   }
 
-  const fetchConversations = async () => {
+  const fetchConversations = async (retry = false) => {
     if (!user) return
     try {
       const { getAuthHeaders } = await import('@/lib/auth-client')
@@ -107,6 +131,13 @@ export default function AgentChatPage() {
       setConversations(data)
     } catch (error) {
       console.error("Error fetching conversations:", error)
+      if (retry) {
+        toast({
+          title: "Error",
+          description: "Failed to load conversations",
+          variant: "destructive",
+        })
+      }
     } finally {
       setIsLoadingConversations(false)
     }
@@ -289,69 +320,65 @@ export default function AgentChatPage() {
     }
   }
 
-  // TODO: This function is defined but not currently used in the UI
-  // Remove if not needed, or wire it up to a UI button if this feature is planned
-  const exportConversation = async (format: 'json' | 'markdown') => {
-    if (!currentConversationId || !user) {
+  const exportConversation = (format: 'json' | 'markdown') => {
+    if (messages.length === 0) {
       toast({
-        title: "Error",
-        description: "No conversation to export",
+        title: "No messages to export",
+        description: "This conversation is empty.",
         variant: "destructive",
       })
       return
     }
 
-    try {
-      const { getAuthHeaders } = await import('@/lib/auth-client')
-      const headers = await getAuthHeaders()
-      const url = `/api/conversations/${currentConversationId}/export?format=${format}`
-      const response = await fetch(url, { headers })
+    if (format === 'markdown') {
+      const markdown = messages
+        .filter(m => m.role !== 'thinking')
+        .map(msg => {
+          const role = msg.role === 'user' ? '**You**' : `**${agent?.name || 'Assistant'}**`
+          const timestamp = formatDate(new Date(msg.timestamp), 'MMM d, yyyy h:mm a')
+          return `${role} (${timestamp})\n\n${msg.content}\n\n---\n`
+        })
+        .join('\n')
       
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        if (response.status === 403) {
-          throw new Error("You don't have permission to export this conversation")
-        } else if (response.status === 404) {
-          throw new Error("Conversation not found")
-        } else {
-          throw new Error(errorData.message || "Failed to export conversation")
-        }
-      }
-
-      if (format === 'json') {
-        const data = await response.json()
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `conversation-${currentConversationId}.json`
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        URL.revokeObjectURL(url)
-      } else {
-        const text = await response.text()
-        const blob = new Blob([text], { type: 'text/markdown' })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `conversation-${currentConversationId}.md`
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        URL.revokeObjectURL(url)
-      }
-
+      const blob = new Blob([markdown], { type: 'text/markdown' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `conversation-${agent?.name || 'chat'}-${new Date().toISOString().split('T')[0]}.md`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      
       toast({
-        title: "Success",
-        description: `Conversation exported as ${format.toUpperCase()}`,
+        title: "Export successful",
+        description: "Conversation exported as Markdown",
       })
-    } catch (error: any) {
-      console.error("Error exporting conversation:", error)
+    } else {
+      const jsonData = {
+        agent: agent?.name || 'Unknown',
+        conversationId: currentConversationId,
+        exportedAt: new Date().toISOString(),
+        messages: messages.filter(m => m.role !== 'thinking').map(msg => ({
+          role: msg.role,
+          content: msg.content,
+          timestamp: msg.timestamp,
+        })),
+      }
+      
+      const blob = new Blob([JSON.stringify(jsonData, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `conversation-${agent?.name || 'chat'}-${new Date().toISOString().split('T')[0]}.json`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      
       toast({
-        title: "Error",
-        description: error.message || "Failed to export conversation",
-        variant: "destructive",
+        title: "Export successful",
+        description: "Conversation exported as JSON",
       })
     }
   }
@@ -534,8 +561,21 @@ export default function AgentChatPage() {
               <Skeleton className="h-16 w-full" />
             </div>
           ) : conversations.length === 0 ? (
-            <div className="p-4 text-center text-sm text-foreground/60">
-              No conversations yet. Start a new one!
+            <div className="p-6 text-center">
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-muted mb-3">
+                <MessageSquare className="w-6 h-6 text-muted-foreground" />
+              </div>
+              <p className="text-sm font-medium text-foreground mb-1">No conversations yet</p>
+              <p className="text-xs text-muted-foreground mb-4">Start chatting with your agent to see conversations here</p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={startNewConversation}
+                className="text-xs"
+              >
+                <Plus className="w-3 h-3 mr-1.5" />
+                New Conversation
+              </Button>
             </div>
           ) : (
             <div className="p-2 space-y-1">
@@ -602,7 +642,7 @@ export default function AgentChatPage() {
                 {agent.description && <p className="text-xs sm:text-sm text-foreground/60 mt-0.5 sm:mt-1 line-clamp-1">{agent.description}</p>}
               </div>
             </div>
-            {/* Simplified - only essential actions */}
+            {/* Actions */}
             <div className="flex items-center gap-1">
               <Link href={`/agents/${agentId}/audit`}>
                 <Button
@@ -614,6 +654,30 @@ export default function AgentChatPage() {
                   <FileSearch className="w-4 h-4" />
                 </Button>
               </Link>
+              {currentConversationId && messages.length > 0 && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      title="Export conversation"
+                    >
+                      <Download className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => exportConversation('markdown')}>
+                      <FileText className="w-4 h-4 mr-2" />
+                      Export as Markdown
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => exportConversation('json')}>
+                      <FileText className="w-4 h-4 mr-2" />
+                      Export as JSON
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
               {currentConversationId && (
                 <Button
                   variant="ghost"
@@ -679,7 +743,7 @@ export default function AgentChatPage() {
                     <p className="whitespace-pre-wrap text-sm sm:text-base leading-relaxed break-words">{message.content}</p>
                   <div className="flex items-center justify-between mt-2 gap-2">
                     <p className="text-xs opacity-60 flex-shrink-0">
-                      {format(new Date(message.timestamp), "h:mm a")}
+                      {formatDate(new Date(message.timestamp), "h:mm a")}
                     </p>
                     <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
                       {message.role === "user" && message.status && (
@@ -761,14 +825,19 @@ export default function AgentChatPage() {
         <div className="border-t border-border px-3 sm:px-4 md:px-6 py-3 sm:py-4 bg-card">
           <div className="max-w-4xl mx-auto">
             <form onSubmit={handleSubmit} className="flex gap-2 sm:gap-3">
-              <Input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask a question..."
-                className="text-sm sm:text-base h-10 sm:h-11 flex-1"
-                disabled={isLoading}
-              />
+                   <Input
+                     type="text"
+                     value={input}
+                     onChange={(e) => setInput(e.target.value)}
+                     placeholder="Ask a question..."
+                     className="text-sm sm:text-base h-10 sm:h-11 flex-1"
+                     disabled={isLoading}
+                     aria-label="Message input"
+                     aria-describedby="input-description"
+                   />
+                   <span id="input-description" className="sr-only">
+                     Type your message and press Enter to send
+                   </span>
               <Button type="submit" disabled={isLoading || !input.trim()} className="bg-foreground text-background hover:bg-foreground/90">
                 {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
               </Button>

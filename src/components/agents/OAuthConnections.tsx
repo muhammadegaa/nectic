@@ -144,11 +144,11 @@ export function OAuthConnections({
               <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
                 <Link2 className="w-5 h-5 text-primary" />
               </div>
-              <div>
+          <div>
                 <CardTitle className="text-xl">Integrations</CardTitle>
                 <CardDescription className="text-sm mt-1">
                   Connect your SaaS platforms securely with OAuth 2.0
-                </CardDescription>
+            </CardDescription>
               </div>
             </div>
             <div className="flex items-center gap-3 mt-3">
@@ -353,7 +353,7 @@ export function OAuthConnections({
                             <Shield className="w-4 h-4 text-foreground/60 mt-0.5 flex-shrink-0" />
                             <p className="text-xs text-foreground/70 leading-relaxed">
                               Your credentials are encrypted and stored securely. We use OAuth 2.0 for secure authentication.
-                            </p>
+                          </p>
                           </div>
                         </div>
                         {!isConnected ? (

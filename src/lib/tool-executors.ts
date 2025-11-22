@@ -264,49 +264,49 @@ export async function executeTool(
       if (filters.status) {
         query = query.where("status", "==", filters.status)
       }
-      
-      if (filters.department) {
-        query = query.where("department", "==", filters.department)
-      }
-      
-      if (filters.minAmount !== undefined) {
-        const amountField = collection === "finance_transactions" ? "amount" : "value"
-        query = query.where(amountField, ">=", filters.minAmount)
-      }
-      
-      if (filters.maxAmount !== undefined) {
-        const amountField = collection === "finance_transactions" ? "amount" : "value"
-        query = query.where(amountField, "<=", filters.maxAmount)
-      }
-      
-      // Apply ordering
-      if (filters.orderBy) {
-        const orderField = filters.orderBy === "date" 
-          ? (collection === "finance_transactions" ? "date" : 
-             collection === "sales_deals" ? "expectedCloseDate" : "hireDate")
-          : filters.orderBy
-        
-        query = query.orderBy(
-          orderField,
-          filters.orderDirection || "desc"
-        )
-      } else {
-        // Default ordering by date/createdAt
-        const defaultOrderField = collection === "finance_transactions" ? "date" :
-                                 collection === "sales_deals" ? "createdAt" :
-                                 collection === "hr_employees" ? "hireDate" : "createdAt"
-        query = query.orderBy(defaultOrderField, "desc")
-      }
-      
-      // Apply limit
-      const limit = filters.limit || 50
-      query = query.limit(limit)
-      
-      const snapshot = await query.get()
+  
+  if (filters.department) {
+    query = query.where("department", "==", filters.department)
+  }
+  
+  if (filters.minAmount !== undefined) {
+    const amountField = collection === "finance_transactions" ? "amount" : "value"
+    query = query.where(amountField, ">=", filters.minAmount)
+  }
+  
+  if (filters.maxAmount !== undefined) {
+    const amountField = collection === "finance_transactions" ? "amount" : "value"
+    query = query.where(amountField, "<=", filters.maxAmount)
+  }
+  
+  // Apply ordering
+  if (filters.orderBy) {
+    const orderField = filters.orderBy === "date" 
+      ? (collection === "finance_transactions" ? "date" : 
+         collection === "sales_deals" ? "expectedCloseDate" : "hireDate")
+      : filters.orderBy
+    
+    query = query.orderBy(
+      orderField,
+      filters.orderDirection || "desc"
+    )
+  } else {
+    // Default ordering by date/createdAt
+    const defaultOrderField = collection === "finance_transactions" ? "date" :
+                             collection === "sales_deals" ? "createdAt" :
+                             collection === "hr_employees" ? "hireDate" : "createdAt"
+    query = query.orderBy(defaultOrderField, "desc")
+  }
+  
+  // Apply limit
+  const limit = filters.limit || 50
+  query = query.limit(limit)
+  
+  const snapshot = await query.get()
       result = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }))
+    id: doc.id,
+    ...doc.data()
+  }))
       }
     } else if (toolName === 'analyze_data') {
       const collection = args.collection as CollectionName
