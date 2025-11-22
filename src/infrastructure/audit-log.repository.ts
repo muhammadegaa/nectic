@@ -81,3 +81,73 @@ export async function logToolCall(input: ToolCallLogInput): Promise<void> {
   }
 }
 
+export interface AuditLogListItem {
+  id: string
+  type: 'data_access' | 'tool_call'
+  agentId: string
+  userId: string
+  source: string
+  toolName?: string
+  collection?: string
+  success?: boolean
+  denied?: boolean
+  timestamp: string
+  inputSummary?: string
+  rowCount?: number
+  errorMessage?: string
+  durationMs?: number
+}
+
+export interface ListAuditLogsParams {
+  agentId: string
+  userId: string
+  type?: 'data_access' | 'tool_call'
+  limit?: number
+}
+
+/**
+ * List audit logs for an agent
+ * Scoped by userId to ensure users only see their own agents' logs
+ */
+export async function listAuditLogsByAgent(params: ListAuditLogsParams): Promise<AuditLogListItem[]> {
+  try {
+    const { agentId, userId, type, limit = 50 } = params
+    const adminDb = getAdminDb()
+    
+    let query: FirebaseFirestore.Query = adminDb.collection(AUDIT_COLLECTION)
+      .where('agentId', '==', agentId)
+      .where('userId', '==', userId) // Ensure user can only see their own agents' logs
+    
+    if (type) {
+      query = query.where('type', '==', type)
+    }
+    
+    query = query.orderBy('timestamp', 'desc').limit(limit)
+    
+    const snapshot = await query.get()
+    
+    return snapshot.docs.map(doc => {
+      const data = doc.data()
+      return {
+        id: doc.id,
+        type: data.type || (data.source === 'tool_call' ? 'tool_call' : 'data_access'),
+        agentId: data.agentId,
+        userId: data.userId,
+        source: data.source || 'unknown',
+        toolName: data.toolName,
+        collection: data.collection,
+        success: data.success,
+        denied: data.denied,
+        timestamp: data.timestamp || data.createdAt,
+        inputSummary: data.inputSummary,
+        rowCount: data.rowCount,
+        errorMessage: data.error || data.errorMessage,
+        durationMs: data.durationMs,
+      } as AuditLogListItem
+    })
+  } catch (error: any) {
+    console.error('[AuditLog] Failed to list audit logs:', error.message)
+    throw error
+  }
+}
+

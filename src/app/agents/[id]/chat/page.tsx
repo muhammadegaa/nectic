@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Send, Loader2, MessageSquare, Plus, Trash2, Download, ThumbsUp, ThumbsDown, FileText } from "lucide-react"
+import { ArrowLeft, Send, Loader2, MessageSquare, Plus, Trash2, Download, ThumbsUp, ThumbsDown, FileText, FileSearch } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
@@ -608,17 +608,29 @@ export default function AgentChatPage() {
               </div>
             </div>
             {/* Simplified - only essential actions */}
-            {currentConversationId && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={startNewConversation}
-                className="h-8 w-8 p-0"
-                title="New Chat"
-              >
-                <Plus className="w-4 h-4" />
-              </Button>
-            )}
+            <div className="flex items-center gap-1">
+              <Link href={`/agents/${agentId}/audit`}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  title="Audit Logs"
+                >
+                  <FileSearch className="w-4 h-4" />
+                </Button>
+              </Link>
+              {currentConversationId && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={startNewConversation}
+                  className="h-8 w-8 p-0"
+                  title="New Chat"
+                >
+                  <Plus className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
           </div>
         </div>
 
