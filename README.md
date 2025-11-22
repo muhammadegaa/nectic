@@ -11,9 +11,15 @@ Internal AI agents that connect to company databases and answer questions in nat
    npm install
    ```
 
-2. **Firebase Setup:**
-   - Copy your Firebase Admin SDK key to `firebase-service-account.json` in project root
-   - Or set `FIREBASE_SERVICE_ACCOUNT_KEY` environment variable
+2. **Environment Setup:**
+   - Copy `.env.example` to `.env.local`
+   - Fill in all required environment variables:
+     - **Firebase Client Config** (6 variables with `NEXT_PUBLIC_` prefix)
+     - **Firebase Admin SDK** (`FIREBASE_SERVICE_ACCOUNT_KEY` or use `firebase-service-account.json`)
+     - **OpenAI API Key** (`OPENAI_API_KEY`)
+     - **Encryption Key** (`ENCRYPTION_KEY`) - Optional but recommended for production
+       - Generate: `openssl rand -hex 32`
+       - Used to encrypt database credentials at rest
 
 3. **Seed Database:**
    ```bash

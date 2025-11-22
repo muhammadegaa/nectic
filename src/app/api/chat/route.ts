@@ -235,8 +235,24 @@ IMPORTANT: This contains sensitive enterprise data. Do not use for training.`
             })
           }
           
-          // Execute tool
-          const result = await executeTool(functionName, functionArgs)
+          // Execute tool (pass agent's database connection if available)
+          let result
+          try {
+            result = await executeTool(functionName, functionArgs, agent.databaseConnection)
+            
+            // Check for errors in result
+            if (result && result.error) {
+              console.error(`Tool ${functionName} returned error:`, result.error)
+              // Continue with error in result - let LLM handle it
+            }
+          } catch (error: any) {
+            console.error(`Tool execution error for ${functionName}:`, error)
+            result = {
+              error: error.message || 'Tool execution failed',
+              tool: functionName,
+              args: functionArgs
+            }
+          }
           
           // Track collections used
           if (functionName === 'query_collection' && functionArgs.collection) {

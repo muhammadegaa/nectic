@@ -6,6 +6,8 @@
 import { getAdminDb } from '@/infrastructure/firebase/firebase-server'
 import { CollectionName, collectionSchemas } from './agent-tools'
 import { executePowerfulTool } from './powerful-tool-executors'
+import { createAdapter } from './db-adapters/adapter-factory'
+import type { DatabaseConnection } from './db-adapters/base-adapter'
 
 export interface QueryFilters {
   dateRange?: { start: string; end: string }
@@ -22,7 +24,7 @@ export interface QueryFilters {
 /**
  * Execute a tool call from the LLM
  */
-export async function executeTool(toolName: string, args: any): Promise<any> {
+export async function executeTool(toolName: string, args: any, databaseConnection?: DatabaseConnection): Promise<any> {
   try {
     // Check if it's a powerful tool first
     const powerfulToolNames = [
@@ -43,7 +45,7 @@ export async function executeTool(toolName: string, args: any): Promise<any> {
     // Basic tools
     switch (toolName) {
       case "query_collection":
-        return await queryCollectionWithFilters(args.collection, args.filters || {})
+        return await queryCollectionWithFilters(args.collection, args.filters || {}, databaseConnection)
       
       case "analyze_data":
         return await analyzeData(args.data, args.analysisType, args.groupBy, args.metric)
@@ -64,14 +66,36 @@ export async function executeTool(toolName: string, args: any): Promise<any> {
 }
 
 /**
- * Query a Firestore collection with dynamic filters
+ * Query a collection/table with dynamic filters
+ * Supports Firestore and external databases via adapters
  */
 async function queryCollectionWithFilters(
-  collection: CollectionName,
-  filters: QueryFilters
+  collection: CollectionName | string,
+  filters: QueryFilters,
+  databaseConnection?: DatabaseConnection
 ): Promise<any[]> {
+  // If database connection provided, use adapter
+  if (databaseConnection && databaseConnection.type !== 'firestore') {
+    const adapter = createAdapter(databaseConnection)
+    try {
+      await adapter.connect(databaseConnection)
+      const result = await adapter.query(collection, filters)
+      return result.data
+    } catch (error: any) {
+      console.error(`Database query error for ${collection}:`, error)
+      throw new Error(`Failed to query ${collection}: ${error.message || 'Database connection error'}`)
+    } finally {
+      try {
+        await adapter.disconnect()
+      } catch (e) {
+        // Ignore disconnect errors
+      }
+    }
+  }
+
+  // Default: Use Firestore
   const adminDb = getAdminDb()
-  let query: FirebaseFirestore.Query = adminDb.collection(collection)
+  let query: FirebaseFirestore.Query = adminDb.collection(collection as string)
   
   // Apply filters dynamically
   if (filters.dateRange) {

@@ -13,6 +13,8 @@ import { Plus, Trash2, Loader2, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { useToast } from "@/components/ui/use-toast"
 import { DataPreview } from "@/components/agents/DataPreview"
+import { DatabaseConnectionForm } from "@/components/agents/DatabaseConnection"
+import type { DatabaseConnection } from "@/lib/db-adapters/base-adapter"
 
 const AVAILABLE_COLLECTIONS = [
   { id: "finance_transactions", label: "Finance Transactions", description: "Financial transactions data" },
@@ -28,6 +30,7 @@ export default function NewAgentPage() {
   const [description, setDescription] = useState("")
   const [selectedCollections, setSelectedCollections] = useState<string[]>([])
   const [intentMappings, setIntentMappings] = useState<Array<{ intent: string; keywords: string; collections: string[] }>>([])
+  const [databaseConnection, setDatabaseConnection] = useState<DatabaseConnection | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Wait for auth to be ready before checking user
@@ -121,6 +124,7 @@ export default function NewAgentPage() {
           description: description.trim() || undefined,
           collections: selectedCollections,
           intentMappings: finalMappings,
+          databaseConnection: databaseConnection || undefined,
         }),
       })
 
@@ -188,6 +192,11 @@ export default function NewAgentPage() {
               </div>
             </CardContent>
           </Card>
+
+          <DatabaseConnectionForm
+            connection={databaseConnection}
+            onConnectionChange={setDatabaseConnection}
+          />
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>

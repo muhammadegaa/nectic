@@ -16,7 +16,7 @@ const agentRepo = new FirebaseAgentRepository()
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { name, description, collections, intentMappings } = body
+    const { name, description, collections, intentMappings, databaseConnection } = body
 
     if (!name || !collections || !Array.isArray(collections) || collections.length === 0) {
       return NextResponse.json(
@@ -41,6 +41,7 @@ export async function POST(request: NextRequest) {
       description,
       collections,
       intentMappings: intentMappings || [],
+      databaseConnection: databaseConnection || undefined,
       userId,
     })
 

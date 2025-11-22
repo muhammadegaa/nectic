@@ -45,8 +45,7 @@ export const agentTools: ToolDefinition[] = [
         properties: {
           collection: {
             type: "string",
-            enum: AVAILABLE_COLLECTIONS,
-            description: "The collection to query: finance_transactions (financial data), sales_deals (sales pipeline), hr_employees (HR data)"
+            description: "The collection/table to query. For Firestore: finance_transactions, sales_deals, hr_employees. For external databases: any table/collection name."
           },
           filters: {
             type: "object",

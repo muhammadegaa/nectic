@@ -3,6 +3,7 @@
  */
 
 import { getAdminDb } from '../firebase/firebase-server'
+import { encryptDatabaseConnection, decryptDatabaseConnection } from '@/lib/encryption'
 import type { Agent } from '@/domain/entities/agent.entity'
 
 export class FirebaseAgentRepository {
@@ -13,9 +14,15 @@ export class FirebaseAgentRepository {
     const now = new Date().toISOString()
     const docRef = adminDb.collection(this.collection).doc()
     
+    // Encrypt database connection credentials if present
+    let processedAgent = { ...agent }
+    if (processedAgent.databaseConnection) {
+      processedAgent.databaseConnection = encryptDatabaseConnection(processedAgent.databaseConnection)
+    }
+    
     // Clean undefined values (Firestore doesn't allow undefined)
     const cleanedAgent = this.cleanUndefined({
-      ...agent,
+      ...processedAgent,
       createdAt: now,
       updatedAt: now,
     })
@@ -45,9 +52,14 @@ export class FirebaseAgentRepository {
     if (!doc.exists) {
       return null
     }
+    const data = doc.data() as any
+    // Decrypt database connection if present
+    if (data.databaseConnection) {
+      data.databaseConnection = decryptDatabaseConnection(data.databaseConnection)
+    }
     return {
+      ...data,
       id: doc.id,
-      ...doc.data()
     } as Agent
   }
 
@@ -60,19 +72,32 @@ export class FirebaseAgentRepository {
     }
     
     const snapshot = await query.get()
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    } as Agent))
+    return snapshot.docs.map(doc => {
+      const data = doc.data() as Agent
+      // Decrypt database connection if present
+      if (data.databaseConnection) {
+        data.databaseConnection = decryptDatabaseConnection(data.databaseConnection)
+      }
+      return {
+        ...data,
+        id: doc.id,
+      } as Agent
+    })
   }
 
   async update(id: string, updates: Partial<Agent>): Promise<Agent> {
     const adminDb = getAdminDb()
     const docRef = adminDb.collection(this.collection).doc(id)
     
+    // Encrypt database connection if present in updates
+    let processedUpdates = { ...updates }
+    if (processedUpdates.databaseConnection) {
+      processedUpdates.databaseConnection = encryptDatabaseConnection(processedUpdates.databaseConnection)
+    }
+    
     // Clean undefined values before updating
     const cleanedUpdates = this.cleanUndefined({
-      ...updates,
+      ...processedUpdates,
       updatedAt: new Date().toISOString(),
     })
     
