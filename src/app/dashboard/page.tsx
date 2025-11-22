@@ -520,35 +520,3 @@ export default function DashboardPage() {
   )
 }
 
-              <Search className="w-12 h-12 sm:w-16 sm:h-16 text-foreground/20 mb-4" />
-              <h3 className="text-xl sm:text-2xl font-light text-foreground mb-2 text-center">
-                No agents found
-              </h3>
-              <p className="text-foreground/60 mb-6 text-center max-w-md text-sm sm:text-base">
-                Try adjusting your search or filter criteria.
-              </p>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setSearchQuery("")
-                  setFilterCollection("all")
-                }}
-                className="h-10"
-              >
-                <X className="w-4 h-4 mr-2" />
-                Clear Filters
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredAndSortedAgents.map((agent) => (
-              <AgentCard key={agent.id} agent={agent} />
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-

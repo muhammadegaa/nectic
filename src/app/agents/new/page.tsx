@@ -364,9 +364,9 @@ export default function NewAgentPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <AppNavigation breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "New Agent" }]} />
+      <AppNavigation />
       <div className="py-6 sm:py-8 lg:py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-[1800px] mx-auto">
+        <div className="max-w-[1800px] mx-auto">
 
         <div className="mb-6 sm:mb-8">
           <div className="flex items-start justify-between gap-4 mb-4">
