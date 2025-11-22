@@ -146,115 +146,199 @@ export default function AgentAuditPage() {
   }
 
   return (
-    <div className="container mx-auto p-6 max-w-7xl">
-      <div className="flex items-center gap-4 mb-6">
+    <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-6 max-w-7xl">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
         <Link href={`/agents/${agentId}/chat`}>
-          <Button variant="ghost" size="sm">
+          <Button variant="ghost" size="sm" className="w-fit">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
         </Link>
-        <div>
-          <h1 className="text-2xl font-bold">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-xl sm:text-2xl font-bold truncate">
             Audit Logs
             {agent && <span className="text-muted-foreground ml-2">- {agent.name}</span>}
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
             View all data access and tool execution logs for this agent
           </p>
         </div>
       </div>
 
-      <div className="mb-6">
+      <div className="mb-4 sm:mb-6">
         <Tabs value={filterType} onValueChange={(v) => setFilterType(v as typeof filterType)}>
-          <TabsList>
-            <TabsTrigger value="all">All</TabsTrigger>
-            <TabsTrigger value="tool_call">Tool Calls</TabsTrigger>
-            <TabsTrigger value="data_access">Data Access</TabsTrigger>
+          <TabsList className="w-full sm:w-auto">
+            <TabsTrigger value="all" className="flex-1 sm:flex-none">All</TabsTrigger>
+            <TabsTrigger value="tool_call" className="flex-1 sm:flex-none">Tool Calls</TabsTrigger>
+            <TabsTrigger value="data_access" className="flex-1 sm:flex-none">Data Access</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
 
-      <Card className="p-6">
+      <Card className="p-4 sm:p-6">
         {logs.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
-            <p>No audit logs found</p>
-            <p className="text-sm mt-2">Logs will appear here after the agent performs actions</p>
+          <div className="text-center py-8 sm:py-12 text-muted-foreground">
+            <p className="text-sm sm:text-base">No audit logs found</p>
+            <p className="text-xs sm:text-sm mt-2">Logs will appear here after the agent performs actions</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left p-3 text-sm font-medium">Time</th>
-                  <th className="text-left p-3 text-sm font-medium">Type</th>
-                  <th className="text-left p-3 text-sm font-medium">Source</th>
-                  <th className="text-left p-3 text-sm font-medium">Details</th>
-                  <th className="text-left p-3 text-sm font-medium">Status</th>
-                  <th className="text-left p-3 text-sm font-medium">Duration</th>
-                </tr>
-              </thead>
-              <tbody>
-                {logs.map((log) => (
-                  <tr key={log.id} className="border-b hover:bg-muted/50">
-                    <td className="p-3 text-sm">
-                      <div className="flex flex-col">
-                        <span>{format(new Date(log.timestamp), 'MMM d, HH:mm:ss')}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {formatDistanceToNow(new Date(log.timestamp), { addSuffix: true })}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="p-3 text-sm">
-                      <div className="flex items-center gap-2">
-                        {getTypeIcon(log)}
-                        <span className="capitalize">{log.type.replace('_', ' ')}</span>
-                      </div>
-                    </td>
-                    <td className="p-3 text-sm">
-                      <span className="capitalize">{log.source}</span>
-                    </td>
-                    <td className="p-3 text-sm">
-                      <div className="flex flex-col gap-1">
-                        {log.toolName && (
-                          <span className="font-medium">Tool: {log.toolName}</span>
-                        )}
-                        {log.collection && (
-                          <span className="text-muted-foreground">Collection: {log.collection}</span>
-                        )}
-                        {log.inputSummary && (
-                          <span className="text-xs text-muted-foreground" title={log.inputSummary}>
-                            {truncateText(log.inputSummary, 40)}
-                          </span>
-                        )}
-                        {log.rowCount !== undefined && log.rowCount > 0 && (
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left p-3 text-sm font-medium">Time</th>
+                    <th className="text-left p-3 text-sm font-medium">Type</th>
+                    <th className="text-left p-3 text-sm font-medium">Source</th>
+                    <th className="text-left p-3 text-sm font-medium">Details</th>
+                    <th className="text-left p-3 text-sm font-medium">Status</th>
+                    <th className="text-left p-3 text-sm font-medium">Duration</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {logs.map((log) => (
+                    <tr key={log.id} className="border-b hover:bg-muted/50">
+                      <td className="p-3 text-sm">
+                        <div className="flex flex-col">
+                          <span>{format(new Date(log.timestamp), 'MMM d, HH:mm:ss')}</span>
                           <span className="text-xs text-muted-foreground">
-                            Rows: {log.rowCount}
+                            {formatDistanceToNow(new Date(log.timestamp), { addSuffix: true })}
                           </span>
-                        )}
-                        {log.errorMessage && (
-                          <span className="text-xs text-red-500" title={log.errorMessage}>
-                            Error: {truncateText(log.errorMessage, 40)}
+                        </div>
+                      </td>
+                      <td className="p-3 text-sm">
+                        <div className="flex items-center gap-2">
+                          {getTypeIcon(log)}
+                          <span className="capitalize">{log.type.replace('_', ' ')}</span>
+                        </div>
+                      </td>
+                      <td className="p-3 text-sm">
+                        <span className="capitalize">{log.source}</span>
+                      </td>
+                      <td className="p-3 text-sm">
+                        <div className="flex flex-col gap-1">
+                          {log.toolName && (
+                            <span className="font-medium">Tool: {log.toolName}</span>
+                          )}
+                          {log.collection && (
+                            <span className="text-muted-foreground">Collection: {log.collection}</span>
+                          )}
+                          {log.inputSummary && (
+                            <span className="text-xs text-muted-foreground" title={log.inputSummary}>
+                              {truncateText(log.inputSummary, 40)}
+                            </span>
+                          )}
+                          {log.rowCount !== undefined && log.rowCount > 0 && (
+                            <span className="text-xs text-muted-foreground">
+                              Rows: {log.rowCount}
+                            </span>
+                          )}
+                          {log.errorMessage && (
+                            <span className="text-xs text-red-500" title={log.errorMessage}>
+                              Error: {truncateText(log.errorMessage, 40)}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-3 text-sm">
+                        <div className="flex items-center gap-2">
+                          {getStatusIcon(log)}
+                          <span className={log.denied ? 'text-red-500' : log.success ? 'text-green-500' : 'text-gray-500'}>
+                            {log.denied ? 'Denied' : log.success ? 'Success' : 'Unknown'}
                           </span>
-                        )}
+                        </div>
+                      </td>
+                      <td className="p-3 text-sm text-muted-foreground">
+                        {log.durationMs !== undefined ? `${log.durationMs}ms` : '-'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="md:hidden space-y-3">
+              {logs.map((log) => (
+                <Card key={log.id} className="p-4">
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        {getTypeIcon(log)}
+                        <span className="text-sm font-medium capitalize truncate">{log.type.replace('_', ' ')}</span>
                       </div>
-                    </td>
-                    <td className="p-3 text-sm">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-shrink-0">
                         {getStatusIcon(log)}
-                        <span className={log.denied ? 'text-red-500' : log.success ? 'text-green-500' : 'text-gray-500'}>
+                        <span className={`text-xs ${log.denied ? 'text-red-500' : log.success ? 'text-green-500' : 'text-gray-500'}`}>
                           {log.denied ? 'Denied' : log.success ? 'Success' : 'Unknown'}
                         </span>
                       </div>
-                    </td>
-                    <td className="p-3 text-sm text-muted-foreground">
-                      {log.durationMs !== undefined ? `${log.durationMs}ms` : '-'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </div>
+                    
+                    <div className="space-y-1.5 text-sm">
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Time</span>
+                        <div className="text-right">
+                          <div className="text-xs">{format(new Date(log.timestamp), 'MMM d, HH:mm:ss')}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {formatDistanceToNow(new Date(log.timestamp), { addSuffix: true })}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Source</span>
+                        <span className="capitalize">{log.source}</span>
+                      </div>
+                      
+                      {log.toolName && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Tool</span>
+                          <span className="font-medium truncate ml-2">{log.toolName}</span>
+                        </div>
+                      )}
+                      
+                      {log.collection && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Collection</span>
+                          <span className="truncate ml-2">{log.collection}</span>
+                        </div>
+                      )}
+                      
+                      {log.rowCount !== undefined && log.rowCount > 0 && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Rows</span>
+                          <span>{log.rowCount}</span>
+                        </div>
+                      )}
+                      
+                      {log.durationMs !== undefined && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Duration</span>
+                          <span>{log.durationMs}ms</span>
+                        </div>
+                      )}
+                      
+                      {log.inputSummary && (
+                        <div className="pt-2 border-t border-border">
+                          <div className="text-xs text-muted-foreground mb-1">Input</div>
+                          <div className="text-xs break-words">{log.inputSummary}</div>
+                        </div>
+                      )}
+                      
+                      {log.errorMessage && (
+                        <div className="pt-2 border-t border-border">
+                          <div className="text-xs text-red-500 font-medium mb-1">Error</div>
+                          <div className="text-xs text-red-500 break-words">{log.errorMessage}</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </>
         )}
       </Card>
     </div>
