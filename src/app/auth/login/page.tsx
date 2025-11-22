@@ -63,13 +63,13 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4 py-12">
+    <div className="min-h-screen flex items-center justify-center bg-background px-4 py-8 sm:py-12">
       <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-3xl font-light text-foreground">Welcome back</CardTitle>
-          <CardDescription>Sign in to your Nectic account</CardDescription>
+        <CardHeader className="space-y-1 px-4 sm:px-6 pt-6 sm:pt-6">
+          <CardTitle className="text-2xl sm:text-3xl font-light text-foreground">Welcome back</CardTitle>
+          <CardDescription className="text-sm sm:text-base">Sign in to your Nectic account</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-6 px-4 sm:px-6 pb-6 sm:pb-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
