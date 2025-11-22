@@ -33,19 +33,19 @@ export default function Home() {
       <Navigation />
       <HeroSection />
       <Suspense fallback={<SectionSkeleton />}>
-        <HowItWorks />
+      <HowItWorks />
       </Suspense>
       <Suspense fallback={<SectionSkeleton />}>
-        <HowToSection />
+      <HowToSection />
       </Suspense>
       <Suspense fallback={<SectionSkeleton />}>
-        <UseCasesSection />
+      <UseCasesSection />
       </Suspense>
       <Suspense fallback={<SectionSkeleton />}>
-        <FeatureHighlights />
+      <FeatureHighlights />
       </Suspense>
       <Suspense fallback={<SectionSkeleton />}>
-        <EnterpriseTrust />
+      <EnterpriseTrust />
       </Suspense>
       <Suspense fallback={<SectionSkeleton />}>
         <TestimonialsSection />
@@ -54,10 +54,10 @@ export default function Home() {
         <CustomerLogosSection />
       </Suspense>
       <Suspense fallback={<SectionSkeleton />}>
-        <CtaSection />
+      <CtaSection />
       </Suspense>
       <Suspense fallback={<SectionSkeleton />}>
-        <Footer />
+      <Footer />
       </Suspense>
     </main>
   )

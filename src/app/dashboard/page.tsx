@@ -508,11 +508,11 @@ export default function DashboardPage() {
             <p className="text-sm text-foreground/60 mb-4">
               Showing {filteredAndSortedAgents.length} of {agents.length} agents
             </p>
-            <div className="grid gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {filteredAndSortedAgents.map((agent) => (
-                <AgentCard key={agent.id} agent={agent} />
-              ))}
-            </div>
+              <AgentCard key={agent.id} agent={agent} />
+            ))}
+          </div>
           </>
         )}
       </div>

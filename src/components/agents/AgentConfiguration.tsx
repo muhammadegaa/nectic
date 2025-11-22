@@ -405,7 +405,7 @@ export function AgentConfiguration({ config, onConfigChange }: AgentConfiguratio
                     </span>
                     <span className="text-xs text-muted-foreground group-hover:text-foreground/90 leading-relaxed">
                       {template.description}
-                    </span>
+                      </span>
                   </button>
                 ))}
               </div>

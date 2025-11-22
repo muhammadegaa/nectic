@@ -106,12 +106,12 @@ export default function AgentChatPage() {
           ),
         })
       } else {
-        toast({
-          title: "Error",
-          description: "Failed to load agent",
-          variant: "destructive",
-        })
-        router.push("/dashboard")
+      toast({
+        title: "Error",
+        description: "Failed to load agent",
+        variant: "destructive",
+      })
+      router.push("/dashboard")
       }
     } finally {
       setIsLoadingAgent(false)
@@ -341,20 +341,20 @@ export default function AgentChatPage() {
         .join('\n')
       
       const blob = new Blob([markdown], { type: 'text/markdown' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
       a.download = `conversation-${agent?.name || 'chat'}-${new Date().toISOString().split('T')[0]}.md`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
       
       toast({
         title: "Export successful",
         description: "Conversation exported as Markdown",
       })
-    } else {
+      } else {
       const jsonData = {
         agent: agent?.name || 'Unknown',
         conversationId: currentConversationId,
@@ -367,15 +367,15 @@ export default function AgentChatPage() {
       }
       
       const blob = new Blob([JSON.stringify(jsonData, null, 2)], { type: 'application/json' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
       a.download = `conversation-${agent?.name || 'chat'}-${new Date().toISOString().split('T')[0]}.json`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
-      
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+
       toast({
         title: "Export successful",
         description: "Conversation exported as JSON",
@@ -678,17 +678,17 @@ export default function AgentChatPage() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
-              {currentConversationId && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={startNewConversation}
-                  className="h-8 w-8 p-0"
-                  title="New Chat"
-                >
-                  <Plus className="w-4 h-4" />
-                </Button>
-              )}
+            {currentConversationId && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={startNewConversation}
+                className="h-8 w-8 p-0"
+                title="New Chat"
+              >
+                <Plus className="w-4 h-4" />
+              </Button>
+            )}
             </div>
           </div>
         </div>
@@ -825,16 +825,16 @@ export default function AgentChatPage() {
         <div className="border-t border-border px-3 sm:px-4 md:px-6 py-3 sm:py-4 bg-card">
           <div className="max-w-4xl mx-auto">
             <form onSubmit={handleSubmit} className="flex gap-2 sm:gap-3">
-                   <Input
-                     type="text"
-                     value={input}
-                     onChange={(e) => setInput(e.target.value)}
-                     placeholder="Ask a question..."
-                     className="text-sm sm:text-base h-10 sm:h-11 flex-1"
-                     disabled={isLoading}
+              <Input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Ask a question..."
+                className="text-sm sm:text-base h-10 sm:h-11 flex-1"
+                disabled={isLoading}
                      aria-label="Message input"
                      aria-describedby="input-description"
-                   />
+              />
                    <span id="input-description" className="sr-only">
                      Type your message and press Enter to send
                    </span>
