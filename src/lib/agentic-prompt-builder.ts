@@ -25,9 +25,9 @@ export function buildSystemPrompt(
   let prompt = `You are an intelligent AI agent that analyzes enterprise data.`
 
   // Reasoning configuration
-  if (reasoning.enabled !== false) {
-    const depth = reasoning.depth || 'moderate'
-    const maxSteps = reasoning.maxSteps || 5
+  if (reasoning?.enabled !== false) {
+    const depth = reasoning?.depth || 'moderate'
+    const maxSteps = reasoning?.maxSteps || 5
     
     prompt += `\n\nThink step-by-step before responding.`
     
@@ -54,7 +54,7 @@ export function buildSystemPrompt(
 4. Respond: Provide the answer`
     }
     
-    if (reasoning.showReasoning !== false) {
+    if (reasoning?.showReasoning !== false) {
       prompt += `\n\nIMPORTANT: Show your reasoning steps to the user so they understand your thinking process.`
     }
   }
@@ -63,11 +63,11 @@ export function buildSystemPrompt(
   prompt += `\n\nAvailable collections: ${collections.join(', ')}.`
 
   // Response style
-  const tone = responseStyle.tone || 'conversational'
-  const detailLevel = responseStyle.detailLevel || 'moderate'
-  const includeNumbers = responseStyle.includeNumbers !== false
-  const includeSources = responseStyle.includeSources === true
-  const formatOutput = responseStyle.formatOutput !== false
+  const tone = responseStyle?.tone || 'conversational'
+  const detailLevel = responseStyle?.detailLevel || 'moderate'
+  const includeNumbers = responseStyle?.includeNumbers !== false
+  const includeSources = responseStyle?.includeSources === true
+  const formatOutput = responseStyle?.formatOutput !== false
 
   prompt += `\n\n**Response Style:**`
   
@@ -110,19 +110,19 @@ export function buildSystemPrompt(
 - Chain queries for complex questions`
 
   // Proactive insights
-  if (proactiveInsights.enabled !== false) {
+  if (proactiveInsights?.enabled !== false) {
     prompt += `\n\n**Proactive Insights:**`
     
-    if (proactiveInsights.anomalyDetection !== false) {
+    if (proactiveInsights?.anomalyDetection !== false) {
       prompt += `\n- If you notice something unusual (anomaly, outlier), mention it naturally`
     }
     
-    if (proactiveInsights.trendIdentification !== false) {
+    if (proactiveInsights?.trendIdentification !== false) {
       prompt += `\n- Identify and mention trends you notice in the data`
     }
     
-    if (proactiveInsights.followUpQuestions !== false) {
-      const frequency = proactiveInsights.frequency || 'sometimes'
+    if (proactiveInsights?.followUpQuestions !== false) {
+      const frequency = proactiveInsights?.frequency || 'sometimes'
       if (frequency === 'always') {
         prompt += `\n- Always end with 1-2 relevant follow-up questions if they add value`
       } else if (frequency === 'sometimes') {
@@ -132,13 +132,13 @@ export function buildSystemPrompt(
       }
     }
     
-    if (proactiveInsights.recommendations !== false) {
+    if (proactiveInsights?.recommendations !== false) {
       prompt += `\n- Provide actionable recommendations when appropriate`
     }
   }
 
   // Domain knowledge
-  if (domainKnowledge.domain && domainKnowledge.domain !== 'general') {
+  if (domainKnowledge?.domain && domainKnowledge.domain !== 'general') {
     if (domainKnowledge.domain === 'finance') {
       prompt += `\n\n**Domain Context (Finance):**
 - You're analyzing financial data (transactions, budgets, cash flow)
@@ -156,7 +156,7 @@ export function buildSystemPrompt(
 - Focus on people metrics and team analytics`
     }
     
-    if (domainKnowledge.customInstructions) {
+    if (domainKnowledge?.customInstructions) {
       prompt += `\n\n**Custom Instructions:**\n${domainKnowledge.customInstructions}`
     }
   }
