@@ -47,6 +47,13 @@ export async function GET(
     // Generate OAuth URL
     const oauthUrl = getOAuthUrl(provider, userId, redirectUri)
 
+    // For browser redirects, return redirect
+    // For API calls (with Authorization header), return JSON with URL
+    const acceptHeader = request.headers.get('accept') || ''
+    if (acceptHeader.includes('application/json') || request.headers.get('authorization')) {
+      return NextResponse.json({ url: oauthUrl })
+    }
+
     // Redirect to OAuth provider
     return NextResponse.redirect(oauthUrl)
   } catch (error: any) {

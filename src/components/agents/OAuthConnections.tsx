@@ -66,13 +66,35 @@ export function OAuthConnections({
 
   const handleConnect = async (provider: OAuthProvider) => {
     try {
-      // Redirect to OAuth initiation endpoint
-      const redirectUri = `${window.location.origin}/api/oauth/${provider.id}`
-      window.location.href = redirectUri
+      // Get auth token and call API to get OAuth URL
+      const { getAuthHeaders } = await import('@/lib/auth-client')
+      const headers = await getAuthHeaders()
+      
+      const response = await fetch(`/api/oauth/${provider.id}`, {
+        method: 'GET',
+        headers,
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to initiate OAuth connection')
+      }
+
+      // If response is a redirect, follow it
+      if (response.redirected) {
+        window.location.href = response.url
+      } else {
+        // If it returns JSON with URL, use that
+        const data = await response.json().catch(() => ({}))
+        if (data.url) {
+          window.location.href = data.url
+        } else {
+          throw new Error('No OAuth URL received')
+        }
+      }
     } catch (error: any) {
       console.error('OAuth connection error:', error)
-      // Fallback: still call the callback for UI state
-      onProviderConnect(provider.id)
+      alert(error.message || 'Failed to connect. Please try again.')
     }
   }
 

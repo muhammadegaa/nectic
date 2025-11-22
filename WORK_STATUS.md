@@ -67,6 +67,15 @@
 
 ## Recent Fixes
 
+### ✅ OAuth Connection Fixed
+- **Problem**: OAuth connection returned "Unauthorized: Authentication required"
+- **Root Cause**: Frontend was using `window.location.href` redirect which can't send Authorization header
+- **Solution**: 
+  - Frontend now calls API with auth token to get OAuth URL
+  - API returns JSON with URL when called with Authorization header
+  - Frontend then redirects to OAuth provider
+- **Test Script**: Added `test-oauth.sh` for local testing with curl
+
 ### ✅ Build Error Fixed
 - Fixed `router.replace()` TypeScript error (Next.js 13+ API change)
 - Removed invalid 3-argument call, using single argument
