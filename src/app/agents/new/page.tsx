@@ -19,13 +19,13 @@ import { DataPreview } from "@/components/agents/DataPreview"
 import { DatabaseConnectionForm } from "@/components/agents/DatabaseConnection"
 import { AgenticConfigForm } from "@/components/agents/AgenticConfig"
 import { AgentPreview } from "@/components/agents/AgentPreview"
+import { AppNavigation } from "@/components/app-navigation"
 
 // Lazy load heavy components for better performance
 const ToolMarketplace = lazy(() => import("@/components/agents/ToolMarketplace").then(m => ({ default: m.ToolMarketplace })))
 const VisualWorkflowBuilder = lazy(() => import("@/components/agents/VisualWorkflowBuilder").then(m => ({ default: m.VisualWorkflowBuilder })))
 const AgentConfiguration = lazy(() => import("@/components/agents/AgentConfiguration").then(m => ({ default: m.AgentConfiguration })))
 const OAuthConnections = lazy(() => import("@/components/agents/OAuthConnections").then(m => ({ default: m.OAuthConnections })))
-import { AppNavigation } from "@/components/app-navigation"
 import type { DatabaseConnection } from "@/lib/db-adapters/base-adapter"
 import type { AgenticConfig } from "@/domain/entities/agent.entity"
 import type { Node, Edge } from "reactflow"
@@ -185,7 +185,7 @@ export default function NewAgentPage() {
       basicTools.forEach(tool => next.add(tool))
       return next
     })
-  }, [selectedCollections])
+  }, [])
 
   // Load draft from localStorage on mount
   useEffect(() => {
