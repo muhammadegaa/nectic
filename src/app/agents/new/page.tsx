@@ -25,22 +25,10 @@ import type { AgenticConfig } from "@/domain/entities/agent.entity"
 import type { Node, Edge } from "reactflow"
 
 // Lazy load heavy components for better performance
-const ToolMarketplace = lazy(async () => {
-  const m = await import("@/components/agents/ToolMarketplace")
-  return { default: m.ToolMarketplace }
-})
-const VisualWorkflowBuilder = lazy(async () => {
-  const m = await import("@/components/agents/VisualWorkflowBuilder")
-  return { default: m.VisualWorkflowBuilder }
-})
-const AgentConfiguration = lazy(async () => {
-  const m = await import("@/components/agents/AgentConfiguration")
-  return { default: m.AgentConfiguration }
-})
-const OAuthConnections = lazy(async () => {
-  const m = await import("@/components/agents/OAuthConnections")
-  return { default: m.OAuthConnections }
-})
+const ToolMarketplace = lazy(() => import("@/components/agents/ToolMarketplace").then(m => ({ default: m.ToolMarketplace })))
+const VisualWorkflowBuilder = lazy(() => import("@/components/agents/VisualWorkflowBuilder").then(m => ({ default: m.VisualWorkflowBuilder })))
+const AgentConfiguration = lazy(() => import("@/components/agents/AgentConfiguration").then(m => ({ default: m.AgentConfiguration })))
+const OAuthConnections = lazy(() => import("@/components/agents/OAuthConnections").then(m => ({ default: m.OAuthConnections })))
 
 const AVAILABLE_COLLECTIONS = [
   { id: "finance_transactions", label: "Finance Transactions", description: "Financial transactions data" },
@@ -49,7 +37,6 @@ const AVAILABLE_COLLECTIONS = [
 ]
 
 export default function NewAgentPage() {
-
   const router = useRouter()
   const { user, loading: authLoading } = useAuth()
   const { toast } = useToast()
