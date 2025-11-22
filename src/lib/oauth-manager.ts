@@ -15,6 +15,12 @@ export interface OAuthToken {
   expiresAt?: number
   scope?: string[]
   tokenType?: string
+  // Provider-specific metadata
+  metadata?: {
+    instanceUrl?: string // Salesforce instance URL
+    subdomain?: string // Zendesk subdomain
+    [key: string]: any
+  }
   createdAt: string
   updatedAt: string
 }
@@ -82,6 +88,15 @@ export async function exchangeCodeForToken(
 
   const tokenData = await response.json()
 
+  // Extract provider-specific metadata
+  const metadata: Record<string, any> = {}
+  if (provider.id === 'salesforce' && tokenData.instance_url) {
+    metadata.instanceUrl = tokenData.instance_url
+  }
+  if (provider.id === 'zendesk' && tokenData.subdomain) {
+    metadata.subdomain = tokenData.subdomain
+  }
+
   return {
     providerId: provider.id,
     userId: '', // Will be set by caller
@@ -90,6 +105,7 @@ export async function exchangeCodeForToken(
     expiresAt: tokenData.expires_in ? Date.now() + (tokenData.expires_in * 1000) : undefined,
     scope: tokenData.scope ? tokenData.scope.split(' ') : provider.scopes,
     tokenType: tokenData.token_type || 'Bearer',
+    metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   }
@@ -163,7 +179,8 @@ export async function getOAuthToken(userId: string, providerId: string): Promise
  */
 export async function refreshOAuthToken(
   provider: OAuthProvider,
-  refreshToken: string
+  refreshToken: string,
+  existingMetadata?: Record<string, any>
 ): Promise<OAuthToken> {
   const clientId = process.env[`${provider.id.toUpperCase()}_CLIENT_ID`] || ''
   const clientSecret = process.env[`${provider.id.toUpperCase()}_CLIENT_SECRET`] || ''
@@ -191,6 +208,13 @@ export async function refreshOAuthToken(
 
   const tokenData = await response.json()
 
+  // Preserve existing metadata
+  const metadata: Record<string, any> = existingMetadata || {}
+  
+  if (provider.id === 'salesforce' && tokenData.instance_url) {
+    metadata.instanceUrl = tokenData.instance_url
+  }
+
   return {
     providerId: provider.id,
     userId: '', // Will be set by caller
@@ -198,6 +222,7 @@ export async function refreshOAuthToken(
     refreshToken: tokenData.refresh_token || refreshToken,
     expiresAt: tokenData.expires_in ? Date.now() + (tokenData.expires_in * 1000) : undefined,
     tokenType: tokenData.token_type || 'Bearer',
+    metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   }
@@ -224,8 +249,8 @@ export async function getValidAccessToken(userId: string, providerId: string): P
       throw new Error(`OAuth provider not found: ${providerId}`)
     }
 
-    // Refresh token
-    const refreshedToken = await refreshOAuthToken(provider, token.refreshToken)
+    // Refresh token (preserve existing metadata)
+    const refreshedToken = await refreshOAuthToken(provider, token.refreshToken, token.metadata)
     refreshedToken.userId = userId
     
     await storeOAuthToken(refreshedToken)
@@ -234,6 +259,13 @@ export async function getValidAccessToken(userId: string, providerId: string): P
   }
 
   return token.accessToken
+}
+
+/**
+ * Get OAuth token with metadata
+ */
+export async function getOAuthTokenWithMetadata(userId: string, providerId: string): Promise<OAuthToken | null> {
+  return await getOAuthToken(userId, providerId)
 }
 
 /**

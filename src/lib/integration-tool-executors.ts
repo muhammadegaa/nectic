@@ -1,9 +1,11 @@
 /**
  * Integration Tool Executors
  * Executes tools for external services (Slack, Google, Salesforce, etc.)
+ * Enterprise-grade with proper error handling, retries, and rate limiting
  */
 
-import { getValidAccessToken } from './oauth-manager'
+import { getValidAccessToken, getOAuthTokenWithMetadata } from './oauth-manager'
+import { apiRequest, ApiError } from './api-client'
 
 /**
  * Execute an integration tool
@@ -30,11 +32,15 @@ export async function executeIntegrationTool(
     } else if (toolName.startsWith('google_') || toolName.startsWith('sheets_') || toolName.startsWith('gmail_')) {
       return await executeGoogleTool(toolName, args, accessToken)
     } else if (toolName.startsWith('salesforce_')) {
-      return await executeSalesforceTool(toolName, args, accessToken)
+      return await executeSalesforceTool(toolName, args, accessToken, userId)
     } else if (toolName.startsWith('notion_')) {
       return await executeNotionTool(toolName, args, accessToken)
     } else if (toolName.startsWith('stripe_')) {
       return await executeStripeTool(toolName, args, accessToken)
+    } else if (toolName.startsWith('hubspot_')) {
+      return await executeHubSpotTool(toolName, args, accessToken)
+    } else if (toolName.startsWith('zendesk_')) {
+      return await executeZendeskTool(toolName, args, accessToken, userId)
     }
 
     throw new Error(`Integration tool executor not implemented: ${toolName}`)
@@ -256,29 +262,47 @@ async function executeGoogleTool(toolName: string, args: any, accessToken: strin
 /**
  * Execute Salesforce tools
  */
-async function executeSalesforceTool(toolName: string, args: any, accessToken: string): Promise<any> {
-  // Get Salesforce instance URL from token (would need to store this)
-  const instanceUrl = args.instance_url || process.env.SALESFORCE_INSTANCE_URL || 'https://login.salesforce.com'
+async function executeSalesforceTool(toolName: string, args: any, accessToken: string, userId: string): Promise<any> {
+  // Get instance URL from stored token metadata
+  const token = await getOAuthTokenWithMetadata(userId, 'salesforce')
+  const instanceUrl = token?.metadata?.instanceUrl || args.instance_url || process.env.SALESFORCE_INSTANCE_URL || 'https://login.salesforce.com'
+  
+  // Use latest API version (v60.0 as of 2024)
+  const apiVersion = 'v60.0'
 
   switch (toolName) {
     case 'salesforce_query': {
       const soql = args.soql
-      const response = await fetch(`${instanceUrl}/services/data/v57.0/query?q=${encodeURIComponent(soql)}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-        },
-      })
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({}))
-        throw new Error(`Salesforce API error: ${JSON.stringify(error)}`)
+      if (!soql) {
+        throw new Error('SOQL query is required')
       }
 
-      const data = await response.json()
-      return {
-        records: data.records,
-        totalSize: data.totalSize,
+      try {
+        const response = await apiRequest(
+          `${instanceUrl}/services/data/${apiVersion}/query?q=${encodeURIComponent(soql)}`,
+          {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Accept': 'application/json',
+            },
+            retryOptions: {
+              maxRetries: 3,
+              retryDelay: 1000,
+            },
+          }
+        )
+
+        return {
+          records: response.data.records || [],
+          totalSize: response.data.totalSize || 0,
+          done: response.data.done || false,
+        }
+      } catch (error: any) {
+        if (error instanceof ApiError) {
+          throw new Error(`Salesforce query failed: ${error.message}`)
+        }
+        throw error
       }
     }
 
@@ -286,24 +310,72 @@ async function executeSalesforceTool(toolName: string, args: any, accessToken: s
       const objectType = args.object_type
       const fields = args.fields
 
-      const response = await fetch(`${instanceUrl}/services/data/v57.0/sobjects/${objectType}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(fields),
-      })
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({}))
-        throw new Error(`Salesforce API error: ${JSON.stringify(error)}`)
+      if (!objectType || !fields) {
+        throw new Error('Object type and fields are required')
       }
 
-      const data = await response.json()
-      return {
-        success: data.success,
-        id: data.id,
+      try {
+        const response = await apiRequest(
+          `${instanceUrl}/services/data/${apiVersion}/sobjects/${objectType}`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(fields),
+            retryOptions: {
+              maxRetries: 2, // Less retries for write operations
+            },
+          }
+        )
+
+        return {
+          success: response.data.success !== false,
+          id: response.data.id,
+        }
+      } catch (error: any) {
+        if (error instanceof ApiError) {
+          throw new Error(`Salesforce create failed: ${error.message}`)
+        }
+        throw error
+      }
+    }
+
+    case 'salesforce_update_record': {
+      const objectType = args.object_type
+      const recordId = args.record_id
+      const fields = args.fields
+
+      if (!objectType || !recordId || !fields) {
+        throw new Error('Object type, record ID, and fields are required')
+      }
+
+      try {
+        const response = await apiRequest(
+          `${instanceUrl}/services/data/${apiVersion}/sobjects/${objectType}/${recordId}`,
+          {
+            method: 'PATCH',
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(fields),
+            retryOptions: {
+              maxRetries: 2,
+            },
+          }
+        )
+
+        return {
+          success: true,
+          id: recordId,
+        }
+      } catch (error: any) {
+        if (error instanceof ApiError) {
+          throw new Error(`Salesforce update failed: ${error.message}`)
+        }
+        throw error
       }
     }
 
@@ -316,36 +388,94 @@ async function executeSalesforceTool(toolName: string, args: any, accessToken: s
  * Execute Notion tools
  */
 async function executeNotionTool(toolName: string, args: any, accessToken: string): Promise<any> {
+  // Use latest Notion API version (2022-06-28 is still current as of 2024)
+  const notionVersion = '2022-06-28'
+
   switch (toolName) {
     case 'notion_create_page': {
       const parent = args.parent
       const properties = args.properties
       const content = args.content || []
 
-      const response = await fetch('https://api.notion.com/v1/pages', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-          'Notion-Version': '2022-06-28',
-        },
-        body: JSON.stringify({
-          parent: { database_id: parent },
-          properties,
-          children: content,
-        }),
-      })
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({}))
-        throw new Error(`Notion API error: ${JSON.stringify(error)}`)
+      if (!parent || !properties) {
+        throw new Error('Parent database ID and properties are required')
       }
 
-      const data = await response.json()
-      return {
-        success: true,
-        pageId: data.id,
-        url: data.url,
+      try {
+        const response = await apiRequest(
+          'https://api.notion.com/v1/pages',
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+              'Notion-Version': notionVersion,
+            },
+            body: JSON.stringify({
+              parent: { database_id: parent },
+              properties,
+              children: content,
+            }),
+            retryOptions: {
+              maxRetries: 2,
+            },
+          }
+        )
+
+        return {
+          success: true,
+          pageId: response.data.id,
+          url: response.data.url,
+        }
+      } catch (error: any) {
+        if (error instanceof ApiError) {
+          throw new Error(`Notion create page failed: ${error.message}`)
+        }
+        throw error
+      }
+    }
+
+    case 'notion_query_database': {
+      const databaseId = args.database_id
+      const filter = args.filter
+      const sorts = args.sorts
+      const pageSize = args.page_size || 100
+
+      if (!databaseId) {
+        throw new Error('Database ID is required')
+      }
+
+      try {
+        const response = await apiRequest(
+          `https://api.notion.com/v1/databases/${databaseId}/query`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+              'Notion-Version': notionVersion,
+            },
+            body: JSON.stringify({
+              filter,
+              sorts,
+              page_size: pageSize,
+            }),
+            retryOptions: {
+              maxRetries: 2,
+            },
+          }
+        )
+
+        return {
+          results: response.data.results || [],
+          hasMore: response.data.has_more || false,
+          nextCursor: response.data.next_cursor,
+        }
+      } catch (error: any) {
+        if (error instanceof ApiError) {
+          throw new Error(`Notion query failed: ${error.message}`)
+        }
+        throw error
       }
     }
 
@@ -387,6 +517,289 @@ async function executeStripeTool(toolName: string, args: any, accessToken: strin
 
     default:
       throw new Error(`Unknown Stripe tool: ${toolName}`)
+  }
+}
+
+/**
+ * Execute HubSpot tools
+ */
+async function executeHubSpotTool(toolName: string, args: any, accessToken: string): Promise<any> {
+  const baseUrl = 'https://api.hubapi.com'
+
+  switch (toolName) {
+    case 'hubspot_get_contact': {
+      const contactId = args.contact_id
+      const email = args.email
+
+      if (!contactId && !email) {
+        throw new Error('Contact ID or email is required')
+      }
+
+      try {
+        let url = `${baseUrl}/crm/v3/objects/contacts`
+        if (contactId) {
+          url += `/${contactId}`
+        } else if (email) {
+          url += `/search`
+        }
+
+        const requestOptions: RequestInit & { retryOptions?: any } = {
+          method: contactId ? 'GET' : 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          retryOptions: {
+            maxRetries: 3,
+          },
+        }
+
+        if (email && !contactId) {
+          requestOptions.body = JSON.stringify({
+            filterGroups: [{
+              filters: [{
+                propertyName: 'email',
+                operator: 'EQ',
+                value: email,
+              }],
+            }],
+          })
+        }
+
+        const response = await apiRequest(url, requestOptions)
+
+        if (contactId) {
+          return {
+            contact: response.data,
+          }
+        } else {
+          return {
+            contacts: response.data.results || [],
+            total: response.data.total || 0,
+          }
+        }
+      } catch (error: any) {
+        if (error instanceof ApiError) {
+          throw new Error(`HubSpot get contact failed: ${error.message}`)
+        }
+        throw error
+      }
+    }
+
+    case 'hubspot_create_contact': {
+      const properties = args.properties
+
+      if (!properties || !properties.email) {
+        throw new Error('Contact properties with email are required')
+      }
+
+      try {
+        const response = await apiRequest(
+          `${baseUrl}/crm/v3/objects/contacts`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ properties }),
+            retryOptions: {
+              maxRetries: 2,
+            },
+          }
+        )
+
+        return {
+          success: true,
+          contactId: response.data.id,
+          contact: response.data,
+        }
+      } catch (error: any) {
+        if (error instanceof ApiError) {
+          throw new Error(`HubSpot create contact failed: ${error.message}`)
+        }
+        throw error
+      }
+    }
+
+    case 'hubspot_get_deals': {
+      const limit = args.limit || 100
+      const after = args.after
+
+      try {
+        const url = new URL(`${baseUrl}/crm/v3/objects/deals`)
+        url.searchParams.set('limit', String(limit))
+        if (after) {
+          url.searchParams.set('after', after)
+        }
+
+        const response = await apiRequest(url.toString(), {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          retryOptions: {
+            maxRetries: 3,
+          },
+        })
+
+        return {
+          deals: response.data.results || [],
+          paging: response.data.paging,
+        }
+      } catch (error: any) {
+        if (error instanceof ApiError) {
+          throw new Error(`HubSpot get deals failed: ${error.message}`)
+        }
+        throw error
+      }
+    }
+
+    default:
+      throw new Error(`Unknown HubSpot tool: ${toolName}`)
+  }
+}
+
+/**
+ * Execute Zendesk tools
+ */
+async function executeZendeskTool(toolName: string, args: any, accessToken: string, userId: string): Promise<any> {
+  // Get subdomain from stored token metadata
+  const token = await getOAuthTokenWithMetadata(userId, 'zendesk')
+  const subdomain = token?.metadata?.subdomain || args.subdomain || process.env.ZENDESK_SUBDOMAIN
+
+  if (!subdomain) {
+    throw new Error('Zendesk subdomain is required. Please reconnect your Zendesk account.')
+  }
+
+  const baseUrl = `https://${subdomain}.zendesk.com/api/v2`
+
+  switch (toolName) {
+    case 'zendesk_get_tickets': {
+      const status = args.status
+      const limit = args.limit || 100
+
+      try {
+        let url = `${baseUrl}/tickets.json?per_page=${limit}`
+        if (status) {
+          url += `&status=${status}`
+        }
+
+        const response = await apiRequest(url, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          retryOptions: {
+            maxRetries: 3,
+          },
+        })
+
+        return {
+          tickets: response.data.tickets || [],
+          count: response.data.count || 0,
+        }
+      } catch (error: any) {
+        if (error instanceof ApiError) {
+          throw new Error(`Zendesk get tickets failed: ${error.message}`)
+        }
+        throw error
+      }
+    }
+
+    case 'zendesk_create_ticket': {
+      const subject = args.subject
+      const description = args.description
+      const priority = args.priority || 'normal'
+      const type = args.type || 'question'
+
+      if (!subject || !description) {
+        throw new Error('Subject and description are required')
+      }
+
+      try {
+        const response = await apiRequest(
+          `${baseUrl}/tickets.json`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              ticket: {
+                subject,
+                comment: {
+                  body: description,
+                },
+                priority,
+                type,
+              },
+            }),
+            retryOptions: {
+              maxRetries: 2,
+            },
+          }
+        )
+
+        return {
+          success: true,
+          ticketId: response.data.ticket.id,
+          ticket: response.data.ticket,
+        }
+      } catch (error: any) {
+        if (error instanceof ApiError) {
+          throw new Error(`Zendesk create ticket failed: ${error.message}`)
+        }
+        throw error
+      }
+    }
+
+    case 'zendesk_update_ticket': {
+      const ticketId = args.ticket_id
+      const status = args.status
+      const comment = args.comment
+
+      if (!ticketId) {
+        throw new Error('Ticket ID is required')
+      }
+
+      try {
+        const updateData: any = {}
+        if (status) updateData.status = status
+        if (comment) {
+          updateData.comment = { body: comment }
+        }
+
+        const response = await apiRequest(
+          `${baseUrl}/tickets/${ticketId}.json`,
+          {
+            method: 'PUT',
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ ticket: updateData }),
+            retryOptions: {
+              maxRetries: 2,
+            },
+          }
+        )
+
+        return {
+          success: true,
+          ticket: response.data.ticket,
+        }
+      } catch (error: any) {
+        if (error instanceof ApiError) {
+          throw new Error(`Zendesk update ticket failed: ${error.message}`)
+        }
+        throw error
+      }
+    }
+
+    default:
+      throw new Error(`Unknown Zendesk tool: ${toolName}`)
   }
 }
 
