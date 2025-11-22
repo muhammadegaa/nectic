@@ -455,7 +455,7 @@ export function VisualWorkflowBuilder({ selectedTools, onWorkflowChange }: Visua
                     placeholder="e.g., amount > 1000"
                   />
                   <p className="text-xs text-foreground/60">
-                    Define the condition for branching (e.g., "value > 100", "status === 'active'")
+                    Define the condition for branching (e.g., &quot;value &gt; 100&quot;, &quot;status === &apos;active&apos;&quot;)
                   </p>
                 </div>
                 <div className="p-3 bg-muted rounded-lg">
