@@ -258,16 +258,16 @@ export default function NewAgentPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background py-12 px-6 lg:px-8">
+    <div className="min-h-screen bg-background py-6 sm:py-8 lg:py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-[1800px] mx-auto">
-        <Link href="/dashboard" className="inline-flex items-center text-foreground/60 hover:text-foreground mb-6 transition-colors">
+        <Link href="/dashboard" className="inline-flex items-center text-sm sm:text-base text-foreground/60 hover:text-foreground mb-4 sm:mb-6 transition-colors">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Dashboard
         </Link>
 
-        <div className="mb-8">
-          <h1 className="text-4xl font-light text-foreground mb-2">Create New AI Agent</h1>
-          <p className="text-foreground/60">Configure your agent's capabilities, tools, and deployment options</p>
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-light text-foreground mb-2">Create New AI Agent</h1>
+          <p className="text-sm sm:text-base text-foreground/60">Configure your agent's capabilities, tools, and deployment options</p>
         </div>
 
         {/* Split Layout: Configuration on left, Live Preview on right */}
@@ -275,27 +275,29 @@ export default function NewAgentPage() {
           {/* Left Side: Configuration */}
           <div className="space-y-6">
             <Tabs defaultValue="basic" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="basic" className="gap-2 text-xs sm:text-sm">
-                  <Settings className="w-4 h-4" />
-                  <span className="hidden sm:inline">Basic Info</span>
-                  <span className="sm:hidden">Basic</span>
-                </TabsTrigger>
-                <TabsTrigger value="tools" className="gap-2 text-xs sm:text-sm">
-                  <Zap className="w-4 h-4" />
-                  Tools
-                </TabsTrigger>
-                <TabsTrigger value="workflow" className="gap-2 text-xs sm:text-sm">
-                  <Workflow className="w-4 h-4" />
-                  <span className="hidden sm:inline">Workflow</span>
-                  <span className="sm:hidden">Flow</span>
-                </TabsTrigger>
-                <TabsTrigger value="config" className="gap-2 text-xs sm:text-sm">
-                  <Settings className="w-4 h-4" />
-                  <span className="hidden sm:inline">Config</span>
-                  <span className="sm:hidden">Cfg</span>
-                </TabsTrigger>
-              </TabsList>
+              <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
+                <TabsList className="grid w-full grid-cols-4 min-w-[400px] sm:min-w-0">
+                  <TabsTrigger value="basic" className="gap-1.5 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
+                    <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+                    <span className="hidden sm:inline">Basic Info</span>
+                    <span className="sm:hidden">Basic</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="tools" className="gap-1.5 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
+                    <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+                    Tools
+                  </TabsTrigger>
+                  <TabsTrigger value="workflow" className="gap-1.5 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
+                    <Workflow className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+                    <span className="hidden sm:inline">Workflow</span>
+                    <span className="sm:hidden">Flow</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="config" className="gap-1.5 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
+                    <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+                    <span className="hidden sm:inline">Config</span>
+                    <span className="sm:hidden">Cfg</span>
+                  </TabsTrigger>
+                </TabsList>
+              </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
           <TabsContent value="basic" className="space-y-6 mt-6">

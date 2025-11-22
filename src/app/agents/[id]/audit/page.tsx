@@ -138,9 +138,9 @@ export default function AgentAuditPage() {
 
   if (authLoading || isLoading) {
     return (
-      <div className="container mx-auto p-6 max-w-7xl">
-        <Skeleton className="h-12 w-64 mb-6" />
-        <Skeleton className="h-96 w-full" />
+      <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-6 max-w-7xl">
+        <Skeleton className="h-8 sm:h-12 w-48 sm:w-64 mb-4 sm:mb-6" />
+        <Skeleton className="h-64 sm:h-96 w-full" />
       </div>
     )
   }
