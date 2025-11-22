@@ -26,7 +26,8 @@ export async function POST(request: NextRequest) {
       modelConfig,
       memoryConfig,
       systemPrompt,
-      deploymentConfig
+      deploymentConfig,
+      workflowConfig
     } = body
 
     if (!name || !collections || !Array.isArray(collections) || collections.length === 0) {
@@ -58,6 +59,7 @@ export async function POST(request: NextRequest) {
       memoryConfig: memoryConfig || undefined,
       systemPrompt: systemPrompt || undefined,
       deploymentConfig: deploymentConfig || undefined,
+      workflowConfig: workflowConfig || undefined,
       userId,
     })
 

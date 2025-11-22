@@ -227,6 +227,10 @@ export default function NewAgentPage() {
           memoryConfig: agentConfig.memory || undefined,
           systemPrompt: agentConfig.systemPrompt || undefined,
           deploymentConfig: agentConfig.deployment || undefined,
+          workflowConfig: workflowNodes.length > 0 || workflowEdges.length > 0 ? {
+            nodes: workflowNodes,
+            edges: workflowEdges,
+          } : undefined,
         }),
       })
 

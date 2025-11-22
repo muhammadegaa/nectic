@@ -37,6 +37,11 @@ export interface Agent {
     channels: string[]
     webhookUrl?: string
   }
+  // Workflow Configuration (visual workflow)
+  workflowConfig?: {
+    nodes: any[]
+    edges: any[]
+  }
   createdAt: string
   updatedAt: string
 }

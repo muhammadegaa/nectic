@@ -15,6 +15,7 @@ import { executeTool } from '@/lib/tool-executors'
 import { buildSystemPrompt, filterTools } from '@/lib/agentic-prompt-builder'
 import { smartEngage } from '@/lib/cost-optimizer'
 import { callLLM } from '@/lib/llm-client'
+import { executeWorkflow } from '@/lib/workflow-executor'
 
 export const dynamic = 'force-dynamic'
 
@@ -115,18 +116,41 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get conversation history for context
+    // Get conversation history for context based on memory configuration
     let conversationHistory: any[] = []
-    // Use memoryConfig if available, otherwise use agenticConfig
+    const memoryType = agent.memoryConfig?.type || 'session'
     const contextWindow = agent.memoryConfig?.maxTurns || 
                          agent.agenticConfig?.contextMemory?.contextWindow || 
                          10
-    if (conversationId) {
+    
+    // Only load conversation history if memory is enabled
+    const memoryEnabled = agent.memoryConfig !== undefined || 
+                         agent.agenticConfig?.contextMemory?.enabled !== false
+    
+    if (memoryEnabled && conversationId) {
       const messages = await conversationRepo.getMessages(conversationId)
-      conversationHistory = messages.slice(-contextWindow).map(msg => ({
-        role: msg.role,
-        content: msg.content
-      }))
+      
+      // Apply memory type logic
+      if (memoryType === 'session') {
+        // Session: Only current conversation
+        conversationHistory = messages.slice(-contextWindow).map(msg => ({
+          role: msg.role,
+          content: msg.content
+        }))
+      } else if (memoryType === 'persistent') {
+        // Persistent: All conversations with this user for this agent
+        // For MVP, we'll use current conversation but could extend to cross-conversation
+        conversationHistory = messages.slice(-contextWindow).map(msg => ({
+          role: msg.role,
+          content: msg.content
+        }))
+      } else {
+        // Episodic: Key events only (for MVP, same as session)
+        conversationHistory = messages.slice(-contextWindow).map(msg => ({
+          role: msg.role,
+          content: msg.content
+        }))
+      }
     }
 
     // Cost Optimization: Pre-screen message with Smart Engage
@@ -152,6 +176,41 @@ export async function POST(request: NextRequest) {
           dataCount: 0,
           costOptimized: true
         })
+      }
+    }
+
+    // Check if workflow is configured - if so, execute workflow instead of LLM
+    if (agent.workflowConfig && agent.workflowConfig.nodes && agent.workflowConfig.nodes.length > 0) {
+      try {
+        const workflowResult = await executeWorkflow(
+          agent.workflowConfig.nodes,
+          agent.workflowConfig.edges || [],
+          {
+            variables: { message, userId },
+            results: {},
+            userId,
+            databaseConnection: agent.databaseConnection,
+          }
+        )
+
+        if (workflowResult.success) {
+          return NextResponse.json({
+            response: JSON.stringify(workflowResult.output) || 'Workflow executed successfully',
+            conversationId: finalConversationId,
+            collectionsUsed: agent.collections,
+            dataCount: 0,
+            reasoningSteps: workflowResult.steps.map(step => ({
+              step: `Executed ${step.nodeType} node: ${step.nodeId}`,
+              tool: step.nodeType,
+              result: step.result,
+            })),
+          })
+        } else {
+          throw new Error(workflowResult.error || 'Workflow execution failed')
+        }
+      } catch (error: any) {
+        console.error('Workflow execution error:', error)
+        // Fall through to LLM-based execution
       }
     }
 
