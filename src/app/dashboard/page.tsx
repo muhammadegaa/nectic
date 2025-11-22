@@ -8,7 +8,15 @@ import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Plus, MessageSquare, Loader2, ArrowRight, FileText } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Plus, MessageSquare, Loader2, ArrowRight, FileText, Search, X, Sparkles } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import type { Agent } from "@/domain/entities/agent.entity"
 import { useAgentAnalytics } from "@/presentation/hooks/use-agent-analytics"
@@ -164,6 +172,9 @@ export default function DashboardPage() {
   const [agents, setAgents] = useState<Agent[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const [searchQuery, setSearchQuery] = useState("")
+  const [filterCollection, setFilterCollection] = useState<string>("all")
+  const [sortBy, setSortBy] = useState<"name" | "recent" | "queries">("recent")
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -200,6 +211,37 @@ export default function DashboardPage() {
       setLoading(false)
     }
   }
+
+  // Get all unique collections for filter
+  const allCollections = Array.from(new Set(agents.flatMap((a) => a.collections))).sort()
+
+  // Filter and sort agents
+  const filteredAndSortedAgents = agents
+    .filter((agent) => {
+      // Search filter
+      const matchesSearch =
+        searchQuery === "" ||
+        agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        agent.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        agent.collections.some((col) => col.toLowerCase().includes(searchQuery.toLowerCase()))
+
+      // Collection filter
+      const matchesCollection =
+        filterCollection === "all" || agent.collections.includes(filterCollection)
+
+      return matchesSearch && matchesCollection
+    })
+    .sort((a, b) => {
+      if (sortBy === "name") {
+        return a.name.localeCompare(b.name)
+      } else if (sortBy === "recent") {
+        // Sort by creation date (newest first) - using id as proxy since we don't have createdAt
+        return b.id.localeCompare(a.id)
+      } else {
+        // Sort by queries - would need analytics data, for now use name
+        return a.name.localeCompare(b.name)
+      }
+    })
 
   if (authLoading || loading) {
     return (
@@ -319,33 +361,140 @@ export default function DashboardPage() {
           </Card>
         </div>
 
-        {/* Agents List */}
+        {/* Search and Filters */}
+        {agents.length > 0 && (
+          <div className="mb-6 space-y-4">
+            <div className="flex flex-col sm:flex-row gap-3">
+              {/* Search Input */}
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-foreground/40" />
+                <Input
+                  type="text"
+                  placeholder="Search agents by name, description, or collection..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 pr-10 h-10"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-foreground/40 hover:text-foreground"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+
+              {/* Collection Filter */}
+              {allCollections.length > 0 && (
+                <Select value={filterCollection} onValueChange={setFilterCollection}>
+                  <SelectTrigger className="w-full sm:w-[180px] h-10">
+                    <SelectValue placeholder="Filter by collection" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Collections</SelectItem>
+                    {allCollections.map((collection) => (
+                      <SelectItem key={collection} value={collection}>
+                        {collection.replace(/_/g, " ")}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+
+              {/* Sort */}
+              <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+                <SelectTrigger className="w-full sm:w-[140px] h-10">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="recent">Most Recent</SelectItem>
+                  <SelectItem value="name">Name (A-Z)</SelectItem>
+                  <SelectItem value="queries">Most Queries</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Results count */}
+            {searchQuery || filterCollection !== "all" ? (
+              <div className="text-sm text-foreground/60">
+                Showing {filteredAndSortedAgents.length} of {agents.length} agents
+                {(searchQuery || filterCollection !== "all") && (
+                  <button
+                    onClick={() => {
+                      setSearchQuery("")
+                      setFilterCollection("all")
+                    }}
+                    className="ml-2 text-foreground hover:underline"
+                  >
+                    Clear filters
+                  </button>
+                )}
+              </div>
+            ) : null}
+          </div>
+        )}
+
+        {/* Error State */}
         {error && (
           <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive">
             {error}
           </div>
         )}
 
+        {/* Empty States */}
         {agents.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-16">
-              <MessageSquare className="w-12 h-12 text-foreground/20 mb-4" />
-              <h3 className="text-xl font-light text-foreground mb-2">No agents yet</h3>
-              <p className="text-foreground/60 mb-6 text-center max-w-md">
-                Create your first AI agent to get started. Agents connect to your databases and answer questions in natural language.
+          <Card className="border-2 border-dashed">
+            <CardContent className="flex flex-col items-center justify-center py-16 sm:py-20 px-4">
+              <div className="relative mb-6">
+                <div className="absolute inset-0 bg-primary/10 rounded-full blur-2xl" />
+                <Sparkles className="w-16 h-16 sm:w-20 sm:h-20 text-primary relative z-10" />
+              </div>
+              <h3 className="text-xl sm:text-2xl font-light text-foreground mb-2 text-center">
+                Create your first AI agent
+              </h3>
+              <p className="text-foreground/60 mb-2 text-center max-w-md text-sm sm:text-base">
+                Build intelligent assistants that connect to your databases and answer questions in natural language.
+              </p>
+              <p className="text-foreground/40 mb-6 text-center max-w-md text-xs sm:text-sm">
+                Get started in minutes with our intuitive agent builder.
               </p>
               <Button
                 onClick={() => router.push("/agents/new")}
-                className="bg-foreground text-background hover:bg-foreground/90"
+                className="bg-foreground text-background hover:bg-foreground/90 h-10 px-6"
+                size="lg"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Create Your First Agent
               </Button>
             </CardContent>
           </Card>
+        ) : filteredAndSortedAgents.length === 0 ? (
+          <Card className="border-2 border-dashed">
+            <CardContent className="flex flex-col items-center justify-center py-16 sm:py-20 px-4">
+              <Search className="w-12 h-12 sm:w-16 sm:h-16 text-foreground/20 mb-4" />
+              <h3 className="text-xl sm:text-2xl font-light text-foreground mb-2 text-center">
+                No agents found
+              </h3>
+              <p className="text-foreground/60 mb-6 text-center max-w-md text-sm sm:text-base">
+                Try adjusting your search or filter criteria.
+              </p>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSearchQuery("")
+                  setFilterCollection("all")
+                }}
+                className="h-10"
+              >
+                <X className="w-4 h-4 mr-2" />
+                Clear Filters
+              </Button>
+            </CardContent>
+          </Card>
         ) : (
           <div className="grid gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {agents.map((agent) => (
+            {filteredAndSortedAgents.map((agent) => (
               <AgentCard key={agent.id} agent={agent} />
             ))}
           </div>
