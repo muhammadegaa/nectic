@@ -1,6 +1,6 @@
 /**
  * Agent Audit Logs API Route
- * GET /api/agents/[agentId]/audit - Get audit logs for an agent
+ * GET /api/agents/[id]/audit - Get audit logs for an agent
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -14,7 +14,7 @@ const agentRepo = new FirebaseAgentRepository()
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { agentId: string } }
+  { params }: { params: { id: string } }
 ) {
   try {
     // Authenticate user
@@ -29,7 +29,7 @@ export async function GET(
     }
 
     // Verify agent exists and belongs to user
-    const agent = await agentRepo.findById(params.agentId)
+    const agent = await agentRepo.findById(params.id)
     if (!agent) {
       return NextResponse.json(
         { error: 'Agent not found' },
@@ -68,7 +68,7 @@ export async function GET(
 
     // Fetch audit logs
     const logs = await listAuditLogsByAgent({
-      agentId: params.agentId,
+      agentId: params.id,
       userId,
       type: type || undefined,
       limit,
