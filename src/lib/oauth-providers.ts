@@ -13,6 +13,8 @@ export interface OAuthProvider {
   icon?: string
   category: 'communication' | 'crm' | 'storage' | 'productivity' | 'analytics' | 'payment' | 'project'
   isFunctional?: boolean // True if tool executors exist and work
+  features?: string[] // List of capabilities/tools enabled by this integration
+  brandColor?: string // Brand color for visual identity
 }
 
 export const oauthProviders: OAuthProvider[] = [
@@ -25,7 +27,13 @@ export const oauthProviders: OAuthProvider[] = [
     tokenUrl: 'https://slack.com/api/oauth.v2.access',
     scopes: ['chat:write', 'channels:read', 'users:read'],
     category: 'communication',
-    isFunctional: true
+    isFunctional: true,
+    brandColor: '#4A154B',
+    features: [
+      'Send messages to channels',
+      'Read channel messages',
+      'List available channels'
+    ]
   },
   {
     id: 'microsoft-teams',
@@ -57,7 +65,14 @@ export const oauthProviders: OAuthProvider[] = [
     tokenUrl: 'https://login.salesforce.com/services/oauth2/token',
     scopes: ['api', 'refresh_token', 'offline_access'],
     category: 'crm',
-    isFunctional: true
+    isFunctional: true,
+    brandColor: '#00A1E0',
+    features: [
+      'Query records with SOQL',
+      'Create new records',
+      'Update existing records',
+      'Get record details'
+    ]
   },
   {
     id: 'hubspot',
@@ -67,7 +82,13 @@ export const oauthProviders: OAuthProvider[] = [
     tokenUrl: 'https://api.hubapi.com/oauth/v1/token',
     scopes: ['contacts', 'content', 'reports', 'sales-email-read'],
     category: 'crm',
-    isFunctional: true
+    isFunctional: true,
+    brandColor: '#FF7A59',
+    features: [
+      'Get contact information',
+      'Create and update contacts',
+      'Manage deals and pipelines'
+    ]
   },
   {
     id: 'pipedrive',
@@ -87,7 +108,14 @@ export const oauthProviders: OAuthProvider[] = [
     tokenUrl: 'https://{subdomain}.zendesk.com/oauth/tokens',
     scopes: ['read', 'write'],
     category: 'crm',
-    isFunctional: true
+    isFunctional: true,
+    brandColor: '#03363D',
+    features: [
+      'Get support tickets',
+      'Create new tickets',
+      'Update ticket status',
+      'Add comments to tickets'
+    ]
   },
   
   // Storage & Files
@@ -136,7 +164,13 @@ export const oauthProviders: OAuthProvider[] = [
       'https://www.googleapis.com/auth/spreadsheets'
     ],
     category: 'productivity',
-    isFunctional: true
+    isFunctional: true,
+    brandColor: '#4285F4',
+    features: [
+      'Read and write Google Sheets',
+      'Send emails via Gmail',
+      'Access Google Calendar'
+    ]
   },
   {
     id: 'notion',
@@ -146,7 +180,14 @@ export const oauthProviders: OAuthProvider[] = [
     tokenUrl: 'https://api.notion.com/v1/oauth/token',
     scopes: ['read', 'update'],
     category: 'productivity',
-    isFunctional: true
+    isFunctional: true,
+    brandColor: '#000000',
+    features: [
+      'Read pages and databases',
+      'Create new pages',
+      'Update page content',
+      'Query databases'
+    ]
   },
   {
     id: 'confluence',
@@ -190,7 +231,13 @@ export const oauthProviders: OAuthProvider[] = [
     tokenUrl: 'https://connect.stripe.com/oauth/token',
     scopes: ['read', 'write'],
     category: 'payment',
-    isFunctional: true
+    isFunctional: true,
+    brandColor: '#635BFF',
+    features: [
+      'Get customer information',
+      'View subscriptions',
+      'Create invoices'
+    ]
   },
   {
     id: 'paypal',
