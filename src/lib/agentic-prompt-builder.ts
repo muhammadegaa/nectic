@@ -180,29 +180,29 @@ export function filterTools(
   agenticConfig?: Partial<AgenticConfig>
 ): ToolDefinition[] {
   const config = agenticConfig || {}
-  const tools = config.tools || {}
-  const basic = tools.basic || {}
-  const powerful = tools.powerful || {}
+  const tools = config.tools || ({} as Partial<AgenticConfig['tools']>)
+  const basic = tools.basic || ({} as Partial<AgenticConfig['tools']['basic']>)
+  const powerful = tools.powerful || ({} as Partial<AgenticConfig['tools']['powerful']>)
 
   const filteredTools: ToolDefinition[] = []
 
   // Basic tools
-  if (basic.queryCollection !== false) {
+  if (basic?.queryCollection !== false) {
     filteredTools.push(agentTools.find(t => t.function.name === 'query_collection')!)
   }
-  if (basic.analyzeData !== false) {
+  if (basic?.analyzeData !== false) {
     filteredTools.push(agentTools.find(t => t.function.name === 'analyze_data')!)
   }
-  if (basic.getCollectionSchema !== false) {
+  if (basic?.getCollectionSchema !== false) {
     filteredTools.push(agentTools.find(t => t.function.name === 'get_collection_schema')!)
   }
 
   // Powerful tools - filter by enabled tools
-  const enabledFinance = powerful.finance || []
-  const enabledSales = powerful.sales || []
-  const enabledHR = powerful.hr || []
-  const enabledCrossCollection = powerful.crossCollection || []
-  const enabledAdvanced = powerful.advanced || []
+  const enabledFinance = powerful?.finance || []
+  const enabledSales = powerful?.sales || []
+  const enabledHR = powerful?.hr || []
+  const enabledCrossCollection = powerful?.crossCollection || []
+  const enabledAdvanced = powerful?.advanced || []
 
   // Finance tools
   if (enabledFinance.length > 0) {
@@ -250,7 +250,7 @@ export function filterTools(
   }
 
   // If no powerful tools are configured, include all by default (backward compatibility)
-  if (filteredTools.length === 3 && !powerful.finance && !powerful.sales && !powerful.hr && !powerful.crossCollection && !powerful.advanced) {
+  if (filteredTools.length === 3 && !powerful?.finance && !powerful?.sales && !powerful?.hr && !powerful?.crossCollection && !powerful?.advanced) {
     // Include all powerful tools for backward compatibility
     return [
       ...filteredTools,
