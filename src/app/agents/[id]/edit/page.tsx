@@ -201,7 +201,7 @@ export default function EditAgentPage() {
     <div className="min-h-screen bg-background">
       <AppNavigation />
       <div className="py-12 px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto">
+        <div className="max-w-4xl mx-auto">
         <Link href="/dashboard" className="inline-flex items-center text-foreground/60 hover:text-foreground mb-6 transition-colors">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Dashboard
@@ -379,6 +379,7 @@ export default function EditAgentPage() {
 
         {/* Analytics Card */}
         <AgentAnalyticsCard agentId={agentId} />
+        </div>
       </div>
     </div>
   )
