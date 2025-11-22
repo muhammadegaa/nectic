@@ -166,12 +166,19 @@ export async function getOAuthToken(userId: string, providerId: string): Promise
   
   // Decrypt tokens
   const decryptedToken: OAuthToken = {
-    ...data,
+    providerId: data.providerId,
+    userId: data.userId,
     accessToken: decryptToken(data.accessToken),
     refreshToken: data.refreshToken ? decryptToken(data.refreshToken) : undefined,
+    expiresAt: data.expiresAt,
+    scope: data.scope,
+    tokenType: data.tokenType,
+    metadata: data.metadata,
+    createdAt: data.createdAt,
+    updatedAt: data.updatedAt,
   }
 
-  return decryptedToken as OAuthToken
+  return decryptedToken
 }
 
 /**
