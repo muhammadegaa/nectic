@@ -33,6 +33,36 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 
+// Get logo domain for Clearbit logo service
+function getLogoDomain(providerId: string): string {
+  const domainMap: Record<string, string> = {
+    'slack': 'slack.com',
+    'salesforce': 'salesforce.com',
+    'hubspot': 'hubspot.com',
+    'zendesk': 'zendesk.com',
+    'google-workspace': 'google.com',
+    'notion': 'notion.so',
+    'stripe': 'stripe.com',
+    'microsoft-teams': 'microsoft.com',
+    'discord': 'discord.com',
+    'pipedrive': 'pipedrive.com',
+    'google-drive': 'drive.google.com',
+    'dropbox': 'dropbox.com',
+    'aws-s3': 'amazonaws.com',
+    'confluence': 'atlassian.com',
+    'google-analytics': 'analytics.google.com',
+    'mixpanel': 'mixpanel.com',
+    'paypal': 'paypal.com',
+    'jira': 'atlassian.com',
+    'asana': 'asana.com',
+    'trello': 'trello.com',
+    'mailchimp': 'mailchimp.com',
+    'snowflake': 'snowflake.com',
+    'bigquery': 'cloud.google.com',
+  }
+  return domainMap[providerId] || `${providerId}.com`
+}
+
 interface OAuthConnectionsProps {
   connectedProviders: string[]
   onProviderConnect: (providerId: string) => void
@@ -190,10 +220,23 @@ export function OAuthConnections({
                 {/* Provider Logo/Icon */}
                 <div className="flex items-start gap-3 mb-3">
                   <div 
-                    className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 font-semibold text-white text-lg shadow-sm"
+                    className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 bg-white/10 border border-border/50 shadow-sm overflow-hidden"
                     style={{ backgroundColor: brandColor }}
                   >
-                    {provider.name.charAt(0)}
+                    <img
+                      src={`https://logo.clearbit.com/${getLogoDomain(provider.id)}`}
+                      alt={provider.name}
+                      className="w-full h-full object-contain p-1.5"
+                      onError={(e) => {
+                        // Fallback to letter if logo fails to load
+                        const target = e.target as HTMLImageElement
+                        target.style.display = 'none'
+                        const parent = target.parentElement
+                        if (parent) {
+                          parent.innerHTML = `<span class="font-semibold text-white text-lg">${provider.name.charAt(0)}</span>`
+                        }
+                      }}
+                    />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
@@ -256,10 +299,22 @@ export function OAuthConnections({
                       <DialogHeader>
                         <div className="flex items-center gap-3 mb-2">
                           <div 
-                            className="w-10 h-10 rounded-lg flex items-center justify-center font-semibold text-white"
+                            className="w-10 h-10 rounded-lg flex items-center justify-center bg-white/10 border border-border/50 overflow-hidden"
                             style={{ backgroundColor: brandColor }}
                           >
-                            {provider.name.charAt(0)}
+                            <img
+                              src={`https://logo.clearbit.com/${getLogoDomain(provider.id)}`}
+                              alt={provider.name}
+                              className="w-full h-full object-contain p-1.5"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement
+                                target.style.display = 'none'
+                                const parent = target.parentElement
+                                if (parent) {
+                                  parent.innerHTML = `<span class="font-semibold text-white text-sm">${provider.name.charAt(0)}</span>`
+                                }
+                              }}
+                            />
                           </div>
                           <div>
                             <DialogTitle className="text-lg">{provider.name} Integration</DialogTitle>
