@@ -16,6 +16,7 @@ import { buildSystemPrompt, filterTools } from '@/lib/agentic-prompt-builder'
 import { smartEngage } from '@/lib/cost-optimizer'
 import { callLLM } from '@/lib/llm-client'
 import { executeWorkflow } from '@/lib/workflow-executor'
+import { AccessDeniedError, ValidationError } from '@/domain/errors/access-errors'
 
 export const dynamic = 'force-dynamic'
 
@@ -211,6 +212,7 @@ export async function POST(request: NextRequest) {
             variables: { message, userId },
             results: {},
             userId,
+            agentId,
             databaseConnection: agent.databaseConnection,
           }
         )
@@ -347,7 +349,7 @@ export async function POST(request: NextRequest) {
           // Execute tool (pass agent's database connection and userId if available)
           let result
           try {
-            result = await executeTool(functionName, functionArgs, agent.databaseConnection, userId)
+            result = await executeTool(functionName, functionArgs, agent.databaseConnection, userId, agentId)
             
             // Check for errors in result
             if (result && result.error) {
@@ -478,12 +480,34 @@ export async function POST(request: NextRequest) {
     })
   } catch (error: any) {
     console.error('Error in chat API:', error)
+
+    // Handle access control errors with proper status codes
+    const isAccessDenied = error instanceof AccessDeniedError ||
+      (error instanceof Error && (
+        error.message?.includes('not allowed') ||
+        error.message?.includes('Unauthorized') ||
+        error.message?.includes('does not belong')
+      ))
+
+    const isValidationError = error instanceof ValidationError
+
+    let status = 500
+    let safeMessage = 'An error occurred while processing your request. Please try again.'
+
+    if (isAccessDenied) {
+      status = 403
+      safeMessage = error.message || 'Access denied'
+    } else if (isValidationError) {
+      status = 400
+      safeMessage = error.message || 'Invalid request'
+    }
+
     return NextResponse.json(
       {
-        error: 'Failed to process chat message',
-        message: error.message,
+        error: safeMessage,
+        message: safeMessage,
       },
-      { status: 500 }
+      { status }
     )
   }
 }
