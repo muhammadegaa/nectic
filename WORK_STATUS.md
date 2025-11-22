@@ -36,7 +36,7 @@
 - Integration tools (5 providers)
 
 ### ❌ BUGS
-- Workflow condition eval uses `eval()` (security risk)
+- None (workflow eval fixed)
 
 ### ✅ UI POLISH COMPLETED
 - Removed "coming soon" text

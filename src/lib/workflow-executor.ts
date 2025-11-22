@@ -248,30 +248,95 @@ function resolveVariables(obj: any, variables: Record<string, any>): any {
 }
 
 /**
- * Evaluate condition (simple JavaScript-like evaluation)
- * For MVP: supports basic comparisons
+ * Evaluate condition safely (no eval)
+ * Supports: >, <, >=, <=, ===, !==, ==, !=, &&, ||
  */
 function evaluateCondition(condition: string, variables: Record<string, any>): boolean {
-  if (!condition) return true
+  if (!condition || !condition.trim()) return true
   
   try {
     // Replace variables in condition
-    let resolvedCondition = condition
+    let resolvedCondition = condition.trim()
+    
+    // Replace variable references with their values
     for (const [varName, varValue] of Object.entries(variables)) {
-      const regex = new RegExp(`\\b${varName}\\b`, 'g')
-      resolvedCondition = resolvedCondition.replace(regex, JSON.stringify(varValue))
+      // Match variable names (word boundaries to avoid partial matches)
+      const regex = new RegExp(`\\b${varName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'g')
+      const valueStr = typeof varValue === 'string' ? `"${varValue.replace(/"/g, '\\"')}"` : String(varValue)
+      resolvedCondition = resolvedCondition.replace(regex, valueStr)
     }
     
-    // Simple evaluation (for MVP - in production, use a safe evaluator)
-    // Only allow basic comparisons for security
-    if (/^[^(){}[\]]+$/.test(resolvedCondition)) {
-      // eslint-disable-next-line no-eval
-      return eval(resolvedCondition)
-    }
-    
-    return false
+    // Parse and evaluate safely (no eval)
+    return parseAndEvaluate(resolvedCondition)
   } catch {
     return false
   }
+}
+
+/**
+ * Safe condition parser (no eval)
+ */
+function parseAndEvaluate(expr: string): boolean {
+  // Remove whitespace
+  expr = expr.replace(/\s+/g, ' ').trim()
+  
+  // Handle logical operators (&&, ||)
+  if (expr.includes('||')) {
+    const parts = expr.split('||').map(p => p.trim())
+    return parts.some(part => parseAndEvaluate(part))
+  }
+  
+  if (expr.includes('&&')) {
+    const parts = expr.split('&&').map(p => p.trim())
+    return parts.every(part => parseAndEvaluate(part))
+  }
+  
+  // Handle comparison operators
+  const operators = [
+    { op: '>=', fn: (a: number, b: number) => a >= b },
+    { op: '<=', fn: (a: number, b: number) => a <= b },
+    { op: '===', fn: (a: any, b: any) => a === b },
+    { op: '!==', fn: (a: any, b: any) => a !== b },
+    { op: '==', fn: (a: any, b: any) => a == b },
+    { op: '!=', fn: (a: any, b: any) => a != b },
+    { op: '>', fn: (a: number, b: number) => a > b },
+    { op: '<', fn: (a: number, b: number) => a < b },
+  ]
+  
+  for (const { op, fn } of operators) {
+    if (expr.includes(op)) {
+      const [left, right] = expr.split(op).map(s => s.trim())
+      const leftVal = parseValue(left)
+      const rightVal = parseValue(right)
+      return fn(leftVal, rightVal)
+    }
+  }
+  
+  // If no operator found, treat as boolean
+  return parseValue(expr) === true || parseValue(expr) === 'true'
+}
+
+/**
+ * Parse a value (number, string, boolean)
+ */
+function parseValue(str: string): any {
+  str = str.trim()
+  
+  // Remove quotes from strings
+  if ((str.startsWith('"') && str.endsWith('"')) || (str.startsWith("'") && str.endsWith("'"))) {
+    return str.slice(1, -1)
+  }
+  
+  // Parse numbers
+  if (/^-?\d+\.?\d*$/.test(str)) {
+    return parseFloat(str)
+  }
+  
+  // Parse booleans
+  if (str === 'true') return true
+  if (str === 'false') return false
+  
+  // Return as string
+  return str
 }
 
