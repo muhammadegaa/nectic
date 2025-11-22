@@ -211,7 +211,7 @@ export function OAuthConnections({
             return (
               <div
                 key={provider.id}
-                className={`group relative p-5 border-2 rounded-xl transition-all duration-200 flex flex-col min-h-[320px] ${
+                className={`group relative p-5 border-2 rounded-xl transition-all duration-200 flex flex-col min-h-[320px] overflow-hidden ${
                   isConnected 
                     ? "border-primary/30 bg-primary/5 shadow-sm" 
                     : "border-border hover:border-primary/50 hover:bg-muted/30 hover:shadow-md"
@@ -284,17 +284,17 @@ export function OAuthConnections({
                 </div>
 
                 {/* Action Buttons - Always at bottom */}
-                <div className="flex gap-2 mt-auto pt-2 flex-shrink-0">
+                <div className="flex gap-2 mt-auto pt-2 flex-shrink-0 w-full">
                   <Dialog>
                     <DialogTrigger asChild>
                       <Button
                         variant="outline"
                         size="sm"
-                        className="flex-1 text-xs h-9"
+                        className="flex-1 text-xs h-9 min-w-0"
                         onClick={() => setSelectedProvider(provider)}
                       >
-                        <Info className="w-3.5 h-3.5 mr-1.5" />
-                        Details
+                        <Info className="w-3.5 h-3.5 mr-1.5 flex-shrink-0" />
+                        <span className="truncate">Details</span>
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="max-w-md">
@@ -382,22 +382,22 @@ export function OAuthConnections({
                   {!isConnected ? (
                     <Button
                       size="sm"
-                      className="flex-1 text-xs h-9 font-medium"
+                      className="flex-1 text-xs h-9 font-medium min-w-0"
                       onClick={() => handleConnect(provider)}
                       style={{ backgroundColor: isConnected ? undefined : brandColor }}
                     >
-                      <Link2 className="w-3.5 h-3.5 mr-1.5" />
-                      Connect
+                      <Link2 className="w-3.5 h-3.5 mr-1.5 flex-shrink-0" />
+                      <span className="truncate">Connect</span>
                     </Button>
                   ) : (
                     <Button
                       variant="outline"
                       size="sm"
-                      className="flex-1 text-xs h-9"
+                      className="flex-1 text-xs h-9 min-w-0"
                       onClick={() => onProviderDisconnect(provider.id)}
                     >
-                      <Unlink className="w-3.5 h-3.5 mr-1.5" />
-                      Disconnect
+                      <Unlink className="w-3.5 h-3.5 mr-1.5 flex-shrink-0" />
+                      <span className="truncate">Disconnect</span>
                     </Button>
                   )}
                 </div>
