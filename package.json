@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "seed": "node seed-firestore.js"
+    "seed": "node seed-firestore.js",
+    "test:sdal": "node scripts/test-sdal.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
