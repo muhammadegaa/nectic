@@ -10,17 +10,55 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useAuth } from "@/contexts/auth-context"
 import { ArrowRight, Loader2 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
+import { Checkbox } from "@/components/ui/checkbox"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [rememberMe, setRememberMe] = useState(false)
+  const [emailError, setEmailError] = useState("")
+  const [passwordError, setPasswordError] = useState("")
   const [loading, setLoading] = useState(false)
   const { signInWithEmail, signInWithGoogle } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
 
+  const validateEmail = (value: string) => {
+    if (!value) {
+      setEmailError("")
+      return
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(value)) {
+      setEmailError("Please enter a valid email address")
+    } else {
+      setEmailError("")
+    }
+  }
+
+  const validatePassword = (value: string) => {
+    if (!value) {
+      setPasswordError("")
+      return
+    }
+    if (value.length < 6) {
+      setPasswordError("Password must be at least 6 characters")
+    } else {
+      setPasswordError("")
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Validate before submitting
+    validateEmail(email)
+    validatePassword(password)
+    
+    if (emailError || passwordError || !email || !password) {
+      return
+    }
+
     setLoading(true)
 
     try {
@@ -78,23 +116,62 @@ export default function LoginPage() {
                 type="email"
                 placeholder="you@company.com"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value)
+                  validateEmail(e.target.value)
+                }}
+                onBlur={(e) => validateEmail(e.target.value)}
                 required
                 disabled={loading}
+                className={emailError ? "border-destructive" : ""}
               />
+              {emailError && (
+                <p className="text-xs text-destructive">{emailError}</p>
+              )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Password</Label>
+                <Link
+                  href="/auth/forgot-password"
+                  className="text-xs text-foreground/60 hover:text-foreground hover:underline"
+                >
+                  Forgot password?
+                </Link>
+              </div>
               <Input
                 id="password"
                 type="password"
                 placeholder="••••••••"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value)
+                  validatePassword(e.target.value)
+                }}
+                onBlur={(e) => validatePassword(e.target.value)}
                 required
                 disabled={loading}
+                className={passwordError ? "border-destructive" : ""}
               />
+              {passwordError && (
+                <p className="text-xs text-destructive">{passwordError}</p>
+              )}
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="remember"
+                checked={rememberMe}
+                onCheckedChange={(checked) => setRememberMe(checked === true)}
+                disabled={loading}
+              />
+              <Label
+                htmlFor="remember"
+                className="text-sm font-normal cursor-pointer"
+              >
+                Remember me
+              </Label>
             </div>
 
             <Button
