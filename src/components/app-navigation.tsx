@@ -81,27 +81,27 @@ export function AppNavigation({ breadcrumbs = [] }: AppNavigationProps) {
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex h-14 items-center justify-between">
+        <div className="flex h-16 items-center justify-between">
           {/* Left: Logo + Breadcrumbs */}
-          <div className="flex items-center gap-4 min-w-0 flex-1">
+          <div className="flex items-center gap-5 min-w-0 flex-1">
             <Link
               href="/dashboard"
-              className="flex items-center gap-2 group transition-opacity duration-200 hover:opacity-80 flex-shrink-0"
+              className="flex items-center gap-2.5 group transition-opacity duration-200 hover:opacity-80 flex-shrink-0"
             >
               <img
                 src="/logo-icon.svg"
                 alt="Nectic"
-                className="w-6 h-6 sm:w-7 sm:h-7 transition-transform duration-200 group-hover:scale-105"
+                className="w-7 h-7 sm:w-8 sm:h-8 transition-transform duration-200 group-hover:scale-105"
               />
             </Link>
 
             {/* Breadcrumbs */}
             {finalBreadcrumbs.length > 0 && (
-              <div className="hidden sm:flex items-center gap-1.5 text-sm text-foreground/60 min-w-0">
+              <div className="hidden sm:flex items-center gap-2 text-sm text-foreground/60 min-w-0">
                 {finalBreadcrumbs.map((crumb, index) => {
                   const isLast = index === finalBreadcrumbs.length - 1
                   return (
-                    <div key={index} className="flex items-center gap-1.5 min-w-0">
+                    <div key={index} className="flex items-center gap-2 min-w-0">
                       {index > 0 && (
                         <ChevronRight className="w-4 h-4 text-foreground/40 flex-shrink-0" />
                       )}
@@ -125,7 +125,7 @@ export function AppNavigation({ breadcrumbs = [] }: AppNavigationProps) {
           </div>
 
           {/* Right: User Menu */}
-          <div className="flex items-center gap-3 flex-shrink-0">
+          <div className="flex items-center gap-4 flex-shrink-0">
             {user && (
               <>
                 {/* Desktop User Menu */}
@@ -133,39 +133,39 @@ export function AppNavigation({ breadcrumbs = [] }: AppNavigationProps) {
                   <DropdownMenuTrigger asChild>
                     <Button
                       variant="ghost"
-                      className="relative h-9 w-9 rounded-full hidden sm:flex"
+                      className="relative h-11 w-11 rounded-full hidden sm:flex p-0 hover:bg-muted/80 transition-colors"
                       aria-label="User menu"
                     >
-                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted">
-                        <User className="h-4 w-4" />
+                      <div className="flex h-11 w-11 items-center justify-center rounded-full bg-muted border-2 border-border hover:border-foreground/20 transition-colors">
+                        <User className="h-5 w-5 text-foreground" />
                       </div>
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuLabel>
-                      <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none">
+                  <DropdownMenuContent align="end" className="w-64">
+                    <DropdownMenuLabel className="px-3 py-3">
+                      <div className="flex flex-col space-y-1.5">
+                        <p className="text-sm font-semibold leading-tight">
                           {user.displayName || "User"}
                         </p>
-                        <p className="text-xs leading-none text-muted-foreground truncate">
+                        <p className="text-xs leading-tight text-muted-foreground truncate">
                           {user.email}
                         </p>
                       </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
-                      <Link href="/dashboard" className="cursor-pointer">
-                        <Home className="mr-2 h-4 w-4" />
+                    <DropdownMenuItem asChild className="px-3 py-2.5">
+                      <Link href="/dashboard" className="cursor-pointer flex items-center">
+                        <Home className="mr-3 h-4 w-4" />
                         Dashboard
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem disabled>
-                      <Settings className="mr-2 h-4 w-4" />
+                    <DropdownMenuItem disabled className="px-3 py-2.5">
+                      <Settings className="mr-3 h-4 w-4" />
                       Settings
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
-                      <LogOut className="mr-2 h-4 w-4" />
+                    <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer px-3 py-2.5 text-destructive focus:text-destructive">
+                      <LogOut className="mr-3 h-4 w-4" />
                       Sign out
                     </DropdownMenuItem>
                   </DropdownMenuContent>
