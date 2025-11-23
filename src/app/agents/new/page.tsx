@@ -14,12 +14,15 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Plus, Trash2, Loader2, ArrowLeft, Settings, Zap, Workflow, Play, CheckCircle2, Circle } from "lucide-react"
 import Link from "next/link"
 import { useToast } from "@/components/ui/use-toast"
-import { lazy, Suspense } from "react"
 import { DataPreview } from "@/components/agents/DataPreview"
 import { DatabaseConnectionForm } from "@/components/agents/DatabaseConnection"
 import { AgenticConfigForm } from "@/components/agents/AgenticConfig"
 import { AgentPreview } from "@/components/agents/AgentPreview"
 import { AppNavigation } from "@/components/app-navigation"
+import { ToolMarketplace } from "@/components/agents/ToolMarketplace"
+import { VisualWorkflowBuilder } from "@/components/agents/VisualWorkflowBuilder"
+import { AgentConfiguration } from "@/components/agents/AgentConfiguration"
+import { OAuthConnections } from "@/components/agents/OAuthConnections"
 import type { DatabaseConnection } from "@/lib/db-adapters/base-adapter"
 import type { AgenticConfig } from "@/domain/entities/agent.entity"
 import type { Node, Edge } from "reactflow"
@@ -31,11 +34,6 @@ const AVAILABLE_COLLECTIONS = [
 ]
 
 export default function NewAgentPage() {
-  // Lazy load heavy components for better performance
-  const ToolMarketplace = lazy(() => import("@/components/agents/ToolMarketplace").then((m) => ({ default: m.ToolMarketplace })))
-  const VisualWorkflowBuilder = lazy(() => import("@/components/agents/VisualWorkflowBuilder").then((m) => ({ default: m.VisualWorkflowBuilder })))
-  const AgentConfiguration = lazy(() => import("@/components/agents/AgentConfiguration").then((m) => ({ default: m.AgentConfiguration })))
-  const OAuthConnections = lazy(() => import("@/components/agents/OAuthConnections").then((m) => ({ default: m.OAuthConnections })))
 
   const router = useRouter()
   const { user, loading: authLoading } = useAuth()
@@ -380,8 +378,9 @@ export default function NewAgentPage() {
               </div>
             )}
             </div>
+          </div>
 
-            {/* Progress Indicator */}
+          {/* Progress Indicator */}
           <div className="mb-6">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm text-foreground/60">
@@ -627,38 +626,30 @@ export default function NewAgentPage() {
           </TabsContent>
 
           <TabsContent value="tools" className="space-y-6 mt-6">
-            <Suspense fallback={<Card><CardContent className="p-6"><Skeleton className="h-64 w-full" /></CardContent></Card>}>
-              <OAuthConnections
-                connectedProviders={connectedOAuthProviders}
-                onProviderConnect={(id) => setConnectedOAuthProviders(prev => [...prev, id])}
-                onProviderDisconnect={(id) => setConnectedOAuthProviders(prev => prev.filter(p => p !== id))}
-              />
-            </Suspense>
-            <Suspense fallback={<Card><CardContent className="p-6"><Skeleton className="h-64 w-full" /></CardContent></Card>}>
-              <ToolMarketplace
-                selectedTools={selectedTools}
-                onToolToggle={handleToolToggle}
-                selectedCollections={selectedCollections}
-              />
-            </Suspense>
+            <OAuthConnections
+              connectedProviders={connectedOAuthProviders}
+              onProviderConnect={(id) => setConnectedOAuthProviders(prev => [...prev, id])}
+              onProviderDisconnect={(id) => setConnectedOAuthProviders(prev => prev.filter(p => p !== id))}
+            />
+            <ToolMarketplace
+              selectedTools={selectedTools}
+              onToolToggle={handleToolToggle}
+              selectedCollections={selectedCollections}
+            />
           </TabsContent>
 
           <TabsContent value="workflow" className="space-y-6 mt-6">
-            <Suspense fallback={<Card><CardContent className="p-6"><Skeleton className="h-96 w-full" /></CardContent></Card>}>
-              <VisualWorkflowBuilder
-                selectedTools={selectedTools}
-                onWorkflowChange={handleWorkflowChange}
-              />
-            </Suspense>
+            <VisualWorkflowBuilder
+              selectedTools={selectedTools}
+              onWorkflowChange={handleWorkflowChange}
+            />
           </TabsContent>
 
           <TabsContent value="config" className="space-y-6 mt-6">
-            <Suspense fallback={<Card><CardContent className="p-6"><Skeleton className="h-64 w-full" /></CardContent></Card>}>
-              <AgentConfiguration
-                config={agentConfig}
-                onConfigChange={setAgentConfig}
-              />
-            </Suspense>
+            <AgentConfiguration
+              config={agentConfig}
+              onConfigChange={setAgentConfig}
+            />
           </TabsContent>
 
               <div className="flex items-center justify-end space-x-4 pt-4 border-t border-border">

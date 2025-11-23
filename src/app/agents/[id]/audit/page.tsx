@@ -11,6 +11,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { format, formatDistanceToNow } from "date-fns"
 import { useAuth } from "@/contexts/auth-context"
+import { AppNavigation } from "@/components/app-navigation"
 import type { Agent } from "@/domain/entities/agent.entity"
 
 interface AuditLog {
