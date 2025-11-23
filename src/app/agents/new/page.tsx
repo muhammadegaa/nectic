@@ -363,10 +363,10 @@ export default function NewAgentPage() {
   return (
     <div className="min-h-screen bg-background">
       <AppNavigation />
-      <div className="py-6 sm:py-8 lg:py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-[1800px] mx-auto">
-          <div className="mb-6 sm:mb-8">
-            <div className="flex items-start justify-between gap-4 mb-4">
+      <div className="py-8 sm:py-10 lg:py-12 px-4 sm:px-6 lg:px-12 xl:px-16">
+      <div className="max-w-[1800px] mx-auto">
+          <div className="mb-8 sm:mb-10">
+            <div className="flex items-start justify-between gap-4 mb-6">
             <div>
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-light text-foreground mb-2">Create New AI Agent</h1>
               <p className="text-sm sm:text-base text-foreground/60">Configure your agent's capabilities, tools, and deployment options</p>
@@ -381,7 +381,7 @@ export default function NewAgentPage() {
           </div>
 
           {/* Progress Indicator */}
-          <div className="mb-6">
+        <div className="mb-8">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm text-foreground/60">
                 Step {activeTab === 'basic' ? '1' : activeTab === 'tools' ? '2' : activeTab === 'workflow' ? '3' : '4'} of 4
@@ -432,10 +432,10 @@ export default function NewAgentPage() {
         </div>
 
         {/* Split Layout: Configuration on left, Live Preview on right */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
           {/* Left Side: Configuration */}
-          <div className="space-y-6">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <div className="space-y-8">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
               <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
                 <TabsList className="grid w-full grid-cols-4 min-w-[400px] sm:min-w-0">
                   <TabsTrigger value="basic" className="gap-1.5 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
@@ -460,8 +460,8 @@ export default function NewAgentPage() {
               </TabsList>
               </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-          <TabsContent value="basic" className="space-y-6 mt-6">
+            <form onSubmit={handleSubmit} className="space-y-8">
+          <TabsContent value="basic" className="space-y-8 mt-8">
           <Card>
             <CardHeader>
               <CardTitle>Agent Details</CardTitle>
@@ -505,7 +505,7 @@ export default function NewAgentPage() {
             selectedCollections={selectedCollections}
           />
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <Card>
               <CardHeader>
                 <CardTitle>Data Collections</CardTitle>
@@ -625,7 +625,7 @@ export default function NewAgentPage() {
           </Card>
           </TabsContent>
 
-          <TabsContent value="tools" className="space-y-6 mt-6">
+          <TabsContent value="tools" className="space-y-8 mt-8">
             <OAuthConnections
               connectedProviders={connectedOAuthProviders}
               onProviderConnect={(id) => setConnectedOAuthProviders(prev => [...prev, id])}
@@ -638,19 +638,19 @@ export default function NewAgentPage() {
             />
           </TabsContent>
 
-          <TabsContent value="workflow" className="space-y-6 mt-6">
+          <TabsContent value="workflow" className="space-y-8 mt-8">
             <VisualWorkflowBuilder
               selectedTools={selectedTools}
               onWorkflowChange={handleWorkflowChange}
             />
           </TabsContent>
 
-          <TabsContent value="config" className="space-y-6 mt-6">
-            <AgentConfiguration
-              config={agentConfig}
-              onConfigChange={setAgentConfig}
-            />
-          </TabsContent>
+          <TabsContent value="config" className="space-y-8 mt-8">
+                <AgentConfiguration
+                  config={agentConfig}
+                  onConfigChange={setAgentConfig}
+                />
+              </TabsContent>
 
               <div className="flex items-center justify-end space-x-4 pt-4 border-t border-border">
                 <Button type="button" variant="outline" onClick={() => router.back()}>
