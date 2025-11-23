@@ -48,6 +48,28 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Rate limiting
+    const { checkRateLimit, getRateLimitIdentifier } = await import('@/lib/rate-limit')
+    const rateLimitResult = await checkRateLimit(getRateLimitIdentifier(request, userId))
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { 
+          error: 'Rate limit exceeded', 
+          message: 'Too many requests. Please try again later.',
+          retryAfter: Math.ceil((rateLimitResult.reset - Date.now()) / 1000)
+        },
+        { 
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': rateLimitResult.limit.toString(),
+            'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+            'X-RateLimit-Reset': rateLimitResult.reset.toString(),
+            'Retry-After': Math.ceil((rateLimitResult.reset - Date.now()) / 1000).toString(),
+          }
+        }
+      )
+    }
+
     const agent = await agentRepo.create({
       name,
       description,
