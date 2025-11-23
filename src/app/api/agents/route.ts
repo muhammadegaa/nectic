@@ -122,3 +122,25 @@ export async function GET(request: NextRequest) {
 
 
 
+
+    } catch (error: any) {
+      return NextResponse.json(
+        { error: 'Unauthorized: Authentication required' },
+        { status: 401 }
+      )
+    }
+    
+    const agents = await agentRepo.findAll(userId)
+    return NextResponse.json(agents)
+  } catch (error: any) {
+    console.error('Error fetching agents:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch agents', message: error.message },
+      { status: 500 }
+    )
+  }
+}
+
+
+
+

@@ -501,7 +501,14 @@ export async function POST(request: NextRequest) {
       reasoningSteps: showReasoning && reasoningSteps.length > 0 ? reasoningSteps : undefined, // Include reasoning steps only if enabled
     })
   } catch (error: any) {
-    console.error('Error in chat API:', error)
+    // Log detailed error for debugging (server-side only)
+    console.error('Chat API Error:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+      agentId: body?.agentId,
+      userId,
+    })
 
     // Handle access control errors with proper status codes
     const isAccessDenied = error instanceof AccessDeniedError ||
@@ -522,6 +529,13 @@ export async function POST(request: NextRequest) {
     } else if (isValidationError) {
       status = 400
       safeMessage = error.message || 'Invalid request'
+    } else if (error.message?.includes('LLM API error') || error.message?.includes('OpenAI API error')) {
+      // LLM-specific errors
+      safeMessage = 'AI service temporarily unavailable. Please try again.'
+      console.error('LLM API Error:', error.message)
+    } else if (error.message?.includes('OpenAI API key')) {
+      status = 500
+      safeMessage = 'AI service configuration error. Please contact support.'
     }
 
     return NextResponse.json(
