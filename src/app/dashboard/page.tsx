@@ -314,13 +314,25 @@ export default function DashboardPage() {
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-light text-foreground mb-1 sm:mb-2">Dashboard</h1>
               <p className="text-sm sm:text-base text-foreground/60">Manage your AI agents</p>
           </div>
-          <Button
-            onClick={() => router.push("/agents/new")}
-            className="bg-foreground text-background hover:bg-foreground/90 w-full sm:w-auto h-10 sm:h-9"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            New Agent
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <Button
+              asChild
+              className="bg-foreground text-background hover:bg-foreground/90 h-10 sm:h-9"
+            >
+              <Link href="/upload">
+                <FileText className="w-4 h-4 mr-2" />
+                Upload Excel
+              </Link>
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => router.push("/agents/new")}
+              className="h-10 sm:h-9"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              New Agent
+            </Button>
+          </div>
         </div>
 
         {/* Stats */}
@@ -460,22 +472,35 @@ export default function DashboardPage() {
                 <Sparkles className="w-16 h-16 sm:w-20 sm:h-20 text-primary relative z-10" />
               </div>
               <h3 className="text-xl sm:text-2xl font-light text-foreground mb-2 text-center">
-                Create your first AI agent
+                Get answers in 30 seconds
               </h3>
               <p className="text-foreground/60 mb-2 text-center max-w-md text-sm sm:text-base">
-                Build intelligent assistants that connect to your databases and answer questions in natural language.
+                Upload Excel or CSV. Ask a question. Get the answer. No setup.
               </p>
               <p className="text-foreground/40 mb-6 text-center max-w-md text-xs sm:text-sm">
-                Get started in minutes with our intuitive agent builder.
+                Or create an agent for advanced configuration.
               </p>
-              <Button
-                onClick={() => router.push("/agents/new")}
-                className="bg-foreground text-background hover:bg-foreground/90 h-10 px-6"
-                size="lg"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Create Your First Agent
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button
+                  asChild
+                  className="bg-foreground text-background hover:bg-foreground/90 h-10 px-6"
+                  size="lg"
+                >
+                  <Link href="/upload">
+                    <FileText className="w-4 h-4 mr-2" />
+                    Upload Excel
+                  </Link>
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => router.push("/agents/new")}
+                  size="lg"
+                  className="h-10 px-6"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  New Agent
+                </Button>
+              </div>
             </CardContent>
           </Card>
         ) : filteredAndSortedAgents.length === 0 ? (

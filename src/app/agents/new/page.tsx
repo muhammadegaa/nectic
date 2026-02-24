@@ -365,6 +365,14 @@ export default function NewAgentPage() {
       <AppNavigation />
       <div className="py-8 sm:py-10 lg:py-12 px-4 sm:px-6 lg:px-12 xl:px-16">
       <div className="max-w-[1800px] mx-auto">
+          <Link
+            href="/upload"
+            className="mb-6 flex items-center gap-3 rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm text-foreground/80 hover:bg-muted/50 hover:text-foreground transition-colors"
+          >
+            <span className="font-medium">New:</span>
+            <span>Upload Excel and chat. No setup.</span>
+            <ArrowRight className="w-4 h-4 ml-auto flex-shrink-0" />
+          </Link>
           <div className="mb-8 sm:mb-10">
             <div className="flex items-start justify-between gap-4 mb-6">
             <div>
