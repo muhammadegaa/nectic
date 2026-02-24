@@ -1,0 +1,267 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import "tw-animate-css";
+
+:root {
+  /* Dark theme - warm amber/orange palette */
+  --background: 0 0% 8%; /* Deep dark */
+  --foreground: 0 0% 98%; /* Near white */
+  --card: 0 0% 12%;
+  --card-foreground: 0 0% 98%;
+  --primary: 40 100% 65%; /* Vibrant orange */
+  --primary-foreground: 0 0% 98%;
+  --secondary: 45 100% 70%; /* Warm amber */
+  --secondary-foreground: 0 0% 8%;
+  --muted: 0 0% 25%;
+  --muted-foreground: 0 0% 65%;
+  --accent: 50 100% 75%; /* Golden amber accent */
+  --accent-foreground: 0 0% 8%;
+  --destructive: 27 100% 58%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 0 0% 20%;
+  --input: 0 0% 15%;
+  --ring: 50 100% 75%;
+  --radius: 0.5rem;
+  --popover: 0 0% 14.5%;
+  --popover-foreground: 0 0% 98.5%;
+  --chart-1: 45 100% 70%;
+  --chart-2: 50 100% 75%;
+  --chart-3: 40 100% 65%;
+  --chart-4: 55 100% 72%;
+  --chart-5: 35 100% 68%;
+  --sidebar: 0 0% 10%;
+  --sidebar-foreground: 0 0% 98%;
+  --sidebar-primary: 40 100% 65%;
+  --sidebar-primary-foreground: 0 0% 98%;
+  --sidebar-accent: 50 100% 75%;
+  --sidebar-accent-foreground: 0 0% 8%;
+  --sidebar-border: 0 0% 18%;
+  --sidebar-ring: 50 100% 75%;
+}
+
+.dark {
+  --background: 0 0% 8%;
+  --foreground: 0 0% 98%;
+  --card: 0 0% 12%;
+  --card-foreground: 0 0% 98%;
+  --primary: 40 100% 70%;
+  --primary-foreground: 0 0% 98%;
+  --secondary: 45 100% 65%;
+  --secondary-foreground: 0 0% 8%;
+  --muted: 0 0% 25%;
+  --muted-foreground: 0 0% 65%;
+  --accent: 50 100% 78%;
+  --accent-foreground: 0 0% 8%;
+  --destructive: 25 100% 40%;
+  --destructive-foreground: 64 100% 64%;
+  --border: 0 0% 20%;
+  --input: 0 0% 15%;
+  --ring: 50 100% 78%;
+  --popover: 0 0% 14.5%;
+  --popover-foreground: 0 0% 98.5%;
+  --chart-1: 40 100% 65%;
+  --chart-2: 45 100% 70%;
+  --chart-3: 50 100% 75%;
+  --chart-4: 55 100% 72%;
+  --chart-5: 35 100% 68%;
+  --sidebar: 0 0% 20.5%;
+  --sidebar-foreground: 0 0% 98.5%;
+  --sidebar-primary: 40 100% 65%;
+  --sidebar-primary-foreground: 0 0% 98.5%;
+  --sidebar-accent: 50 100% 78%;
+  --sidebar-accent-foreground: 0 0% 98.5%;
+  --sidebar-border: 0 0% 26.9%;
+  --sidebar-ring: 0 0% 43.9%;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+}
+
+/* Animation keyframes */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes glow {
+  0%,
+  100% {
+    box-shadow: 0 0 20px rgba(251, 146, 60, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(251, 146, 60, 0.6);
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-15px);
+  }
+}
+
+@keyframes meshGradient {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes radialBlur {
+  0% {
+    background-size: 100% 100%;
+  }
+  100% {
+    background-size: 120% 120%;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+@keyframes hoverGlowPulse {
+  0% {
+    box-shadow: 0 0 20px rgba(251, 146, 60, 0.2), inset 0 0 20px rgba(251, 146, 60, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(251, 146, 60, 0.4), inset 0 0 30px rgba(251, 146, 60, 0.15);
+  }
+  100% {
+    box-shadow: 0 0 20px rgba(251, 146, 60, 0.2), inset 0 0 20px rgba(251, 146, 60, 0.1);
+  }
+}
+
+@keyframes spotlightShine {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+@keyframes lineReveal {
+  0% {
+    width: 0%;
+  }
+  100% {
+    width: 100%;
+  }
+}
+
+@keyframes counterUp {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out forwards;
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.6s ease-out forwards;
+}
+
+.animate-glow {
+  animation: glow 2s ease-in-out infinite;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-line-reveal {
+  animation: lineReveal 1s ease-out forwards;
+}
+
+.animate-counter-up {
+  animation: counterUp 0.8s ease-out forwards;
+}
+
+.animate-mesh-gradient {
+  animation: meshGradient 8s ease infinite;
+}
+
+.animate-shimmer {
+  animation: shimmer 3s infinite;
+}
+
+.hover-glow-pulse:hover {
+  animation: hoverGlowPulse 2s ease-in-out;
+}
+
+.animate-spotlight:hover {
+  animation: spotlightShine 3s ease-in-out;
+}
+
+/* Stagger animations */
+.stagger-1 {
+  animation-delay: 0.1s;
+}
+.stagger-2 {
+  animation-delay: 0.2s;
+}
+.stagger-3 {
+  animation-delay: 0.3s;
+}
+.stagger-4 {
+  animation-delay: 0.4s;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
