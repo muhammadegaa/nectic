@@ -17,6 +17,7 @@ interface LLMResponse {
   content: string
   tool_calls?: Array<{
     id: string
+    type: 'function'
     function: {
       name: string
       arguments: string
@@ -90,6 +91,7 @@ async function callOpenAI(
     content: message.content || '',
     tool_calls: message.tool_calls?.map((tc: any) => ({
       id: tc.id,
+      type: 'function' as const,
       function: {
         name: tc.function.name,
         arguments: tc.function.arguments,
