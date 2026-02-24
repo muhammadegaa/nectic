@@ -1,0 +1,19 @@
+# Tinker Training Requirements
+# Python 3.11+
+
+# Core Tinker SDK
+tinker>=0.1.0
+tinker-cookbook>=0.1.0
+
+# Data processing
+numpy>=1.24.0
+
+# Environment management
+python-dotenv>=1.0.0
+
+# Tokenizer support (if not included in tinker-cookbook)
+# transformers>=4.30.0  # Uncomment if needed
+
+# Type hints
+typing-extensions>=4.5.0
+
