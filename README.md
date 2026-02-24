@@ -50,7 +50,7 @@ Internal AI agents that connect to company databases and answer questions in nat
 2. Signup → Create Agent (Finance) → Chat
 3. Health check: `curl http://localhost:3000/api/health`
 
-**Strategy:** See `NECTIC_STRATEGY_2026.md`. **MVP status:** See `MVP_STATUS.md`.
+**Strategy & roadmap:** See `NECTIC.md`.
 
 ## 📊 Database Structure
 
@@ -74,6 +74,7 @@ Internal AI agents that connect to company databases and answer questions in nat
 
 The seed script creates:
 - 200 financial transactions
+- 30 budgets
 - 50 sales deals
 - 25 employees
 
