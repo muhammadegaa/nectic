@@ -66,7 +66,7 @@ export default function DemoPage() {
         </Link>
         <div className="flex items-center gap-2 text-sm text-foreground/60">
           <Sparkles className="w-4 h-4" />
-          Demo — Sample Finance Data
+          Sample Finance Demo
         </div>
         <Link href="/auth/signup">
           <Button size="sm" className="bg-foreground text-background hover:bg-foreground/90">

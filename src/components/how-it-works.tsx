@@ -9,7 +9,7 @@ const steps = [
   },
   {
     title: "Ask a question",
-    description: '"What\'s our burn rate?" "Top 5 expenses?" Get the answer in 30 seconds.',
+    description: "What's our burn rate? Top 5 expenses? Get the answer in 30 seconds.",
   },
   {
     title: "Done",

@@ -39,10 +39,10 @@ export default function Navigation() {
           {/* Desktop Menu - Minimal */}
           <div className="hidden lg:flex items-center gap-8">
             <a
-              href="#how-to"
+              href="#how-it-works"
               className="text-sm text-foreground/60 hover:text-foreground transition-colors duration-200 relative group"
             >
-              How to
+              How it works
               <span className="absolute bottom-0 left-0 w-0 h-px bg-foreground transition-all duration-200 group-hover:w-full" />
             </a>
             <a
@@ -89,11 +89,11 @@ export default function Navigation() {
         {isOpen && (
           <div className="lg:hidden pb-6 space-y-4 border-t border-border/50 pt-4 animate-fade-in">
             <a
-              href="#how-to"
+              href="#how-it-works"
               onClick={() => setIsOpen(false)}
               className="block text-sm text-foreground/60 hover:text-foreground transition-colors duration-200"
             >
-              How to
+              How it works
             </a>
             <a
               href="#use-cases"

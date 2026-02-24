@@ -2,6 +2,8 @@
 
 **Last updated:** February 2026
 
+**Current focus:** Week 1 — 5 interviews, 20 outbound, 1 LOI. Validate before building.
+
 ---
 
 ## 1. The Idea
@@ -123,3 +125,47 @@ No finance/FP&A domain experience. Compensate with: user interviews, LOIs, "Fina
 - **Local:** `npm run dev`. Demo: `OPENAI_API_KEY` only.
 - **Prod:** Vercel. Env vars in Vercel.
 - **Check before push:** `npm run check`
+
+---
+
+## 10. Execution — Todos (Top 1%)
+
+**Principle:** Validate first. Build only what users say they'll pay for.
+
+### Week 1 — Validation (Do First)
+
+| # | Todo | Done | Owner |
+|---|------|------|-------|
+| 1 | List 20 Indonesia finance leads (Mekari/Shopee network, fractional CFOs, FP&A, accounting firms) |  |  |
+| 2 | Send 20 outbound messages: "Your team spends 5 hrs/week on reports. We do it in 30 sec. 15 min demo?" |  |  |
+| 3 | Run 5 user interviews (15 min each): "How do you get spend answers today? What breaks? What would you pay?" |  |  |
+| 4 | Get 1 LOI: "Would you pay Rp X/month when we add Excel upload?" — written yes (email/Calendly is enough) |  |  |
+
+### Week 2 — Build (If 1+ LOI)
+
+| # | Todo | Done | Owner |
+|---|------|------|-------|
+| 5 | Excel/CSV upload — Parse, infer schema, temp collection, chat. 10MB, 10K rows. |  |  |
+| 6 | Citation — Show which rows the answer came from (builds trust) |  |  |
+| 7 | Demo analytics — Track demo tries (simple: Vercel Analytics or PostHog) |  |  |
+
+### Week 3–4 — Traction
+
+| # | Todo | Done | Owner |
+|---|------|------|-------|
+| 8 | 100 demo tries — Share /demo on LinkedIn, HN, Twitter. Indonesia finance groups. |  |  |
+| 9 | 2 LOIs total — From demos with real data. "Connect your Excel" → "Would you pay?" |  |  |
+| 10 | 10 live demos — 5 from Week 1 + 5 from outreach. |  |  |
+
+### Week 5+ — Scale (If Validated)
+
+| # | Todo | Done | Owner |
+|---|------|------|-------|
+| 11 | Bahasa UI — Landing, demo, chat. Indonesia-first. |  |  |
+| 12 | Waitlist — 50 signups. Indonesia. |  |  |
+| 13 | IDR pricing — Simple monthly. |  |  |
+
+### Daily
+
+- [ ] 1 user touch (interview, demo, or outbound)
+- [ ] 1 ship (code, copy, or process)
