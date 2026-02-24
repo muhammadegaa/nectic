@@ -17,6 +17,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { format as formatDate, formatDistanceToNow } from "date-fns"
+import { ChatMarkdown } from "@/components/chat-markdown"
 import { useAuth } from "@/contexts/auth-context"
 import type { Agent } from "@/domain/entities/agent.entity"
 import type { Conversation, Message } from "@/domain/entities/conversation.entity"
@@ -740,7 +741,11 @@ export default function AgentChatPage() {
                         : "bg-card border border-border text-foreground"
                     }`}
                   >
-                    <p className="whitespace-pre-wrap text-sm sm:text-base leading-relaxed break-words">{message.content}</p>
+                    {message.role === "user" ? (
+                      <p className="whitespace-pre-wrap text-sm sm:text-base leading-relaxed break-words">{message.content}</p>
+                    ) : (
+                      <ChatMarkdown content={message.content} className="text-sm sm:text-base leading-relaxed" />
+                    )}
                   <div className="flex items-center justify-between mt-2 gap-2">
                     <p className="text-xs opacity-60 flex-shrink-0">
                       {formatDate(new Date(message.timestamp), "h:mm a")}

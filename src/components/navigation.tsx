@@ -61,10 +61,13 @@ export default function Navigation() {
             </a>
             <Button
               size="sm"
+              asChild
               className="group bg-foreground text-background hover:bg-foreground/90 h-9 px-4 text-sm font-medium transition-all duration-200 hover:shadow-md hover:shadow-foreground/20 hover:scale-[1.02] active:scale-[0.98]"
             >
-              Talk to us
-              <ArrowRight className="w-3.5 h-3.5 ml-1.5 transition-transform duration-200 group-hover:translate-x-0.5" />
+              <Link href="/demo">
+                Try now
+                <ArrowRight className="w-3.5 h-3.5 ml-1.5 transition-transform duration-200 group-hover:translate-x-0.5" />
+              </Link>
             </Button>
           </div>
 
@@ -108,10 +111,13 @@ export default function Navigation() {
             </a>
             <Button
               size="sm"
+              asChild
               className="w-full justify-center group bg-foreground text-background hover:bg-foreground/90"
             >
-              Talk to us
-              <ArrowRight className="w-3.5 h-3.5 ml-1.5 transition-transform duration-200 group-hover:translate-x-0.5" />
+              <Link href="/demo">
+                Try now
+                <ArrowRight className="w-3.5 h-3.5 ml-1.5 transition-transform duration-200 group-hover:translate-x-0.5" />
+              </Link>
             </Button>
           </div>
         )}

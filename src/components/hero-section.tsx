@@ -58,13 +58,12 @@ export default function HeroSection() {
       />
 
       <div className="max-w-5xl mx-auto relative z-10">
-        {/* Value Proposition Badge */}
         <div
-          className={`inline-block mb-8 text-sm text-foreground/50 transition-all duration-700 ease-out ${
-            isLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
+          className={`inline-block mb-6 text-sm text-foreground/50 transition-all duration-500 ${
+            isLoaded ? "opacity-100" : "opacity-0"
           }`}
         >
-          Finance first. Your data stays in your infrastructure.
+          Indonesia-first · 30-second answers
         </div>
 
         {/* Main Headline - Large, Clean, Minimal */}

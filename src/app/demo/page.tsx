@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Send, Loader2, ArrowRight, Sparkles } from "lucide-react"
+import { ChatMarkdown } from "@/components/chat-markdown"
 
 const SUGGESTED_PROMPTS = [
   "What's our total spend on software?",
@@ -106,13 +107,17 @@ export default function DemoPage() {
                 className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
               >
                 <div
-                  className={`max-w-[85%] rounded-lg px-4 py-2 ${
+                  className={`max-w-[85%] rounded-lg px-4 py-3 ${
                     m.role === "user"
                       ? "bg-foreground text-background"
                       : "bg-muted text-foreground"
                   }`}
                 >
-                  <p className="text-sm whitespace-pre-wrap">{m.content}</p>
+                  {m.role === "user" ? (
+                    <p className="text-sm whitespace-pre-wrap">{m.content}</p>
+                  ) : (
+                    <ChatMarkdown content={m.content} className="text-sm leading-relaxed" />
+                  )}
                 </div>
               </div>
             ))}
