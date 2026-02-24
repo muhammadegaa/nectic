@@ -34,7 +34,13 @@ export async function POST(request: NextRequest) {
     }
 
     const systemPrompt = buildSystemPrompt(DEMO_COLLECTIONS, {
-      responseStyle: { tone: 'conversational', detailLevel: 'moderate', includeNumbers: true },
+      responseStyle: {
+        tone: 'conversational',
+        detailLevel: 'moderate',
+        includeNumbers: true,
+        includeSources: false,
+        formatOutput: true,
+      },
       reasoning: { enabled: true, depth: 'moderate', showReasoning: false },
     })
 
