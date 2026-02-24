@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
         includeSources: false,
         formatOutput: true,
       },
-      reasoning: { enabled: true, depth: 'moderate', showReasoning: false },
+      reasoning: { enabled: true, depth: 'moderate', showReasoning: false, maxSteps: 5 },
     })
 
     const messages: any[] = [
