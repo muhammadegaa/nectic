@@ -1,18 +1,21 @@
 /**
- * Demo Chat API - No auth required
- * POST /api/chat/demo - Chat with pre-seeded Finance data
+ * Demo Chat API - No auth, no Firebase required
+ * POST /api/chat/demo - Chat with embedded sample finance data
+ * Only needs OPENAI_API_KEY. Works out of the box.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { agentTools } from '@/lib/agent-tools'
-import { powerfulTools } from '@/lib/powerful-tools'
-import { executeTool } from '@/lib/tool-executors'
-import { buildSystemPrompt, filterTools } from '@/lib/agentic-prompt-builder'
+import { executeDemoTool } from '@/lib/demo-tool-executor'
+import { buildSystemPrompt } from '@/lib/agentic-prompt-builder'
 import { callLLM } from '@/lib/llm-client'
 
 export const dynamic = 'force-dynamic'
 
-const DEMO_COLLECTIONS = ['finance_transactions', 'finance_budgets']
+const DEMO_COLLECTIONS = ['finance_transactions']
+const DEMO_TOOLS = agentTools.filter((t) =>
+  ['query_collection', 'analyze_data', 'get_collection_schema'].includes(t.function.name)
+)
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,100 +23,81 @@ export async function POST(request: NextRequest) {
     const { message } = body
 
     if (!message || typeof message !== 'string') {
-      return NextResponse.json(
-        { error: 'Message is required' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Message is required' }, { status: 400 })
     }
 
     if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json(
-        { error: 'OpenAI API key not configured' },
+        { error: 'OpenAI API key not configured. Add OPENAI_API_KEY to your environment.' },
         { status: 500 }
       )
     }
 
-    const systemPrompt = buildSystemPrompt(DEMO_COLLECTIONS, undefined)
-    const availableTools = filterTools(undefined)
-    const tools = availableTools.length > 0 ? availableTools : [...agentTools, ...powerfulTools]
+    const systemPrompt = buildSystemPrompt(DEMO_COLLECTIONS, {
+      responseStyle: { tone: 'conversational', detailLevel: 'moderate', includeNumbers: true },
+      reasoning: { enabled: true, depth: 'moderate', showReasoning: false },
+    })
 
     const messages: any[] = [
       { role: 'system', content: systemPrompt },
-      { role: 'user', content: message }
+      { role: 'user', content: message },
     ]
 
-    let assistantMessage: any
-    let toolCalls: any[] = []
+    const llmResponse = await callLLM('openai', 'gpt-4o', {
+      messages,
+      tools: DEMO_TOOLS,
+      tool_choice: 'auto',
+      temperature: 0.3,
+      max_tokens: 1500,
+      user: 'demo-user',
+    })
 
-    const llmResponse = await callLLM(
-      'openai',
-      'gpt-4o',
-      {
-        messages,
-        tools,
-        tool_choice: 'auto',
-        temperature: 0.3,
-        max_tokens: 1500,
-        user: 'demo-user',
-      }
-    )
-
-    assistantMessage = {
-      role: 'assistant',
-      content: llmResponse.content,
-      tool_calls: llmResponse.tool_calls,
-    }
-    toolCalls = llmResponse.tool_calls || []
-
+    const toolCalls = llmResponse.tool_calls || []
     let response: string
 
     if (toolCalls.length > 0) {
       const toolResults: any[] = []
       for (const toolCall of toolCalls) {
         try {
-          const functionName = toolCall.function.name
-          const functionArgs = JSON.parse(toolCall.function.arguments)
-          const result = await executeTool(functionName, functionArgs, undefined, undefined, undefined)
+          const name = toolCall.function?.name
+          const args = JSON.parse(toolCall.function?.arguments || '{}')
+          const result = await executeDemoTool(name, args)
           toolResults.push({
             tool_call_id: toolCall.id,
             role: 'tool',
-            name: functionName,
-            content: JSON.stringify(result)
+            name,
+            content: JSON.stringify(result),
           })
-        } catch (error: any) {
+        } catch (err: any) {
           toolResults.push({
             tool_call_id: toolCall.id,
             role: 'tool',
-            name: toolCall.function.name,
-            content: JSON.stringify({ error: error.message || 'Tool execution failed' })
+            name: toolCall.function?.name,
+            content: JSON.stringify({ error: err?.message || 'Tool failed' }),
           })
         }
       }
 
-      const finalLLMResponse = await callLLM(
-        'openai',
-        'gpt-4o',
-        {
-          messages: [
-            ...messages,
-            assistantMessage,
-            ...toolResults,
-          ],
-          temperature: 0.3,
-          max_tokens: 1500,
-          user: 'demo-user',
-        }
-      )
-      response = finalLLMResponse.content || 'I could not generate a response.'
+      const finalRes = await callLLM('openai', 'gpt-4o', {
+        messages: [
+          ...messages,
+          { role: 'assistant', content: llmResponse.content, tool_calls: toolCalls },
+          ...toolResults,
+        ],
+        temperature: 0.3,
+        max_tokens: 1500,
+        user: 'demo-user',
+      })
+      response = finalRes.content || 'I could not generate a response.'
     } else {
-      response = assistantMessage.content || 'I could not generate a response.'
+      response = llmResponse.content || 'I could not generate a response.'
     }
 
     return NextResponse.json({ response })
   } catch (error: any) {
     console.error('Demo chat error:', error)
     return NextResponse.json(
-      { error: 'Failed to get response', message: error.message },
+      { error: 'Failed to get response', message: error?.message || 'Unknown error' },
       { status: 500 }
     )
   }

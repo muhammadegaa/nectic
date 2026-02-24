@@ -64,7 +64,7 @@ export default function HeroSection() {
             isLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
           }`}
         >
-          Your data stays in your infrastructure. Zero leaks. Zero training.
+          Finance first. Your data stays in your infrastructure.
         </div>
 
         {/* Main Headline - Large, Clean, Minimal */}
@@ -73,9 +73,9 @@ export default function HeroSection() {
             isLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
           }`}
         >
-          Internal AI
+          Turn your spreadsheets
           <br />
-          <span className="text-foreground/95">that never leaks</span>
+          <span className="text-foreground/95">into a CFO you can chat with</span>
         </h1>
 
         {/* Subheadline - Simple, Direct */}
@@ -84,7 +84,7 @@ export default function HeroSection() {
             isLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
           }`}
         >
-          Your data stays in your infrastructure. Zero leaks. Zero training. Build secure AI assistants that connect directly to your private databases.
+          Finance teams spend 5+ hours/week on reports. Ask &quot;What&apos;s our burn rate?&quot;—get the answer in 30 seconds. No SQL, no dashboards.
         </p>
 
         {/* CTAs */}

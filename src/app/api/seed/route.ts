@@ -75,6 +75,35 @@ function generateTransactions(count: number) {
   return transactions
 }
 
+// Generate budgets
+function generateBudgets(count: number) {
+  const budgets = []
+  const departments = ['Engineering', 'Sales', 'Marketing', 'Operations', 'HR']
+  const categories = ['payroll', 'rent', 'software', 'marketing', 'sales', 'utilities', 'travel', 'office-supplies']
+  const periods = ['2024-Q1', '2024-Q2', '2024-Q3', '2024-Q4', '2025-Q1']
+
+  for (let i = 0; i < count; i++) {
+    const dept = randomElement(departments)
+    const cat = randomElement(categories)
+    const period = randomElement(periods)
+    const allocated = randomInt(5000, 100000)
+    const spent = Math.floor(allocated * (0.3 + Math.random() * 0.8))
+
+    budgets.push({
+      id: `budget_${i + 1}`,
+      department: dept,
+      category: cat,
+      allocatedAmount: allocated,
+      spentAmount: spent,
+      period,
+      fiscalYear: parseInt(period.split('-')[0], 10),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    })
+  }
+  return budgets
+}
+
 // Generate deals
 function generateDeals(count: number) {
   const deals = []
@@ -195,6 +224,12 @@ export async function GET() {
     }
     console.log(`✅ Seeded ${transactions.length} transactions`)
 
+    const budgets = generateBudgets(30)
+    for (const b of budgets) {
+      await adminDb.collection('finance_budgets').doc(b.id).set(cleanUndefined(b))
+    }
+    console.log(`✅ Seeded ${budgets.length} budgets`)
+
     // Sales
     console.log('💼 Seeding sales data...')
     const deals = generateDeals(50)
@@ -217,6 +252,7 @@ export async function GET() {
       message: 'Database seeded successfully!',
       data: {
         transactions: transactions.length,
+        budgets: budgets.length,
         deals: deals.length,
         employees: employees.length,
       },

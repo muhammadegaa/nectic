@@ -37,13 +37,20 @@ Internal AI agents that connect to company databases and answer questions in nat
    npm run dev
    ```
 
-### Quick Test (Critical Path)
+### Quick Test (Demo — No Firebase)
 
-1. Signup → Create Agent (pick Finance collection) → Chat
-2. Ask: "What are our recent transactions?"
+1. Set `OPENAI_API_KEY` in `.env.local`
+2. Run `npm run dev`
+3. Open `http://localhost:3000/demo`
+4. Ask: "What's our total spend on software?" or "What's our burn rate?"
+
+### Full App (Firebase Required)
+
+1. Configure Firebase + run seed: `curl http://localhost:3000/api/seed`
+2. Signup → Create Agent (Finance) → Chat
 3. Health check: `curl http://localhost:3000/api/health`
 
-**Strategy:** See `NECTIC_STRATEGY_2026.md` for YC roadmap and product direction.
+**Strategy:** See `NECTIC_STRATEGY_2026.md`. **MVP status:** See `MVP_STATUS.md`.
 
 ## 📊 Database Structure
 

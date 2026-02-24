@@ -1,7 +1,8 @@
 # Nectic Strategy 2026 — Living Document
 
 **Goal:** Get funded by Y Combinator  
-**Last updated:** February 2026
+**Last updated:** February 2026  
+**Research:** See `RESEARCH_YC_2026.md` for validated pain points and competitive landscape.
 
 ---
 
@@ -9,23 +10,23 @@
 
 ### RFS Fit (Spring 2026)
 
-- **Vertical AI** — Finance first; "instant reports from your data"
-- **AI-native workflows** — "Ask your data" replaces "request a report"; systems change, not just automation
-- **Cursor for PM** — Nectic helps product/business get data; Cursor helps engineers build
+- **Cursor for PM** — Same pattern: upload data → ask question → get answer. PM = product discovery; Finance = operational discovery. "Cursor for FP&A."
+- **Vertical AI** — Finance first. 42% of FP&A time spent gathering data; we eliminate that.
+- **AI-native workflows** — "Ask" replaces "request a report"; systems change, not just automation.
 
 ### What YC Looks For
 
-- **Clear communication** — One sentence: "Upload Excel. Ask a question. Get the answer in 30 seconds."
-- **Specific problem** — Finance teams wait days for reports; data in 47+ places; 81% cite data quality as #1 AI barrier
-- **Traction** — Demo tries, beta users, LOIs; show momentum between application and interview
+- **Clear communication** — One sentence: "Finance teams spend 5+ hours/week recreating reports. We let them ask the question and get the answer in 30 seconds."
+- **Specific problem** — 82% use 4+ systems; 69% spend 5+ hrs/week on reports; 89% make decisions on bad data (insightsoftware, Pigment)
+- **Traction** — Demo tries, LOIs; show momentum between application and interview
 
 ### Peers (W26)
 
-- **Pollinate** — Supply chain; "$100k+ purchasing volume through automated workflows"
-- **Jinba** — NL workflow; "40,000 enterprise users at major financial institutions"
-- **Unisson** — AI SME agents for customer-facing teams
+- **Pollinate** — Supply chain; $100k+ automated purchasing volume
+- **Jinba** — Chat-to-workflow; 40,000 users at financial institutions
+- **Unisson** — AI product specialist for customer-facing teams
 
-**Gap:** No sharp wedge, no traction, too much config, no instant demo.
+**Gap:** Need traction (demo tries + 1–2 LOIs) and sharper wedge (spend questions first).
 
 ---
 
@@ -33,14 +34,19 @@
 
 ### One-Liner
 
-> "Nectic turns your spreadsheets and finance data into a CFO you can chat with. Upload Excel or connect Firestore—ask 'What's our burn rate?' and get the answer in 30 seconds. No SQL, no dashboards."
+> "Finance teams spend 5+ hours a week recreating reports. Nectic lets them ask the question—'What's our burn rate?' 'How much did we spend on software?'—and get the answer in 30 seconds. No SQL, no dashboards."
+
+### Wedge (Sharp)
+
+- **First question type:** Spend. Burn rate, top expenses, category breakdown. Validated, recurring pain.
+- **Not:** "AI for all data." **Not:** "Replace BI." **Yes:** Eliminate the 42% of FP&A time spent gathering data.
 
 ### Changes (Priority)
 
 | # | Change | Why |
 |---|--------|-----|
 | 1 | **Instant demo** — "Try now" on landing, no signup | Traction metric; 60-second wow |
-| 2 | **Excel upload** — First-class; connect → chat | 74% use Excel; removes friction |
+| 2 | **Excel/CSV upload** — Connect → chat | 96% FP&A use Excel; removes friction |
 | 3 | **2-step onboarding** — Connect data → Chat | Cut agent config; faster to value |
 | 4 | **One default agent** — No config for v1 | Simplify story; power users in Settings |
 
@@ -75,13 +81,15 @@
 
 ## 4. Application Narrative
 
-**Problem:** Finance and ops teams run on Excel and email. Getting a simple report takes days because data lives in 47+ places and nobody has time to build dashboards. 81% of enterprises say data quality/availability is their top AI barrier.
+**Problem:** FP&A spends 42% of time gathering data and 25–40% on manual repetitive tasks (copy-paste, formatting, data chasing). 69% spend 5+ hours/week recreating reports. 89% make decisions on inaccurate or incomplete data. 82% use 4+ systems; integration is the top barrier.
 
-**Solution:** Nectic connects to your data (Excel, Firestore, PostgreSQL) and answers questions in natural language. Upload a spreadsheet or connect your DB—ask "What's our burn rate?" and get the answer in 30 seconds. No SQL, no BI tools, no IT ticket.
+**Solution:** Nectic lets finance teams ask the question and get the answer in 30 seconds. Connect your data (Excel, CSV, or database)—ask "What's our burn rate?" or "How much did we spend on software?"—no SQL, no BI setup, no IT ticket.
 
-**Why now:** LLMs can reliably query structured data. Spreadsheets and legacy DBs haven't changed—but the interface has. "Ask your data" replaces "request a report."
+**Why now:** LLMs can reliably query structured data. YC RFS Spring 2026: "Cursor for PM" — same pattern. Finance = operational discovery.
 
-**Traction:** [Fill with real numbers: X demo tries, Y beta users, Z LOIs. One quote from a user.]
+**Traction:** [Fill with real numbers: X demo tries, Y signups, Z LOIs. One quote from a user.]
+
+**Stage:** Validation. Using low-cost infra for POC. Building toward Excel upload and real connectors.
 
 ---
 
