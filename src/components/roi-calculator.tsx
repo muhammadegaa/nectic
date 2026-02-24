@@ -63,7 +63,7 @@ export default function RoiCalculator() {
           </div>
 
           <Button size="lg" asChild className="group bg-foreground text-background hover:bg-foreground/90">
-            <Link href="/demo">
+            <Link href="/upload">
               Try it in 30 seconds
               <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
             </Link>

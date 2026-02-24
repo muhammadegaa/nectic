@@ -71,7 +71,7 @@ export default function Navigation() {
               asChild
               className="group bg-foreground text-background hover:bg-foreground/90 h-9 px-4 text-sm font-medium transition-all duration-200 hover:shadow-md hover:shadow-foreground/20 hover:scale-[1.02] active:scale-[0.98]"
             >
-              <Link href="/demo">
+              <Link href="/upload">
                 Try free
                 <ArrowRight className="w-3.5 h-3.5 ml-1.5 transition-transform duration-200 group-hover:translate-x-0.5" />
               </Link>
@@ -128,7 +128,7 @@ export default function Navigation() {
               asChild
               className="w-full justify-center group bg-foreground text-background hover:bg-foreground/90"
             >
-              <Link href="/demo">
+              <Link href="/upload">
                 Try free
                 <ArrowRight className="w-3.5 h-3.5 ml-1.5 transition-transform duration-200 group-hover:translate-x-0.5" />
               </Link>

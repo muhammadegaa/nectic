@@ -39,7 +39,7 @@ export default function CtaSection() {
             asChild
             className="group bg-foreground text-background hover:bg-foreground/90 h-12 px-8 text-base font-medium transition-all duration-200 hover:shadow-lg hover:shadow-foreground/20 hover:scale-[1.02] active:scale-[0.98]"
           >
-            <a href="/demo">
+            <a href="/upload">
               Get your financial time back
               <ArrowRight className="w-4 h-4 ml-2 transition-transform duration-200 group-hover:translate-x-1" />
             </a>
