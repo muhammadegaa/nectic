@@ -46,6 +46,13 @@ export default function Navigation() {
               <span className="absolute bottom-0 left-0 w-0 h-px bg-foreground transition-all duration-200 group-hover:w-full" />
             </a>
             <a
+              href="#roi"
+              className="text-sm text-foreground/60 hover:text-foreground transition-colors duration-200 relative group"
+            >
+              ROI
+              <span className="absolute bottom-0 left-0 w-0 h-px bg-foreground transition-all duration-200 group-hover:w-full" />
+            </a>
+            <a
               href="#use-cases"
               className="text-sm text-foreground/60 hover:text-foreground transition-colors duration-200 relative group"
             >
@@ -65,7 +72,7 @@ export default function Navigation() {
               className="group bg-foreground text-background hover:bg-foreground/90 h-9 px-4 text-sm font-medium transition-all duration-200 hover:shadow-md hover:shadow-foreground/20 hover:scale-[1.02] active:scale-[0.98]"
             >
               <Link href="/demo">
-                Try now
+                Try free
                 <ArrowRight className="w-3.5 h-3.5 ml-1.5 transition-transform duration-200 group-hover:translate-x-0.5" />
               </Link>
             </Button>
@@ -96,6 +103,13 @@ export default function Navigation() {
               How it works
             </a>
             <a
+              href="#roi"
+              onClick={() => setIsOpen(false)}
+              className="block text-sm text-foreground/60 hover:text-foreground transition-colors duration-200"
+            >
+              ROI
+            </a>
+            <a
               href="#use-cases"
               onClick={() => setIsOpen(false)}
               className="block text-sm text-foreground/60 hover:text-foreground transition-colors duration-200"
@@ -115,7 +129,7 @@ export default function Navigation() {
               className="w-full justify-center group bg-foreground text-background hover:bg-foreground/90"
             >
               <Link href="/demo">
-                Try now
+                Try free
                 <ArrowRight className="w-3.5 h-3.5 ml-1.5 transition-transform duration-200 group-hover:translate-x-0.5" />
               </Link>
             </Button>

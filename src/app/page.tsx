@@ -6,6 +6,8 @@ import HeroSection from "@/components/hero-section"
 import { Skeleton } from "@/components/ui/skeleton"
 
 const HowItWorks = lazy(() => import("@/components/how-it-works"))
+const RoiCalculator = lazy(() => import("@/components/roi-calculator"))
+const CompetitiveComparison = lazy(() => import("@/components/competitive-comparison"))
 const UseCasesSection = lazy(() => import("@/components/use-cases-section"))
 const EnterpriseTrust = lazy(() => import("@/components/enterprise-trust"))
 const CtaSection = lazy(() => import("@/components/cta-section"))
@@ -29,6 +31,12 @@ export default function Home() {
       <HeroSection />
       <Suspense fallback={<SectionSkeleton />}>
       <HowItWorks />
+      </Suspense>
+      <Suspense fallback={<SectionSkeleton />}>
+      <RoiCalculator />
+      </Suspense>
+      <Suspense fallback={<SectionSkeleton />}>
+      <CompetitiveComparison />
       </Suspense>
       <Suspense fallback={<SectionSkeleton />}>
       <UseCasesSection />

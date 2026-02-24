@@ -22,7 +22,7 @@ export default function HeroSection() {
             isLoaded ? "opacity-100" : "opacity-0"
           }`}
         >
-          Finance answers in 30 seconds. Built for Indonesia.
+          From 5-hour reports to 30-second answers
         </div>
 
         <h1
@@ -30,9 +30,9 @@ export default function HeroSection() {
             isLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
           }`}
         >
-          Ask a finance question.
+          Stop drowning in spreadsheets.
           <br />
-          <span className="text-foreground/95">Get the answer in 30 seconds.</span>
+          <span className="text-foreground/95">Start leading with insights.</span>
         </h1>
 
         <p
@@ -40,7 +40,7 @@ export default function HeroSection() {
             isLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
           }`}
         >
-          No SQL. No dashboards. Upload Excel, ask &quot;What&apos;s our burn rate?&quot; and get the answer.
+          Ask any financial question. Get instant answers from your data. No SQL, no dashboards.
         </p>
 
         <div
@@ -54,7 +54,7 @@ export default function HeroSection() {
             className="group bg-foreground text-background hover:bg-foreground/90 h-12 px-8 text-base font-medium transition-all duration-200 hover:shadow-lg hover:shadow-foreground/20 hover:scale-[1.02] active:scale-[0.98]"
           >
             <Link href="/demo">
-              Try now
+              Get your financial time back
               <ArrowRight className="w-4 h-4 ml-2 transition-transform duration-200 group-hover:translate-x-1" />
             </Link>
           </Button>

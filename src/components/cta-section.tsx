@@ -20,7 +20,7 @@ export default function CtaSection() {
             isLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
           }`}
         >
-          Try it in 30 seconds
+          Start your 30-second reports
         </h2>
         <p
           className={`text-lg text-foreground/60 mb-8 max-w-xl mx-auto transition-all duration-700 ease-out delay-75 ${
@@ -40,7 +40,7 @@ export default function CtaSection() {
             className="group bg-foreground text-background hover:bg-foreground/90 h-12 px-8 text-base font-medium transition-all duration-200 hover:shadow-lg hover:shadow-foreground/20 hover:scale-[1.02] active:scale-[0.98]"
           >
             <a href="/demo">
-              Try now
+              Get your financial time back
               <ArrowRight className="w-4 h-4 ml-2 transition-transform duration-200 group-hover:translate-x-1" />
             </a>
           </Button>
