@@ -1,8 +1,5 @@
 "use client"
 
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { ArrowRight } from "lucide-react"
 import { useEffect, useState } from "react"
 
 export default function HeroSection() {
@@ -13,52 +10,62 @@ export default function HeroSection() {
   }, [])
 
   return (
-    <section className="relative pt-40 pb-32 px-6 lg:px-8 bg-background overflow-hidden min-h-screen flex items-center">
-      <div className="absolute inset-0 bg-gradient-to-b from-background via-background to-muted/20 pointer-events-none" />
+    <section className="min-h-screen flex items-center px-6 lg:px-8 bg-white">
+      <div className="max-w-5xl mx-auto w-full pt-24 pb-16">
 
-      <div className="max-w-5xl mx-auto relative z-10">
         <div
-          className={`inline-block mb-6 text-sm text-foreground/50 transition-all duration-500 ${
-            isLoaded ? "opacity-100" : "opacity-0"
-          }`}
+          className={`transition-all duration-500 ${isLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"}`}
         >
-          From 5-hour reports to 30-second answers
+          <span className="text-xs font-medium text-neutral-400 uppercase tracking-widest">
+            Product intelligence
+          </span>
         </div>
 
         <h1
-          className={`text-5xl sm:text-6xl lg:text-7xl font-light text-foreground mb-6 leading-[1.1] tracking-tight transition-all duration-700 ease-out ${
-            isLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+          className={`mt-6 text-4xl sm:text-5xl lg:text-6xl font-light text-neutral-900 leading-[1.1] tracking-tight transition-all duration-700 delay-100 ${
+            isLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
           }`}
         >
-          Stop drowning in spreadsheets.
+          Your roadmap shouldn't depend on
           <br />
-          <span className="text-foreground/95">Start leading with insights.</span>
+          <span className="text-neutral-400">what sales decides to tell you.</span>
         </h1>
 
         <p
-          className={`text-lg sm:text-xl text-foreground/60 mb-10 max-w-xl leading-relaxed transition-all duration-700 ease-out delay-75 ${
-            isLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+          className={`mt-8 text-lg text-neutral-500 max-w-xl leading-relaxed transition-all duration-700 delay-150 ${
+            isLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
           }`}
         >
-          Ask any financial question. Get instant answers from your data. No SQL, no dashboards.
+          Nectic reads your WhatsApp sales conversations and delivers a weekly brief to your PM —
+          what customers actually said, clustered and ranked, without the sales filter.
         </p>
 
         <div
-          className={`transition-all duration-700 ease-out delay-150 ${
-            isLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+          className={`mt-10 flex flex-col sm:flex-row gap-3 transition-all duration-700 delay-200 ${
+            isLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
           }`}
         >
-          <Button
-            size="lg"
-            asChild
-            className="group bg-foreground text-background hover:bg-foreground/90 h-12 px-8 text-base font-medium transition-all duration-200 hover:shadow-lg hover:shadow-foreground/20 hover:scale-[1.02] active:scale-[0.98]"
+          <a
+            href="#early-access"
+            className="inline-flex items-center justify-center bg-neutral-900 text-white text-sm font-medium px-6 py-3 hover:bg-neutral-700 transition-colors"
           >
-            <Link href="/upload">
-              Get your financial time back
-              <ArrowRight className="w-4 h-4 ml-2 transition-transform duration-200 group-hover:translate-x-1" />
-            </Link>
-          </Button>
+            Request early access
+          </a>
+          <a
+            href="#how-it-works"
+            className="inline-flex items-center justify-center text-sm text-neutral-500 px-6 py-3 hover:text-neutral-900 transition-colors"
+          >
+            See how it works →
+          </a>
         </div>
+
+        <p
+          className={`mt-6 text-xs text-neutral-400 transition-all duration-700 delay-300 ${
+            isLoaded ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          Built for B2B SaaS product teams in Southeast Asia.
+        </p>
       </div>
     </section>
   )

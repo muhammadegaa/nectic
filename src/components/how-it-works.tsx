@@ -1,45 +1,40 @@
 "use client"
 
-import { useEffect, useState } from "react"
-
 const steps = [
   {
-    title: "Connect your data",
-    description: "Upload Excel or CSV. No setup, no connectors.",
+    number: "01",
+    title: "Connect",
+    description:
+      "Share your WhatsApp Business number. Nectic connects via the official API. Takes under 2 minutes. No data migration, no IT ticket.",
   },
   {
-    title: "Ask a question",
-    description: "What's our burn rate? Top 5 expenses? Get the answer in 30 seconds.",
+    number: "02",
+    title: "Monitor",
+    description:
+      "Nectic reads every customer conversation your sales team has. Silently. Automatically. No one needs to summarize or tag anything.",
   },
   {
-    title: "Done",
-    description: "No SQL. No dashboards. No IT ticket.",
+    number: "03",
+    title: "Brief",
+    description:
+      "Every Monday, your PM gets a brief. What customers said, clustered by theme, ranked by frequency. With the exact quotes to back it up.",
   },
 ]
 
 export default function HowItWorks() {
-  const [isLoaded, setIsLoaded] = useState(false)
-
-  useEffect(() => {
-    setIsLoaded(true)
-  }, [])
-
   return (
-    <section id="how-it-works" className="py-32 px-6 lg:px-8 bg-background">
-      <div className="max-w-7xl mx-auto">
-        {/* Product Cards - Like Giga's "Explore Agent Canvas" */}
-        <div className="grid md:grid-cols-3 gap-8">
-          {steps.map((step, index) => (
-            <div
-              key={index}
-              className={`p-8 border border-border ${
-                isLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
-              }`}
-              style={{ transitionDelay: `${index * 100}ms` }}
-            >
-              <span className="text-sm font-medium text-foreground/50">Step {index + 1}</span>
-              <h3 className="text-xl font-medium text-foreground mt-2">{step.title}</h3>
-              <p className="text-foreground/60 mt-2 leading-relaxed">{step.description}</p>
+    <section id="how-it-works" className="py-24 px-6 lg:px-8 bg-neutral-50">
+      <div className="max-w-5xl mx-auto">
+        <p className="text-xs font-medium text-neutral-400 uppercase tracking-widest mb-12">
+          How it works
+        </p>
+
+        <div className="grid md:grid-cols-3 gap-px bg-neutral-200">
+          {steps.map((step) => (
+            <div key={step.number} className="bg-neutral-50 p-8">
+              <span className="text-xs font-mono text-neutral-300">{step.number}</span>
+              <h3 className="text-lg font-medium text-neutral-900 mt-4 mb-3">{step.title}</h3>
+              <p className="text-sm text-neutral-500 leading-relaxed">{step.description}</p>
             </div>
           ))}
         </div>

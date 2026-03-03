@@ -1,50 +1,58 @@
 "use client"
 
-import type React from "react"
-import { Button } from "@/components/ui/button"
-import { ArrowRight } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 
 export default function CtaSection() {
-  const [isLoaded, setIsLoaded] = useState(false)
+  const [email, setEmail] = useState("")
+  const [submitted, setSubmitted] = useState(false)
 
-  useEffect(() => {
-    setIsLoaded(true)
-  }, [])
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!email) return
+    setSubmitted(true)
+  }
 
   return (
-    <section id="contact" className="py-32 px-6 lg:px-8 bg-background border-t border-border">
-      <div className="max-w-5xl mx-auto text-center">
-        <h2
-          className={`text-3xl sm:text-4xl font-light text-foreground mb-4 leading-tight transition-all duration-700 ease-out ${
-            isLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
-          }`}
-        >
-          Start your 30-second reports
-        </h2>
-        <p
-          className={`text-lg text-foreground/60 mb-8 max-w-xl mx-auto transition-all duration-700 ease-out delay-75 ${
-            isLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
-          }`}
-        >
-          No signup. Ask a question about sample finance data. See the answer.
+    <section id="early-access" className="py-24 px-6 lg:px-8 bg-neutral-900">
+      <div className="max-w-5xl mx-auto">
+        <p className="text-xs font-medium text-neutral-500 uppercase tracking-widest mb-6">
+          Early access
         </p>
-        <div
-          className={`transition-all duration-700 ease-out delay-150 ${
-            isLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
-          }`}
-        >
-          <Button
-            size="lg"
-            asChild
-            className="group bg-foreground text-background hover:bg-foreground/90 h-12 px-8 text-base font-medium transition-all duration-200 hover:shadow-lg hover:shadow-foreground/20 hover:scale-[1.02] active:scale-[0.98]"
-          >
-            <a href="/upload">
-              Get your financial time back
-              <ArrowRight className="w-4 h-4 ml-2 transition-transform duration-200 group-hover:translate-x-1" />
-            </a>
-          </Button>
-        </div>
+
+        <h2 className="text-3xl sm:text-4xl font-light text-white mb-4 max-w-lg leading-tight">
+          First 10 teams get white-glove setup and 3 months free.
+        </h2>
+
+        <p className="text-neutral-400 text-base mb-10 max-w-md">
+          We onboard you personally, connect your WhatsApp, and make sure your PM gets their first brief within 7 days.
+        </p>
+
+        {submitted ? (
+          <div className="text-sm text-neutral-400 border border-neutral-700 px-6 py-4 max-w-sm">
+            You're on the list. We'll reach out within 48 hours.
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 max-w-md">
+            <input
+              type="email"
+              required
+              placeholder="your@company.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="flex-1 bg-neutral-800 border border-neutral-700 text-white text-sm px-4 py-3 placeholder:text-neutral-600 focus:outline-none focus:border-neutral-500 transition-colors"
+            />
+            <button
+              type="submit"
+              className="bg-white text-neutral-900 text-sm font-medium px-6 py-3 hover:bg-neutral-200 transition-colors shrink-0"
+            >
+              Request access
+            </button>
+          </form>
+        )}
+
+        <p className="mt-6 text-xs text-neutral-600">
+          B2B SaaS companies only. WhatsApp Business account required.
+        </p>
       </div>
     </section>
   )
