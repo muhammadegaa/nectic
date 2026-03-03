@@ -6,9 +6,9 @@ import { Toaster } from "@/components/ui/toaster"
 import { ErrorBoundary } from "@/components/error-boundary"
 
 export const metadata: Metadata = {
-  title: "Nectic - Secure Internal AI Assistants",
+  title: "Nectic - Product Intelligence from Your Sales Conversations",
   description:
-    "Build secure internal AI assistants that connect to your private databases. Enterprise-grade security with zero data leakage.",
+    "Nectic reads your WhatsApp sales conversations and delivers weekly product intelligence to your PM team. No filters. No drama.",
   generator: "v0.app",
   icons: {
     icon: [
