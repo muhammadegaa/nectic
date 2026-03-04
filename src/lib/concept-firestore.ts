@@ -9,19 +9,34 @@ import {
   deleteDoc,
   query,
   orderBy,
+  where,
   serverTimestamp,
 } from "firebase/firestore"
 import { db } from "@/infrastructure/firebase/firebase-client"
 import type { AnalysisResult } from "@/app/api/concept/analyze/route"
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+export interface AccountContext {
+  industry?: string
+  contractTier?: "starter" | "growth" | "enterprise"
+  renewalMonth?: string // "YYYY-MM"
+}
+
 export interface StoredAccount {
   id: string
   fileName: string
   analyzedAt: string
+  updatedAt?: string
   result: AnalysisResult
+  vendorParticipants: string[]
+  customerParticipants: string[]
+  context: AccountContext
+  shareToken: string
 }
 
 export interface AggregatedSignal {
+  problemStatement: string
   title: string
   type: string
   priority: string
@@ -31,9 +46,13 @@ export interface AggregatedSignal {
   quotes: string[]
 }
 
+// ─── Refs ─────────────────────────────────────────────────────────────────────
+
 function accountsRef(uid: string) {
   return collection(db, "users", uid, "accounts")
 }
+
+// ─── Account CRUD ─────────────────────────────────────────────────────────────
 
 export async function getAccounts(uid: string): Promise<StoredAccount[]> {
   const q = query(accountsRef(uid), orderBy("analyzedAt", "desc"))
@@ -47,7 +66,23 @@ export async function saveAccount(
 ): Promise<StoredAccount> {
   const ref = doc(accountsRef(uid))
   await setDoc(ref, { ...data, _createdAt: serverTimestamp() })
+  // Mirror shareToken → sharedAccounts for lookup without uid
+  await setDoc(doc(db, "sharedAccounts", data.shareToken), {
+    uid,
+    accountId: ref.id,
+    accountName: data.result.accountName,
+    createdAt: serverTimestamp(),
+  })
   return { id: ref.id, ...data }
+}
+
+export async function updateAccount(
+  uid: string,
+  id: string,
+  data: Partial<Omit<StoredAccount, "id">>
+): Promise<void> {
+  const ref = doc(accountsRef(uid), id)
+  await setDoc(ref, { ...data, _updatedAt: serverTimestamp() }, { merge: true })
 }
 
 export async function getAccount(uid: string, id: string): Promise<StoredAccount | null> {
@@ -57,8 +92,23 @@ export async function getAccount(uid: string, id: string): Promise<StoredAccount
 }
 
 export async function deleteAccount(uid: string, id: string): Promise<void> {
+  const account = await getAccount(uid, id)
+  if (account?.shareToken) {
+    await deleteDoc(doc(db, "sharedAccounts", account.shareToken))
+  }
   await deleteDoc(doc(accountsRef(uid), id))
 }
+
+// ─── Shared account lookup (no auth required) ─────────────────────────────────
+
+export async function getSharedAccount(token: string): Promise<StoredAccount | null> {
+  const snap = await getDoc(doc(db, "sharedAccounts", token))
+  if (!snap.exists()) return null
+  const { uid, accountId } = snap.data() as { uid: string; accountId: string }
+  return getAccount(uid, accountId)
+}
+
+// ─── Cross-account signal aggregation ─────────────────────────────────────────
 
 export function aggregateSignals(accounts: StoredAccount[]): AggregatedSignal[] {
   const map = new Map<string, AggregatedSignal>()
@@ -66,7 +116,8 @@ export function aggregateSignals(accounts: StoredAccount[]): AggregatedSignal[] 
   for (const account of accounts) {
     const seen = new Set<string>()
     for (const sig of account.result.productSignals ?? []) {
-      const key = sig.title.toLowerCase().trim()
+      // Group by problemStatement if available, fall back to normalised title
+      const key = (sig.problemStatement ?? sig.title).toLowerCase().trim()
       if (seen.has(key)) continue
       seen.add(key)
 
@@ -77,6 +128,7 @@ export function aggregateSignals(accounts: StoredAccount[]): AggregatedSignal[] 
         if (sig.quote) existing.quotes.push(sig.quote)
       } else {
         map.set(key, {
+          problemStatement: sig.problemStatement ?? sig.title,
           title: sig.title,
           type: sig.type,
           priority: sig.priority,

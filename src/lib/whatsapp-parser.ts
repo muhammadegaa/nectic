@@ -1,3 +1,18 @@
+// ─── File ingestion (handles .txt and .zip) ───────────────────────────────────
+
+export async function parseWhatsAppFile(file: File): Promise<WaParsed> {
+  if (file.name.endsWith(".zip") || file.type === "application/zip" || file.type === "application/x-zip-compressed") {
+    const JSZip = (await import("jszip")).default
+    const zip = await JSZip.loadAsync(file)
+    const chatFile = zip.file("_chat.txt") ?? zip.file(/\/_chat\.txt$/)[0] ?? zip.file(/chat\.txt$/i)[0]
+    if (!chatFile) throw new Error("No _chat.txt found inside the ZIP. Try exporting again without media.")
+    const raw = await chatFile.async("string")
+    return parseWhatsAppExport(raw)
+  }
+  const raw = await file.text()
+  return parseWhatsAppExport(raw)
+}
+
 export interface WaMessage {
   timestamp: string
   sender: string

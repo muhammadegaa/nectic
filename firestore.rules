@@ -41,5 +41,23 @@ service cloud.firestore {
       allow read, write: if request.auth != null && resource.data.userId == request.auth.uid;
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
     }
+
+    // Concept: per-user account storage
+    match /users/{userId}/accounts/{accountId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Shared account lookups — anyone with the token can read (read-only, no write)
+    match /sharedAccounts/{token} {
+      allow read: if true;
+      allow create: if request.auth != null;
+      allow delete: if request.auth != null;
+    }
+
+    // Early access submissions — allow unauthenticated creates
+    match /earlyAccess/{docId} {
+      allow create: if true;
+      allow read: if request.auth != null;
+    }
   }
 }

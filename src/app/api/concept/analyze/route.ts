@@ -2,26 +2,52 @@ import { NextRequest, NextResponse } from "next/server"
 
 export const maxDuration = 60
 
-const SYSTEM_PROMPT = `You are a B2B SaaS customer intelligence analyst specializing in Southeast Asia markets.
+interface AccountContext {
+  industry?: string
+  contractTier?: string
+  renewalMonth?: string
+}
 
-You will receive a WhatsApp group chat conversation between a sales/CS rep and their customer(s). The conversation may be in Bahasa Indonesia, English, or code-switched (mixed). Analyze it deeply.
+const SYSTEM_PROMPT = `You are a B2B SaaS customer intelligence analyst specialising in Southeast Asia markets.
 
-Your job: surface what the customer actually thinks about the product — churn signals, product pain points, feature requests, relationship health — things that the CS/sales rep might have missed or not escalated.
+You will receive a WhatsApp group conversation, participant roles, and optional account context. The conversation may be in Bahasa Indonesia, English, or code-switched. Analyse it deeply from the CUSTOMER's perspective only.
 
-Return ONLY valid JSON. No markdown, no explanation, just JSON.`
+Your job: surface what the customer actually thinks — churn signals, product pain points, feature requests, relationship health — things the CS/sales rep might have missed or not escalated.
 
-const USER_PROMPT = (conversation: string) => `Analyze this WhatsApp conversation and return a JSON object with EXACTLY this structure:
+Return ONLY valid JSON. No markdown wrapper, no explanation, just the JSON object.`
+
+const USER_PROMPT = (
+  conversation: string,
+  vendorParticipants: string[],
+  customerParticipants: string[],
+  context: AccountContext
+) => {
+  const participantContext = vendorParticipants.length > 0 || customerParticipants.length > 0
+    ? `PARTICIPANT ROLES:
+- Vendor team (your company): ${vendorParticipants.length ? vendorParticipants.join(", ") : "unknown"}
+- Customer team: ${customerParticipants.length ? customerParticipants.join(", ") : "unknown"}
+
+Analyse ONLY from the customer's perspective. Risk signals and product signals must come from the customer voice, not the vendor.`
+    : ""
+
+  const accountContext = [
+    context.industry && `Industry: ${context.industry}`,
+    context.contractTier && `Contract tier: ${context.contractTier}`,
+    context.renewalMonth && `Renewal: ${context.renewalMonth}`,
+  ].filter(Boolean).join("\n")
+
+  return `${participantContext ? participantContext + "\n\n" : ""}${accountContext ? `ACCOUNT CONTEXT:\n${accountContext}\n\n` : ""}Analyse this WhatsApp conversation and return a JSON object with EXACTLY this structure:
 
 {
-  "accountName": "infer from context, or 'Unknown Account'",
+  "accountName": "infer customer company name from context, or 'Unknown Account'",
   "healthScore": <integer 1-10, 10 = very healthy>,
   "riskLevel": "low" | "medium" | "high" | "critical",
   "summary": "<2-3 sentence executive summary of the account situation>",
   "sentimentTrend": "improving" | "stable" | "declining",
   "riskSignals": [
     {
-      "quote": "<exact quote from conversation>",
-      "explanation": "<why this is a risk signal, in English>",
+      "quote": "<exact quote from a customer-side participant>",
+      "explanation": "<why this is a risk signal>",
       "severity": "low" | "medium" | "high",
       "date": "<date from conversation>"
     }
@@ -30,7 +56,8 @@ const USER_PROMPT = (conversation: string) => `Analyze this WhatsApp conversatio
     {
       "type": "complaint" | "feature_request" | "praise" | "confusion",
       "title": "<short title, max 8 words>",
-      "quote": "<exact quote>",
+      "problemStatement": "<the underlying customer problem in one sentence, not the feature request itself>",
+      "quote": "<exact quote from a customer-side participant>",
       "priority": "low" | "medium" | "high",
       "pmAction": "<what the PM should do with this>"
     }
@@ -50,13 +77,14 @@ const USER_PROMPT = (conversation: string) => `Analyze this WhatsApp conversatio
   "stats": {
     "messageCount": <number>,
     "participantCount": <number>,
-    "dateRange": "<e.g. Feb 1–21, 2026>",
+    "dateRange": "<e.g. Mar 19 – Mar 28, 2024>",
     "languages": ["Bahasa Indonesia", "English"]
   }
 }
 
 CONVERSATION:
 ${conversation}`
+}
 
 export interface AnalysisResult {
   accountName: string
@@ -65,16 +93,24 @@ export interface AnalysisResult {
   summary: string
   sentimentTrend: "improving" | "stable" | "declining"
   riskSignals: { quote: string; explanation: string; severity: string; date: string }[]
-  productSignals: { type: string; title: string; quote: string; priority: string; pmAction: string }[]
+  productSignals: { type: string; title: string; problemStatement?: string; quote: string; priority: string; pmAction: string }[]
   relationshipSignals: { observation: string; implication: string }[]
   competitorMentions: string[]
   recommendedAction: { what: string; owner: string; urgency: string }
   stats: { messageCount: number; participantCount: number; dateRange: string; languages: string[] }
+  changesSince?: { summary: string; newRiskSignals: number; resolvedSignals: number; healthDelta: number }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const { conversation, messageCount, participants } = await req.json()
+    const {
+      conversation,
+      messageCount,
+      participants: participantCount,
+      vendorParticipants = [],
+      customerParticipants = [],
+      context = {},
+    } = await req.json()
 
     if (!conversation || typeof conversation !== "string") {
       return NextResponse.json({ error: "conversation is required" }, { status: 400 })
@@ -98,7 +134,7 @@ export async function POST(req: NextRequest) {
         temperature: 0.2,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: USER_PROMPT(conversation) },
+          { role: "user", content: USER_PROMPT(conversation, vendorParticipants, customerParticipants, context) },
         ],
       }),
     })
@@ -116,11 +152,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Empty response from model" }, { status: 502 })
     }
 
-    const result: AnalysisResult = JSON.parse(raw)
+    // Strip markdown code fences if model wraps the JSON
+    const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim()
+    const result: AnalysisResult = JSON.parse(cleaned)
 
-    // Patch stats with accurate parser counts if provided
     if (messageCount) result.stats.messageCount = messageCount
-    if (participants) result.stats.participantCount = participants
+    if (participantCount) result.stats.participantCount = participantCount
 
     return NextResponse.json({ result }, { status: 200 })
   } catch (err: unknown) {

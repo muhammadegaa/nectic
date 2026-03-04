@@ -8,7 +8,8 @@ import remarkGfm from "remark-gfm"
 import type { Components } from "react-markdown"
 import LogoIcon from "@/components/logo-icon"
 import { useAuth } from "@/contexts/auth-context"
-import { getAccount, deleteAccount, type StoredAccount } from "@/lib/concept-firestore"
+import { getAccount, deleteAccount, updateAccount, type StoredAccount } from "@/lib/concept-firestore"
+import { parseWhatsAppFile, formatForPrompt } from "@/lib/whatsapp-parser"
 import type { AnalysisResult } from "@/app/api/concept/analyze/route"
 
 // ─── Config ──────────────────────────────────────────────────────────────────
@@ -110,6 +111,9 @@ export default function AccountPage() {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [briefSignal, setBriefSignal] = useState<ProductSignal | null>(null)
+  const [copied, setCopied] = useState(false)
+  const [showReanalyze, setShowReanalyze] = useState(false)
+  const reanalyzeInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (!authLoading && !user) router.replace("/concept/login")
@@ -128,6 +132,46 @@ export default function AccountPage() {
     setDeleting(true)
     await deleteAccount(user.uid, id)
     router.push("/concept")
+  }
+
+  const copyShareLink = async () => {
+    if (!account?.shareToken) return
+    const url = `${window.location.origin}/concept/shared/${account.shareToken}`
+    await navigator.clipboard.writeText(url)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2500)
+  }
+
+  const handleReanalyze = async (file: File) => {
+    if (!user || !account) return
+    setShowReanalyze(false)
+    try {
+      const parsed = await parseWhatsAppFile(file)
+      if (parsed.messages.length < 5) return
+      const conversation = formatForPrompt(parsed)
+      const res = await fetch("/api/concept/reanalyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          priorAnalysis: account.result,
+          conversation,
+          messageCount: parsed.totalMessages,
+          vendorParticipants: account.vendorParticipants ?? [],
+          customerParticipants: account.customerParticipants ?? [],
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      await updateAccount(user.uid, id, {
+        result: data.result as AnalysisResult,
+        fileName: file.name,
+        updatedAt: new Date().toISOString(),
+      })
+      const updated = await getAccount(user.uid, id)
+      if (updated) setAccount(updated)
+    } catch (err) {
+      console.error("Re-analysis failed:", err)
+    }
   }
 
   if (authLoading || !user || loadingAccount) {
@@ -165,20 +209,62 @@ export default function AccountPage() {
           <span className="text-neutral-300">/</span>
           <span className="text-sm text-neutral-700 truncate max-w-32">{account.result.accountName}</span>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowReanalyze(true)}
+            className="text-xs text-neutral-500 border border-neutral-200 bg-white hover:bg-neutral-50 px-3 py-1.5 rounded-lg transition-colors font-medium"
+          >
+            Update →
+          </button>
+          <button
+            onClick={copyShareLink}
+            className="text-xs text-neutral-500 border border-neutral-200 bg-white hover:bg-neutral-50 px-3 py-1.5 rounded-lg transition-colors font-medium"
+          >
+            {copied ? "Link copied!" : "Share"}
+          </button>
           {confirmDelete ? (
             <div className="flex items-center gap-2">
-              <span className="text-xs text-neutral-500">Remove this account?</span>
               <button onClick={() => setConfirmDelete(false)} className="text-xs text-neutral-400 hover:text-neutral-700 px-2 py-1 transition-colors">Cancel</button>
               <button onClick={handleDelete} disabled={deleting} className="text-xs text-white bg-red-600 hover:bg-red-700 px-3 py-1.5 rounded transition-colors disabled:opacity-50">
                 {deleting ? "Removing…" : "Remove"}
               </button>
             </div>
           ) : (
-            <button onClick={() => setConfirmDelete(true)} className="text-xs text-neutral-300 hover:text-red-500 transition-colors">Remove account</button>
+            <button onClick={() => setConfirmDelete(true)} className="text-xs text-neutral-300 hover:text-red-500 transition-colors pl-1">Remove</button>
           )}
         </div>
       </nav>
+
+      {/* Re-analysis file picker (hidden) */}
+      <input
+        ref={reanalyzeInputRef}
+        type="file"
+        accept=".txt,.zip,text/plain,application/zip"
+        className="hidden"
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleReanalyze(f) }}
+      />
+
+      {/* Re-analysis modal */}
+      {showReanalyze && (
+        <>
+          <div className="fixed inset-0 bg-black/30 z-40 backdrop-blur-sm" onClick={() => setShowReanalyze(false)} />
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="bg-white w-full max-w-sm rounded-xl shadow-2xl p-6">
+              <p className="text-sm font-semibold text-neutral-900 mb-1">Update account analysis</p>
+              <p className="text-xs text-neutral-500 mb-5 leading-relaxed">
+                Upload a new WhatsApp export with recent messages. Nectic will compare against the previous analysis and surface what changed.
+              </p>
+              <button
+                onClick={() => reanalyzeInputRef.current?.click()}
+                className="w-full bg-neutral-900 text-white text-sm font-semibold py-3 rounded-lg hover:bg-neutral-700 transition-colors mb-2"
+              >
+                Choose file →
+              </button>
+              <button onClick={() => setShowReanalyze(false)} className="w-full text-xs text-neutral-400 hover:text-neutral-600 py-1 transition-colors">Cancel</button>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Report */}
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
@@ -229,6 +315,28 @@ function AnalysisReport({
 
   return (
     <div className="space-y-4">
+      {/* Changes since last analysis */}
+      {result.changesSince && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg px-5 py-4">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide mb-1">Updated analysis</p>
+              <p className="text-sm text-blue-800 leading-relaxed">{result.changesSince.summary}</p>
+              <div className="flex items-center gap-3 mt-2 text-xs text-blue-600">
+                {result.changesSince.newRiskSignals > 0 && <span>+{result.changesSince.newRiskSignals} new risk signals</span>}
+                {result.changesSince.resolvedSignals > 0 && <span>{result.changesSince.resolvedSignals} resolved</span>}
+              </div>
+            </div>
+            <div className="flex-shrink-0 text-center">
+              <p className={`text-2xl font-light ${result.changesSince.healthDelta > 0 ? "text-green-600" : result.changesSince.healthDelta < 0 ? "text-red-600" : "text-neutral-500"}`}>
+                {result.changesSince.healthDelta > 0 ? `+${result.changesSince.healthDelta}` : result.changesSince.healthDelta}
+              </p>
+              <p className="text-xs text-neutral-400">health</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Health score */}
       <div className={`border rounded-lg p-6 ${risk.bg} ${risk.border}`}>
         <div className="flex items-start justify-between gap-4">

@@ -5,17 +5,25 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import LogoIcon from "@/components/logo-icon"
 import { useAuth } from "@/contexts/auth-context"
-import { parseWhatsAppExport, formatForPrompt, type WaParsed } from "@/lib/whatsapp-parser"
+import { parseWhatsAppFile, formatForPrompt, type WaParsed } from "@/lib/whatsapp-parser"
 import {
   getAccounts,
   saveAccount,
   deleteAccount,
   aggregateSignals,
   type StoredAccount,
+  type AccountContext,
 } from "@/lib/concept-firestore"
 import type { AnalysisResult } from "@/app/api/concept/analyze/route"
 
-type ConnectStage = "instructions" | "upload" | "parsed" | "analyzing" | "error"
+type ConnectStage = "instructions" | "upload" | "ready" | "analyzing" | "error"
+
+const INDUSTRIES = ["SaaS / Software", "Fintech", "Logistics", "HR Tech", "E-commerce", "Healthcare", "Education", "Other"]
+const CONTRACT_TIERS = [
+  { value: "starter", label: "Starter  (<$500/mo)" },
+  { value: "growth", label: "Growth  ($500–2k/mo)" },
+  { value: "enterprise", label: "Enterprise  (>$2k/mo)" },
+]
 
 const riskConfig = {
   low: { label: "Low", bg: "bg-green-50", text: "text-green-700", border: "border-green-200", dot: "bg-green-500" },
@@ -41,12 +49,10 @@ function timeAgo(iso: string): string {
   return `${Math.floor(h / 24)}d ago`
 }
 
-// ─── WhatsApp icon ─────────────────────────────────────────────────────────────
-
 function WhatsAppIcon({ size = 16, className = "" }: { size?: number; className?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
-      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
     </svg>
   )
 }
@@ -66,6 +72,11 @@ export default function ConceptPage() {
   const [uploadError, setUploadError] = useState("")
   const [dragging, setDragging] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  // Participant labelling
+  const [vendorParticipants, setVendorParticipants] = useState<string[]>([])
+  const [customerParticipants, setCustomerParticipants] = useState<string[]>([])
+  // Account context
+  const [context, setContext] = useState<AccountContext>({})
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -92,6 +103,9 @@ export default function ConceptPage() {
     setParsed(null)
     setFileName("")
     setUploadError("")
+    setVendorParticipants([])
+    setCustomerParticipants([])
+    setContext({})
     setShowConnect(true)
   }
 
@@ -102,30 +116,35 @@ export default function ConceptPage() {
       setParsed(null)
       setFileName("")
       setUploadError("")
+      setVendorParticipants([])
+      setCustomerParticipants([])
+      setContext({})
       if (inputRef.current) inputRef.current.value = ""
     }, 200)
   }
 
-  const handleFile = useCallback((file: File) => {
-    if (!file.name.endsWith(".txt") && file.type !== "text/plain") {
-      setUploadError("Please upload a .txt file exported from WhatsApp.")
+  const handleFile = useCallback(async (file: File) => {
+    const isValid = file.name.endsWith(".txt") || file.name.endsWith(".zip") ||
+      file.type === "text/plain" || file.type === "application/zip" || file.type === "application/x-zip-compressed"
+    if (!isValid) {
+      setUploadError("Please upload a WhatsApp .txt export or .zip folder.")
       setConnectStage("error")
       return
     }
     setFileName(file.name)
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const raw = e.target?.result as string
-      const p = parseWhatsAppExport(raw)
+    try {
+      const p = await parseWhatsAppFile(file)
       if (p.messages.length < 5) {
-        setUploadError("Couldn't parse this file. Make sure it's a WhatsApp chat export (.txt).")
+        setUploadError("Couldn't parse this file. Make sure it's a WhatsApp chat export.")
         setConnectStage("error")
         return
       }
       setParsed(p)
-      setConnectStage("parsed")
+      setConnectStage("ready")
+    } catch (err: unknown) {
+      setUploadError(err instanceof Error ? err.message : "Failed to read file.")
+      setConnectStage("error")
     }
-    reader.readAsText(file, "utf-8")
   }, [])
 
   const onDrop = useCallback((e: React.DragEvent) => {
@@ -134,6 +153,20 @@ export default function ConceptPage() {
     const file = e.dataTransfer.files[0]
     if (file) handleFile(file)
   }, [handleFile])
+
+  const toggleParticipant = (name: string, side: "vendor" | "customer") => {
+    if (side === "vendor") {
+      setVendorParticipants((prev) =>
+        prev.includes(name) ? prev.filter((p) => p !== name) : [...prev, name]
+      )
+      setCustomerParticipants((prev) => prev.filter((p) => p !== name))
+    } else {
+      setCustomerParticipants((prev) =>
+        prev.includes(name) ? prev.filter((p) => p !== name) : [...prev, name]
+      )
+      setVendorParticipants((prev) => prev.filter((p) => p !== name))
+    }
+  }
 
   const analyze = async () => {
     if (!parsed || !user) return
@@ -149,16 +182,24 @@ export default function ConceptPage() {
           conversation,
           messageCount: parsed.totalMessages,
           participants: parsed.participants.length,
+          vendorParticipants,
+          customerParticipants,
+          context,
         }),
       })
 
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "Analysis failed")
 
+      const shareToken = crypto.randomUUID()
       await saveAccount(user.uid, {
         fileName,
         analyzedAt: new Date().toISOString(),
         result: data.result as AnalysisResult,
+        vendorParticipants,
+        customerParticipants,
+        context,
+        shareToken,
       })
 
       await refreshAccounts()
@@ -191,30 +232,22 @@ export default function ConceptPage() {
 
   return (
     <div className="min-h-screen bg-neutral-50">
-      {/* Nav */}
       <nav className="bg-white border-b border-neutral-200 px-4 sm:px-6 h-12 flex items-center justify-between sticky top-0 z-10">
         <Link href="/" className="flex items-center gap-2 hover:opacity-70 transition-opacity">
           <LogoIcon size={20} />
           <span className="text-sm font-semibold text-neutral-900">Nectic</span>
         </Link>
         <div className="flex items-center gap-3">
-          <span className="text-xs bg-amber-50 border border-amber-200 text-amber-700 px-3 py-1 rounded-full font-medium">
-            Early access
-          </span>
+          <span className="text-xs bg-amber-50 border border-amber-200 text-amber-700 px-3 py-1 rounded-full font-medium">Early access</span>
           {accounts.length > 0 && !loadingAccounts && (
-            <button
-              onClick={openConnect}
-              className="flex items-center gap-1.5 text-xs bg-neutral-900 text-white px-3 py-1.5 rounded-lg hover:bg-neutral-700 transition-colors font-medium"
-            >
+            <button onClick={openConnect} className="flex items-center gap-1.5 text-xs bg-neutral-900 text-white px-3 py-1.5 rounded-lg hover:bg-neutral-700 transition-colors font-medium">
               <WhatsAppIcon size={12} />
               Connect account
             </button>
           )}
           <div className="flex items-center gap-2 pl-2 border-l border-neutral-200">
             <span className="text-xs text-neutral-500 hidden sm:block">{user.displayName ?? user.email}</span>
-            <button onClick={() => signOut()} className="text-xs text-neutral-400 hover:text-neutral-700 transition-colors">
-              Sign out
-            </button>
+            <button onClick={() => signOut()} className="text-xs text-neutral-400 hover:text-neutral-700 transition-colors">Sign out</button>
           </div>
         </div>
       </nav>
@@ -226,10 +259,7 @@ export default function ConceptPage() {
           </div>
         ) : (
           <>
-            {accounts.length === 0 && (
-              <EmptyState onConnect={openConnect} userName={user.displayName?.split(" ")[0] ?? null} />
-            )}
-
+            {accounts.length === 0 && <EmptyState onConnect={openConnect} userName={user.displayName?.split(" ")[0] ?? null} />}
             {accounts.length > 0 && (
               <>
                 <div className="grid grid-cols-3 gap-4 mb-8">
@@ -248,7 +278,6 @@ export default function ConceptPage() {
                     </p>
                   </div>
                 </div>
-
                 <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
                   <div className="lg:col-span-3 space-y-3">
                     <h2 className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-4">Connected accounts</h2>
@@ -274,7 +303,6 @@ export default function ConceptPage() {
         )}
       </main>
 
-      {/* Connect modal */}
       {showConnect && (
         <ConnectModal
           stage={connectStage}
@@ -283,6 +311,9 @@ export default function ConceptPage() {
           error={uploadError}
           dragging={dragging}
           inputRef={inputRef}
+          vendorParticipants={vendorParticipants}
+          customerParticipants={customerParticipants}
+          context={context}
           onClose={closeConnect}
           onContinueToUpload={() => setConnectStage("upload")}
           onBackToInstructions={() => setConnectStage("instructions")}
@@ -291,6 +322,8 @@ export default function ConceptPage() {
           onDragLeave={() => setDragging(false)}
           onFileSelect={() => inputRef.current?.click()}
           onInputChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f) }}
+          onToggleParticipant={toggleParticipant}
+          onContextChange={setContext}
           onAnalyze={analyze}
           onRetry={() => { setConnectStage("upload"); setUploadError(""); if (inputRef.current) inputRef.current.value = "" }}
         />
@@ -302,22 +335,11 @@ export default function ConceptPage() {
 // ─── Connect modal ─────────────────────────────────────────────────────────────
 
 function ConnectModal({
-  stage,
-  parsed,
-  fileName,
-  error,
-  dragging,
-  inputRef,
-  onClose,
-  onContinueToUpload,
-  onBackToInstructions,
-  onDrop,
-  onDragOver,
-  onDragLeave,
-  onFileSelect,
-  onInputChange,
-  onAnalyze,
-  onRetry,
+  stage, parsed, fileName, error, dragging, inputRef,
+  vendorParticipants, customerParticipants, context,
+  onClose, onContinueToUpload, onBackToInstructions,
+  onDrop, onDragOver, onDragLeave, onFileSelect, onInputChange,
+  onToggleParticipant, onContextChange, onAnalyze, onRetry,
 }: {
   stage: ConnectStage
   parsed: WaParsed | null
@@ -325,6 +347,9 @@ function ConnectModal({
   error: string
   dragging: boolean
   inputRef: React.RefObject<HTMLInputElement>
+  vendorParticipants: string[]
+  customerParticipants: string[]
+  context: AccountContext
   onClose: () => void
   onContinueToUpload: () => void
   onBackToInstructions: () => void
@@ -333,6 +358,8 @@ function ConnectModal({
   onDragLeave: () => void
   onFileSelect: () => void
   onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void
+  onToggleParticipant: (name: string, side: "vendor" | "customer") => void
+  onContextChange: (ctx: AccountContext) => void
   onAnalyze: () => void
   onRetry: () => void
 }) {
@@ -340,17 +367,22 @@ function ConnectModal({
     <>
       <div className="fixed inset-0 bg-black/30 z-40 backdrop-blur-sm" onClick={stage === "analyzing" ? undefined : onClose} />
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="bg-white w-full max-w-md rounded-xl shadow-2xl overflow-hidden">
-
+        <div className="bg-white w-full max-w-md rounded-xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100 flex-shrink-0">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 bg-[#25D366] rounded-lg flex items-center justify-center">
                 <WhatsAppIcon size={16} className="text-white" />
               </div>
               <div>
                 <p className="text-sm font-semibold text-neutral-900">Connect WhatsApp account</p>
-                <p className="text-xs text-neutral-400">Export a group chat to get started</p>
+                <p className="text-xs text-neutral-400">
+                  {stage === "instructions" && "Export a group chat to get started"}
+                  {stage === "upload" && "Drop your export file"}
+                  {stage === "ready" && "Review before analysis"}
+                  {stage === "analyzing" && "Analysing with Claude…"}
+                  {stage === "error" && "Something went wrong"}
+                </p>
               </div>
             </div>
             {stage !== "analyzing" && (
@@ -358,115 +390,148 @@ function ConnectModal({
             )}
           </div>
 
-          {/* Body */}
-          <div className="px-6 py-5">
+          {/* Body — scrollable */}
+          <div className="overflow-y-auto flex-1 px-6 py-5">
 
-            {/* Step: Instructions */}
             {stage === "instructions" && (
               <div>
                 <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-4">How to export</p>
                 <div className="space-y-4">
-                  <Step number={1} title="Open the WhatsApp group" description="The group chat between your team and the customer account you want to analyse." />
-                  <Step number={2} title='Tap ⋮ → "More" → "Export chat"' description='On iOS: tap the group name → "Export Chat". On Android: tap ⋮ → "More" → "Export chat".' />
-                  <Step number={3} title='"Without media" only' description="Select without media — Nectic only needs the text. This keeps the file small and fast to process." />
-                  <Step number={4} title="Save the .txt file and upload" description="AirDrop, email, or save to Files — then drop it here." />
+                  <Step number={1} title="Open the WhatsApp group" description="The group chat between your team and the customer account." />
+                  <Step number={2} title='Tap ⋮ → "More" → "Export chat"' description='iOS: tap the group name → "Export Chat". Android: tap ⋮ → "More" → "Export chat".' />
+                  <Step number={3} title='"Without media" only' description="Select without media — text only. This keeps the file small." />
+                  <Step number={4} title="Upload the file or ZIP" description="Save to Files and drop it here. Both .txt and .zip folder exports are accepted." />
                 </div>
-                <button
-                  onClick={onContinueToUpload}
-                  className="mt-6 w-full bg-neutral-900 text-white text-sm font-semibold py-3 rounded-lg hover:bg-neutral-700 transition-colors"
-                >
+                <button onClick={onContinueToUpload} className="mt-6 w-full bg-neutral-900 text-white text-sm font-semibold py-3 rounded-lg hover:bg-neutral-700 transition-colors">
                   I have the file →
                 </button>
-                <p className="mt-3 text-center text-xs text-neutral-400">
-                  Files are processed in memory and never stored on our servers
-                </p>
+                <p className="mt-3 text-center text-xs text-neutral-400">Files are processed in memory — never stored on our servers</p>
               </div>
             )}
 
-            {/* Step: Upload */}
             {stage === "upload" && (
               <div>
                 <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-4">Upload export file</p>
                 <div
-                  className={`border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-all ${
-                    dragging
-                      ? "border-[#25D366] bg-green-50"
-                      : "border-neutral-200 bg-neutral-50 hover:border-neutral-400 hover:bg-neutral-100"
-                  }`}
-                  onDragOver={onDragOver}
-                  onDragLeave={onDragLeave}
-                  onDrop={onDrop}
-                  onClick={onFileSelect}
+                  className={`border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-all ${dragging ? "border-[#25D366] bg-green-50" : "border-neutral-200 bg-neutral-50 hover:border-neutral-400 hover:bg-neutral-100"}`}
+                  onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop} onClick={onFileSelect}
                 >
-                  <input ref={inputRef} type="file" accept=".txt,text/plain" className="hidden" onChange={onInputChange} />
+                  <input ref={inputRef} type="file" accept=".txt,.zip,text/plain,application/zip" className="hidden" onChange={onInputChange} />
                   <div className="w-10 h-10 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-3">
                     <WhatsAppIcon size={20} className="text-neutral-400" />
                   </div>
-                  <p className="text-sm font-medium text-neutral-700">Drop your .txt export here</p>
-                  <p className="mt-1 text-xs text-neutral-400">or click to browse</p>
+                  <p className="text-sm font-medium text-neutral-700">Drop your export here</p>
+                  <p className="mt-1 text-xs text-neutral-400">.txt file or .zip folder — both accepted</p>
                 </div>
-                <button
-                  onClick={onBackToInstructions}
-                  className="mt-3 text-xs text-neutral-400 hover:text-neutral-600 transition-colors"
-                >
-                  ← Back to instructions
-                </button>
+                <button onClick={onBackToInstructions} className="mt-3 text-xs text-neutral-400 hover:text-neutral-600 transition-colors">← Back to instructions</button>
               </div>
             )}
 
-            {/* Step: Parsed preview */}
-            {stage === "parsed" && parsed && (
-              <div>
-                <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-4">Ready to analyse</p>
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-5">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="w-6 h-6 bg-[#25D366] rounded flex items-center justify-center flex-shrink-0">
-                      <WhatsAppIcon size={13} className="text-white" />
+            {stage === "ready" && parsed && (
+              <div className="space-y-5">
+                {/* Parsed stats */}
+                <div>
+                  <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-3">File parsed</p>
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-6 h-6 bg-[#25D366] rounded flex items-center justify-center flex-shrink-0">
+                        <WhatsAppIcon size={13} className="text-white" />
+                      </div>
+                      <p className="text-sm font-semibold text-neutral-900 truncate">{fileName}</p>
                     </div>
-                    <p className="text-sm font-semibold text-neutral-900 truncate">{fileName}</p>
+                    <div className="grid grid-cols-3 gap-2 text-center">
+                      <div className="bg-white rounded-lg py-2 px-1 border border-green-100">
+                        <p className="text-lg font-light text-neutral-900">{parsed.totalMessages}</p>
+                        <p className="text-xs text-neutral-400 mt-0.5">messages</p>
+                      </div>
+                      <div className="bg-white rounded-lg py-2 px-1 border border-green-100">
+                        <p className="text-lg font-light text-neutral-900">{parsed.participants.length}</p>
+                        <p className="text-xs text-neutral-400 mt-0.5">participants</p>
+                      </div>
+                      <div className="bg-white rounded-lg py-2 px-1 border border-green-100">
+                        <p className="text-xs font-medium text-neutral-900 mt-1">{parsed.dateRange.from.split(" ")[0]}</p>
+                        <p className="text-xs text-neutral-400 mt-0.5">from</p>
+                      </div>
+                    </div>
+                    {parsed.truncated && (
+                      <p className="mt-3 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-1.5">
+                        Large file — analysing the most recent {parsed.messages.length} messages.
+                      </p>
+                    )}
                   </div>
-                  <div className="grid grid-cols-3 gap-3 text-center">
-                    <div className="bg-white rounded-lg py-2.5 px-1 border border-green-100">
-                      <p className="text-lg font-light text-neutral-900">{parsed.totalMessages}</p>
-                      <p className="text-xs text-neutral-400 mt-0.5">messages</p>
-                    </div>
-                    <div className="bg-white rounded-lg py-2.5 px-1 border border-green-100">
-                      <p className="text-lg font-light text-neutral-900">{parsed.participants.length}</p>
-                      <p className="text-xs text-neutral-400 mt-0.5">participants</p>
-                    </div>
-                    <div className="bg-white rounded-lg py-2.5 px-1 border border-green-100">
-                      <p className="text-xs font-medium text-neutral-900 mt-1">{parsed.dateRange.from.split(" ")[0]}</p>
-                      <p className="text-xs text-neutral-400 mt-0.5">from</p>
-                    </div>
-                  </div>
-                  {parsed.truncated && (
-                    <p className="mt-3 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-1.5">
-                      Large file — analysing the most recent {parsed.messages.length} messages.
-                    </p>
-                  )}
                 </div>
-                <button
-                  onClick={onAnalyze}
-                  className="w-full bg-neutral-900 text-white text-sm font-semibold py-3 rounded-lg hover:bg-neutral-700 transition-colors"
-                >
-                  Run analysis →
-                </button>
-                <button onClick={onRetry} className="mt-2 w-full text-xs text-neutral-400 hover:text-neutral-600 transition-colors py-1">
-                  Use a different file
-                </button>
+
+                {/* Participant labelling */}
+                <div>
+                  <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-1">Who&apos;s who</p>
+                  <p className="text-xs text-neutral-500 mb-3">Label each participant so Nectic knows whose voice is the customer&apos;s.</p>
+                  <div className="space-y-2">
+                    {parsed.participants.map((name) => {
+                      const isVendor = vendorParticipants.includes(name)
+                      const isCustomer = customerParticipants.includes(name)
+                      return (
+                        <div key={name} className="flex items-center gap-2">
+                          <span className="text-xs text-neutral-700 flex-1 min-w-0 truncate font-medium">{name}</span>
+                          <button
+                            onClick={() => onToggleParticipant(name, "vendor")}
+                            className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-colors ${isVendor ? "bg-neutral-900 text-white border-neutral-900" : "bg-white text-neutral-500 border-neutral-200 hover:border-neutral-400"}`}
+                          >
+                            My team
+                          </button>
+                          <button
+                            onClick={() => onToggleParticipant(name, "customer")}
+                            className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-colors ${isCustomer ? "bg-blue-600 text-white border-blue-600" : "bg-white text-neutral-500 border-neutral-200 hover:border-neutral-400"}`}
+                          >
+                            Customer
+                          </button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Account context */}
+                <div>
+                  <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-1">Account context <span className="normal-case font-normal text-neutral-400">(optional)</span></p>
+                  <p className="text-xs text-neutral-500 mb-3">Helps Nectic score urgency and risk more accurately.</p>
+                  <div className="space-y-2.5">
+                    <select
+                      value={context.industry ?? ""}
+                      onChange={(e) => onContextChange({ ...context, industry: e.target.value || undefined })}
+                      className="w-full text-xs border border-neutral-200 rounded-lg px-3 py-2 text-neutral-700 focus:outline-none focus:border-neutral-400 bg-white"
+                    >
+                      <option value="">Industry (optional)</option>
+                      {INDUSTRIES.map((i) => <option key={i} value={i}>{i}</option>)}
+                    </select>
+                    <select
+                      value={context.contractTier ?? ""}
+                      onChange={(e) => onContextChange({ ...context, contractTier: e.target.value as AccountContext["contractTier"] || undefined })}
+                      className="w-full text-xs border border-neutral-200 rounded-lg px-3 py-2 text-neutral-700 focus:outline-none focus:border-neutral-400 bg-white"
+                    >
+                      <option value="">Contract tier (optional)</option>
+                      {CONTRACT_TIERS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+                    </select>
+                    <input
+                      type="month"
+                      value={context.renewalMonth ?? ""}
+                      onChange={(e) => onContextChange({ ...context, renewalMonth: e.target.value || undefined })}
+                      className="w-full text-xs border border-neutral-200 rounded-lg px-3 py-2 text-neutral-700 focus:outline-none focus:border-neutral-400 bg-white"
+                      placeholder="Renewal month (optional)"
+                    />
+                  </div>
+                </div>
               </div>
             )}
 
-            {/* Step: Analysing */}
             {stage === "analyzing" && (
               <div className="py-8 text-center">
                 <div className="w-12 h-12 border-2 border-neutral-200 border-t-neutral-900 rounded-full animate-spin mx-auto mb-4" />
                 <p className="text-sm font-semibold text-neutral-900">Analysing {parsed?.totalMessages} messages</p>
-                <p className="mt-1 text-xs text-neutral-400">GPT-4o is reading the conversation · ~15 seconds</p>
+                <p className="mt-1 text-xs text-neutral-400">Claude 3.5 Sonnet · ~20 seconds</p>
                 <div className="mt-5 space-y-2 text-left">
-                  {["Identifying participants and account name…", "Extracting risk signals…", "Clustering product signals…", "Scoring account health…"].map((s, i) => (
+                  {["Identifying customer voice…", "Extracting risk signals…", "Clustering product signals…", "Scoring account health…"].map((s, i) => (
                     <div key={i} className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-neutral-300 animate-pulse" style={{ animationDelay: `${i * 300}ms` }} />
+                      <div className="w-1.5 h-1.5 rounded-full bg-neutral-300 animate-pulse" style={{ animationDelay: `${i * 350}ms` }} />
                       <p className="text-xs text-neutral-500">{s}</p>
                     </div>
                   ))}
@@ -474,20 +539,26 @@ function ConnectModal({
               </div>
             )}
 
-            {/* Step: Error */}
             {stage === "error" && (
               <div className="py-4 text-center">
                 <p className="text-sm font-semibold text-neutral-900 mb-2">Something went wrong</p>
                 <p className="text-xs text-red-600 mb-5">{error}</p>
-                <button
-                  onClick={onRetry}
-                  className="w-full bg-neutral-900 text-white text-sm font-semibold py-3 rounded-lg hover:bg-neutral-700 transition-colors"
-                >
-                  Try again
-                </button>
+                <button onClick={onRetry} className="w-full bg-neutral-900 text-white text-sm font-semibold py-3 rounded-lg hover:bg-neutral-700 transition-colors">Try again</button>
               </div>
             )}
           </div>
+
+          {/* Footer CTA */}
+          {stage === "ready" && (
+            <div className="px-6 py-4 border-t border-neutral-100 flex-shrink-0 space-y-2">
+              <button onClick={onAnalyze} className="w-full bg-neutral-900 text-white text-sm font-semibold py-3 rounded-lg hover:bg-neutral-700 transition-colors">
+                Run analysis →
+              </button>
+              <button onClick={onRetry} className="w-full text-xs text-neutral-400 hover:text-neutral-600 transition-colors py-1">
+                Use a different file
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </>
@@ -499,9 +570,7 @@ function ConnectModal({
 function Step({ number, title, description }: { number: number; title: string; description: string }) {
   return (
     <div className="flex gap-4">
-      <div className="w-6 h-6 rounded-full bg-neutral-900 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
-        {number}
-      </div>
+      <div className="w-6 h-6 rounded-full bg-neutral-900 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{number}</div>
       <div>
         <p className="text-sm font-semibold text-neutral-800">{title}</p>
         <p className="text-xs text-neutral-500 mt-0.5 leading-relaxed">{description}</p>
@@ -512,29 +581,20 @@ function Step({ number, title, description }: { number: number; title: string; d
 
 // ─── Account card ─────────────────────────────────────────────────────────────
 
-function AccountCard({
-  account,
-  onDelete,
-  confirmingDelete,
-  onConfirmDelete,
-  onCancelDelete,
-}: {
-  account: StoredAccount
-  onDelete: () => void
-  confirmingDelete: boolean
-  onConfirmDelete: () => void
-  onCancelDelete: () => void
+function AccountCard({ account, onDelete, confirmingDelete, onConfirmDelete, onCancelDelete }: {
+  account: StoredAccount; onDelete: () => void; confirmingDelete: boolean; onConfirmDelete: () => void; onCancelDelete: () => void
 }) {
   const risk = riskConfig[account.result.riskLevel] ?? riskConfig.medium
   const topRisk = account.result.riskSignals?.[0]
   const topProduct = account.result.productSignals?.[0]
+  const hasChanges = !!account.result.changesSince
 
   return (
     <div className={`bg-white border rounded-lg overflow-hidden transition-shadow hover:shadow-sm ${confirmingDelete ? "border-red-300" : "border-neutral-200"}`}>
       <Link href={`/concept/account/${account.id}`} className="block p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="flex items-center gap-2 mb-1.5">
+            <div className="flex items-center gap-2 mb-1.5 flex-wrap">
               <div className="w-5 h-5 bg-[#25D366] rounded flex items-center justify-center flex-shrink-0">
                 <WhatsAppIcon size={11} className="text-white" />
               </div>
@@ -542,29 +602,28 @@ function AccountCard({
                 <span className={`w-1.5 h-1.5 rounded-full ${risk.dot}`} />
                 {risk.label} risk
               </span>
+              {hasChanges && (
+                <span className="text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">Updated</span>
+              )}
             </div>
             <p className="text-sm font-semibold text-neutral-900 truncate">{account.result.accountName}</p>
-            {topRisk && (
-              <p className="mt-1.5 text-xs text-neutral-500 line-clamp-1 italic">&ldquo;{topRisk.quote}&rdquo;</p>
-            )}
-            {!topRisk && topProduct && (
-              <p className="mt-1.5 text-xs text-neutral-500 line-clamp-1">{topProduct.title}</p>
-            )}
+            {topRisk && <p className="mt-1.5 text-xs text-neutral-500 line-clamp-1 italic">&ldquo;{topRisk.quote}&rdquo;</p>}
+            {!topRisk && topProduct && <p className="mt-1.5 text-xs text-neutral-500 line-clamp-1">{topProduct.title}</p>}
           </div>
           <div className="flex-shrink-0 text-right">
             <p className={`text-2xl font-light ${risk.text}`}>{account.result.healthScore}</p>
             <p className="text-xs text-neutral-400">/ 10</p>
           </div>
         </div>
-        <div className="mt-3 flex items-center gap-3 text-xs text-neutral-400 border-t border-neutral-100 pt-3">
+        <div className="mt-3 flex items-center gap-3 text-xs text-neutral-400 border-t border-neutral-100 pt-3 flex-wrap">
           <span>{account.result.stats?.messageCount ?? "?"} messages</span>
           <span>·</span>
           <span>{account.result.riskSignals?.length ?? 0} risk signals</span>
           <span>·</span>
-          <span>{timeAgo(account.analyzedAt)}</span>
+          <span>{timeAgo(account.updatedAt ?? account.analyzedAt)}</span>
+          {account.context?.industry && <><span>·</span><span>{account.context.industry}</span></>}
         </div>
       </Link>
-
       {confirmingDelete ? (
         <div className="px-5 py-3 bg-red-50 border-t border-red-200 flex items-center justify-between gap-3">
           <p className="text-xs text-red-700">Remove this account?</p>
@@ -601,9 +660,7 @@ function CrossAccountSignals({ signals, accountCount }: { signals: ReturnType<ty
     <div className="space-y-2">
       {accountCount < 2 && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mb-4">
-          <p className="text-xs text-blue-700 leading-relaxed">
-            Connect more accounts to see which signals appear across your entire customer base.
-          </p>
+          <p className="text-xs text-blue-700 leading-relaxed">Connect more accounts to see which problems appear across your customer base.</p>
         </div>
       )}
       {signals.map((sig, i) => {
@@ -611,22 +668,18 @@ function CrossAccountSignals({ signals, accountCount }: { signals: ReturnType<ty
         const isShared = sig.accountCount > 1
         return (
           <div key={i} className={`bg-white border rounded-lg p-4 ${isShared ? "border-blue-200 bg-blue-50/30" : "border-neutral-200"}`}>
-            <div className="flex items-start justify-between gap-2 mb-2">
-              <p className="text-xs font-semibold text-neutral-800 leading-snug">{sig.title}</p>
+            <div className="flex items-start justify-between gap-2 mb-1.5">
+              <p className="text-xs font-semibold text-neutral-800 leading-snug">{sig.problemStatement || sig.title}</p>
               {isShared && (
-                <span className="flex-shrink-0 text-xs font-bold text-blue-700 bg-blue-100 border border-blue-200 px-2 py-0.5 rounded-full">
-                  {sig.accountCount} accounts
-                </span>
+                <span className="flex-shrink-0 text-xs font-bold text-blue-700 bg-blue-100 border border-blue-200 px-2 py-0.5 rounded-full">{sig.accountCount} accounts</span>
               )}
             </div>
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap mb-2">
               <span className={`text-xs font-medium px-2 py-0.5 border rounded-full ${typeCfg.color}`}>{typeCfg.label}</span>
               {sig.priority === "high" && <span className="text-xs text-red-600 font-medium">High priority</span>}
             </div>
-            {isShared && sig.accountNames.length > 0 && (
-              <p className="mt-2 text-xs text-neutral-500">{sig.accountNames.join(", ")}</p>
-            )}
-            <p className="mt-2 text-xs text-neutral-500 leading-relaxed">{sig.pmAction}</p>
+            {isShared && <p className="text-xs text-neutral-500 mb-1">{sig.accountNames.join(", ")}</p>}
+            <p className="text-xs text-neutral-500 leading-relaxed">{sig.pmAction}</p>
           </div>
         )
       })}
@@ -646,22 +699,16 @@ function EmptyState({ onConnect, userName }: { onConnect: () => void; userName: 
         {userName ? `Welcome, ${userName}` : "Account Intelligence"}
       </p>
       <h1 className="text-3xl font-light text-neutral-900 tracking-tight">
-        What are your customers<br />
-        <span className="text-neutral-400">actually telling you?</span>
+        What are your customers<br /><span className="text-neutral-400">actually telling you?</span>
       </h1>
       <p className="mt-4 text-sm text-neutral-500 leading-relaxed max-w-sm mx-auto">
         Connect a WhatsApp account group to extract churn signals, product pain points, and patterns your team would never catch manually.
       </p>
-      <button
-        onClick={onConnect}
-        className="mt-8 flex items-center gap-2 bg-neutral-900 text-white text-sm font-semibold px-6 py-3 rounded-lg hover:bg-neutral-700 transition-colors mx-auto"
-      >
+      <button onClick={onConnect} className="mt-8 flex items-center gap-2 bg-neutral-900 text-white text-sm font-semibold px-6 py-3 rounded-lg hover:bg-neutral-700 transition-colors mx-auto">
         <WhatsAppIcon size={14} className="text-white" />
         Connect first account
       </button>
-      <p className="mt-4 text-xs text-neutral-400">
-        Works with WhatsApp .txt exports · Bahasa Indonesia + English · Processed in memory only
-      </p>
+      <p className="mt-4 text-xs text-neutral-400">Works with .txt and .zip exports · Bahasa Indonesia + English · Processed in memory only</p>
     </div>
   )
 }
