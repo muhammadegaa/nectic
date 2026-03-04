@@ -1,5 +1,6 @@
 import Link from "next/link"
 import LogoIcon from "@/components/logo-icon"
+import { WhatsAppIcon, ZoomIcon, HubSpotIcon, JiraIcon, SlackIcon } from "@/components/brand-icons"
 import { demoWeek, demoIntegrations } from "@/lib/demo-data"
 
 const steps = [
