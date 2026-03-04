@@ -25,26 +25,33 @@ function buildParticipantBlock(roles: ParticipantRoles): string {
 
 const USER_PROMPT = (
   prior: AnalysisResult,
-  newConversation: string,
-  participantRoles: ParticipantRoles
+  newConversation: string | null,
+  participantRoles: ParticipantRoles,
+  supplementalContext: string | null
 ) => {
   const participantContext = Object.keys(participantRoles).length > 0
     ? buildParticipantBlock(participantRoles)
     : ""
 
+  const contextBlock = supplementalContext?.trim()
+    ? `\nADDITIONAL CONTEXT PROVIDED BY PM:\n${supplementalContext.trim()}\n`
+    : ""
+
+  const messagesBlock = newConversation?.trim()
+    ? `\nNEW MESSAGES TO INCORPORATE:\n${newConversation}`
+    : "\nNO NEW MESSAGES — update is based on additional context only."
+
   return `${participantContext}PREVIOUS ANALYSIS (from ${prior.stats.dateRange}):
 ${JSON.stringify(prior, null, 2)}
+${contextBlock}${messagesBlock}
 
-NEW MESSAGES TO INCORPORATE:
-${newConversation}
-
-Produce a fully updated analysis using the same JSON structure as the previous analysis, incorporating both old context and new signals. Also add a "changesSince" field:
+Produce a fully updated analysis using the same JSON structure as the previous analysis, adjusting confidence, health score, risk signals, caveats, and data gaps wherever the new context changes your assessment. Also add a "changesSince" field:
 
 {
   "changesSince": {
     "summary": "<1-2 sentences describing what changed>",
     "newRiskSignals": <count of new risk signals not in previous analysis>,
-    "resolvedSignals": <count of issues that appear resolved>,
+    "resolvedSignals": <count of issues that appear resolved or clarified by the new context>,
     "healthDelta": <integer, positive = improved, negative = declined, 0 = stable>
   }
 }`
@@ -54,18 +61,23 @@ export async function POST(req: NextRequest) {
   try {
     const {
       priorAnalysis,
-      conversation,
+      conversation = null,
       messageCount,
       participantRoles = {},
+      supplementalContext = null,
     } = await req.json() as {
       priorAnalysis: AnalysisResult
-      conversation: string
+      conversation?: string | null
       messageCount?: number
       participantRoles?: Record<string, "vendor" | "customer" | "partner" | "other">
+      supplementalContext?: string | null
     }
 
-    if (!priorAnalysis || !conversation) {
-      return NextResponse.json({ error: "priorAnalysis and conversation are required" }, { status: 400 })
+    if (!priorAnalysis) {
+      return NextResponse.json({ error: "priorAnalysis is required" }, { status: 400 })
+    }
+    if (!conversation && !supplementalContext) {
+      return NextResponse.json({ error: "Provide conversation or supplementalContext" }, { status: 400 })
     }
 
     const apiKey = process.env.OPENROUTER_API_KEY
@@ -86,7 +98,7 @@ export async function POST(req: NextRequest) {
         temperature: 0.2,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: USER_PROMPT(priorAnalysis, conversation, participantRoles) },
+          { role: "user", content: USER_PROMPT(priorAnalysis, conversation, participantRoles, supplementalContext) },
         ],
       }),
     })

@@ -514,7 +514,41 @@ function AnalysisReport({
 
       {/* Analysis quality / caveats */}
       {result.analysisQuality && (result.analysisQuality.caveats.length > 0 || result.analysisQuality.dataGaps.length > 0) && (
-        <AnalysisQualityBanner quality={result.analysisQuality} />
+        <AnalysisQualityBanner
+          quality={result.analysisQuality}
+          savedContext={account.supplementalContext}
+          onSave={async (ctx) => {
+            if (!user) return
+            await updateAccount(user.uid, id, { supplementalContext: ctx })
+            setAccount((prev) => prev ? { ...prev, supplementalContext: ctx } : prev)
+          }}
+          onReanalyze={async (ctx) => {
+            if (!user) return
+            await updateAccount(user.uid, id, { supplementalContext: ctx })
+            setAccount((prev) => prev ? { ...prev, supplementalContext: ctx } : prev)
+            try {
+              const res = await fetch("/api/concept/reanalyze", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  priorAnalysis: result,
+                  participantRoles: account.participantRoles,
+                  supplementalContext: ctx,
+                }),
+              })
+              const data = await res.json()
+              if (!res.ok) throw new Error(data.error)
+              await updateAccount(user.uid, id, {
+                result: data.result as AnalysisResult,
+                updatedAt: new Date().toISOString(),
+              })
+              const updated = await getAccount(user.uid, id)
+              if (updated) setAccount(updated)
+            } catch (err) {
+              console.error("Context re-analysis failed:", err)
+            }
+          }}
+        />
       )}
 
       {/* Health score */}
@@ -675,10 +709,21 @@ function AnalysisReport({
 
 function AnalysisQualityBanner({
   quality,
+  savedContext,
+  onSave,
+  onReanalyze,
 }: {
   quality: NonNullable<AnalysisResult["analysisQuality"]>
+  savedContext?: string
+  onSave: (ctx: string) => Promise<void>
+  onReanalyze: (ctx: string) => Promise<void>
 }) {
   const [expanded, setExpanded] = useState(false)
+  const [context, setContext] = useState(savedContext ?? "")
+  const [saving, setSaving] = useState(false)
+  const [reanalysing, setReanalysing] = useState(false)
+  const [saved, setSaved] = useState(false)
+
   const confColor = quality.confidence === "low"
     ? "bg-amber-50 border-amber-200"
     : quality.confidence === "medium"
@@ -691,6 +736,22 @@ function AnalysisQualityBanner({
     : "text-green-700"
   const confLabel = { high: "High confidence", medium: "Medium confidence", low: "Low confidence" }[quality.confidence]
 
+  const handleSave = async () => {
+    if (!context.trim()) return
+    setSaving(true)
+    await onSave(context)
+    setSaving(false)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2500)
+  }
+
+  const handleReanalyze = async () => {
+    if (!context.trim()) return
+    setReanalysing(true)
+    await onReanalyze(context)
+    setReanalysing(false)
+  }
+
   return (
     <div className={`border rounded-lg overflow-hidden ${confColor}`}>
       <button
@@ -702,11 +763,14 @@ function AnalysisQualityBanner({
           {quality.confidence !== "high" && (
             <span className="text-xs text-neutral-500">· Nectic flagged {quality.caveats.length + quality.dataGaps.length} limitation{quality.caveats.length + quality.dataGaps.length !== 1 ? "s" : ""}</span>
           )}
+          {savedContext && (
+            <span className="text-xs text-blue-500 font-medium">· context added</span>
+          )}
         </div>
         <span className="text-neutral-400 text-xs">{expanded ? "▾" : "▴"}</span>
       </button>
       {expanded && (
-        <div className="px-5 pb-4 space-y-3 border-t border-black/5 pt-3">
+        <div className="px-5 pb-5 space-y-4 border-t border-black/5 pt-3">
           {quality.caveats.length > 0 && (
             <div>
               <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1.5">What Nectic is uncertain about</p>
@@ -731,6 +795,37 @@ function AnalysisQualityBanner({
               </ul>
             </div>
           )}
+
+          {/* Supplemental context input */}
+          <div className="pt-1 border-t border-black/5">
+            <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-2">Add what you know</p>
+            <p className="text-xs text-neutral-400 mb-2 leading-relaxed">
+              Paste in any context that fills these gaps — contract values, stakeholder info, outcome of meetings, CRM notes, anything. Nectic will update the analysis without needing a new WhatsApp export.
+            </p>
+            <textarea
+              value={context}
+              onChange={(e) => setContext(e.target.value)}
+              placeholder="e.g. BTN contract is 1.4M IDR, renewal in June. PKS approved April 2. Liana confirmed ITM is no longer a priority account..."
+              rows={4}
+              className="w-full text-xs border border-neutral-200 rounded-lg px-3 py-2.5 text-neutral-700 focus:outline-none focus:border-neutral-400 bg-white resize-none leading-relaxed"
+            />
+            <div className="flex gap-2 mt-2">
+              <button
+                onClick={handleSave}
+                disabled={!context.trim() || saving}
+                className="text-xs px-3 py-1.5 border border-neutral-200 rounded-lg text-neutral-600 hover:bg-neutral-50 disabled:opacity-40 transition-colors"
+              >
+                {saved ? "Saved" : saving ? "Saving…" : "Save"}
+              </button>
+              <button
+                onClick={handleReanalyze}
+                disabled={!context.trim() || reanalysing}
+                className="text-xs px-3 py-1.5 bg-neutral-900 text-white rounded-lg hover:bg-neutral-700 disabled:opacity-40 transition-colors"
+              >
+                {reanalysing ? "Updating analysis…" : "Update analysis"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

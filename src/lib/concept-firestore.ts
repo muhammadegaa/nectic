@@ -34,6 +34,7 @@ export interface StoredAccount {
   participantRoles: ParticipantRoles
   context: AccountContext
   shareToken: string
+  supplementalContext?: string
 }
 
 export interface AggregatedSignal {
