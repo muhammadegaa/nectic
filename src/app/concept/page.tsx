@@ -418,7 +418,7 @@ function ConsentFooter({ onAnalyze, onRetry }: { onAnalyze: () => void; onRetry:
           />
         </div>
         <p className="text-xs text-neutral-600 leading-relaxed">
-          I confirm I have the right to share these conversations for analysis. I understand conversation text will be sent to Anthropic for processing.{" "}
+          I confirm I have the right to share these conversations for analysis.{" "}
           <a href="/privacy" target="_blank" className="underline hover:text-neutral-900 transition-colors">Privacy policy</a>
         </p>
       </label>
@@ -483,7 +483,7 @@ function ConnectModal({
                   {stage === "instructions" && "Export a group chat to get started"}
                   {stage === "upload" && "Drop your export file"}
                   {stage === "ready" && "Review before analysis"}
-                  {stage === "analyzing" && "Analysing with Claude…"}
+                  {stage === "analyzing" && "Analysing..."}
                   {stage === "error" && "Something went wrong"}
                 </p>
               </div>
@@ -576,7 +576,7 @@ function ConnectModal({
                     )}
                   </div>
                   <p className="text-xs text-neutral-500 mb-3">
-                    Nectic auto-detects roles from message patterns. Correct any that look wrong.
+                    Roles are pre-filled from message patterns. Correct any that look off.
                   </p>
                   <div className="space-y-2">
                     {parsed.participants.map((name) => {
@@ -589,9 +589,6 @@ function ConnectModal({
                               {ROLE_LABEL[role]}
                             </span>
                             <span className="text-xs text-neutral-700 truncate font-medium">{name}</span>
-                            {isAiSuggested && (
-                              <span className="text-xs text-neutral-400 flex-shrink-0">AI</span>
-                            )}
                           </div>
                           <select
                             value={role}
@@ -650,9 +647,9 @@ function ConnectModal({
               <div className="py-8 text-center">
                 <div className="w-12 h-12 border-2 border-neutral-200 border-t-neutral-900 rounded-full animate-spin mx-auto mb-4" />
                 <p className="text-sm font-semibold text-neutral-900">Analysing {parsed?.totalMessages} messages</p>
-                <p className="mt-1 text-xs text-neutral-400">Claude Haiku 4.5 · ~10 seconds</p>
+                <p className="mt-1 text-xs text-neutral-400">Usually takes about 10 seconds</p>
                 <div className="mt-5 space-y-2 text-left">
-                  {["Identifying customer voice…", "Extracting risk signals…", "Clustering product signals…", "Scoring account health…"].map((s, i) => (
+                  {["Identifying customer voice…", "Extracting risk signals…", "Grouping product signals…", "Scoring account health…"].map((s, i) => (
                     <div key={i} className="flex items-center gap-2">
                       <div className="w-1.5 h-1.5 rounded-full bg-neutral-300 animate-pulse" style={{ animationDelay: `${i * 350}ms` }} />
                       <p className="text-xs text-neutral-500">{s}</p>

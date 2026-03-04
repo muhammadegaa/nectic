@@ -679,7 +679,7 @@ function AnalysisReport({
                     &ldquo;{s.quote}&rdquo;
                   </div>
                   <p className="text-xs text-neutral-500 mb-3">
-                    <span className="font-medium text-neutral-600">PM action:</span> {s.pmAction}
+                    <span className="font-medium text-neutral-600">Suggested action:</span> {s.pmAction}
                   </p>
                   <SignalActionControl
                     signalKey={key}
@@ -790,10 +790,10 @@ function AnalysisQualityBanner({
         <div className="flex items-center gap-2">
           <span className={`text-xs font-semibold ${confText}`}>{confLabel}</span>
           {quality.confidence !== "high" && (
-            <span className="text-xs text-neutral-500">· Nectic flagged {quality.caveats.length + quality.dataGaps.length} limitation{quality.caveats.length + quality.dataGaps.length !== 1 ? "s" : ""}</span>
+            <span className="text-xs text-neutral-500">· {quality.caveats.length + quality.dataGaps.length} thing{quality.caveats.length + quality.dataGaps.length !== 1 ? "s" : ""} to be aware of</span>
           )}
           {savedContext && (
-            <span className="text-xs text-blue-500 font-medium">· context added</span>
+            <span className="text-xs text-blue-500 font-medium">· you added context</span>
           )}
         </div>
         <span className="text-neutral-400 text-xs">{expanded ? "▾" : "▴"}</span>
@@ -814,7 +814,7 @@ function AnalysisQualityBanner({
           )}
           {quality.dataGaps.length > 0 && (
             <div>
-              <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1.5">What would improve accuracy</p>
+              <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1.5">Missing context</p>
               <ul className="space-y-1">
                 {quality.dataGaps.map((g, i) => (
                   <li key={i} className="text-xs text-neutral-600 flex gap-2">
@@ -1239,7 +1239,7 @@ function BriefPanel({
         {phase === "context" && (
           <div className="flex-1 overflow-y-auto px-5 py-5 flex flex-col">
             <p className="text-xs text-neutral-500 mb-5 leading-relaxed">
-              This context shapes the brief. Nectic writes differently depending on whether this is new, already planned, or somewhere in between.
+              The brief adapts based on where this sits on your roadmap.
             </p>
 
             {/* Problem statement */}
@@ -1264,7 +1264,7 @@ function BriefPanel({
               ))}
             </div>
 
-            <p className="text-xs font-semibold text-neutral-700 mb-2">Anything else Nectic should know? <span className="font-normal text-neutral-400">(optional)</span></p>
+            <p className="text-xs font-semibold text-neutral-700 mb-2">Anything else to include? <span className="font-normal text-neutral-400">(optional)</span></p>
             <textarea
               value={additionalContext}
               onChange={(e) => setAdditionalContext(e.target.value)}
