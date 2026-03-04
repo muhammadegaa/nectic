@@ -118,10 +118,21 @@ export async function POST(req: NextRequest) {
 
     const data = await response.json()
     const raw = data.choices?.[0]?.message?.content
-    if (!raw) return NextResponse.json({ error: "Empty response" }, { status: 502 })
+    if (!raw) return NextResponse.json({ error: "Empty response from model. Please try again." }, { status: 502 })
 
-    const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim()
-    const result: AnalysisResult = JSON.parse(cleaned)
+    const stripped = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim()
+    const jsonMatch = stripped.match(/\{[\s\S]*\}/)
+    if (!jsonMatch) {
+      console.error("No JSON in reanalyze response:", stripped.slice(0, 300))
+      return NextResponse.json({ error: "Re-analysis failed — model returned unexpected format. Please try again." }, { status: 502 })
+    }
+    let result: AnalysisResult
+    try {
+      result = JSON.parse(jsonMatch[0])
+    } catch (parseErr) {
+      console.error("Reanalyze JSON parse failed:", parseErr)
+      return NextResponse.json({ error: "Re-analysis could not be completed. Please try again." }, { status: 502 })
+    }
     if (messageCount) result.stats.messageCount = messageCount
 
     return NextResponse.json({ result }, { status: 200 })

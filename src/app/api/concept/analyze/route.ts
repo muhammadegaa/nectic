@@ -173,12 +173,28 @@ export async function POST(req: NextRequest) {
     const raw = data.choices?.[0]?.message?.content
 
     if (!raw) {
-      return NextResponse.json({ error: "Empty response from model" }, { status: 502 })
+      return NextResponse.json({ error: "Empty response from model. Please try again." }, { status: 502 })
     }
 
-    // Strip markdown code fences if model wraps the JSON
-    const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim()
-    const result: AnalysisResult = JSON.parse(cleaned)
+    // Strip markdown code fences, then extract the outermost JSON object
+    const stripped = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim()
+    const jsonMatch = stripped.match(/\{[\s\S]*\}/)
+    if (!jsonMatch) {
+      console.error("No JSON object found in model response:", stripped.slice(0, 300))
+      return NextResponse.json({
+        error: "Analysis could not be completed. The model returned an unexpected format — please try again.",
+      }, { status: 502 })
+    }
+
+    let result: AnalysisResult
+    try {
+      result = JSON.parse(jsonMatch[0])
+    } catch (parseErr) {
+      console.error("JSON parse failed:", parseErr, "raw:", stripped.slice(0, 300))
+      return NextResponse.json({
+        error: "Analysis could not be completed. Please try again — if the issue persists, try a shorter conversation.",
+      }, { status: 502 })
+    }
 
     if (messageCount) result.stats.messageCount = messageCount
     if (participantCount) result.stats.participantCount = participantCount

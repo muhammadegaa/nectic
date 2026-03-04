@@ -354,6 +354,38 @@ const ROLE_LABEL: Record<ParticipantRole, string> = {
   other: "?",
 }
 
+function ConsentFooter({ onAnalyze, onRetry }: { onAnalyze: () => void; onRetry: () => void }) {
+  const [agreed, setAgreed] = useState(false)
+  return (
+    <div className="px-6 py-4 border-t border-neutral-100 flex-shrink-0 space-y-3">
+      <label className="flex items-start gap-3 cursor-pointer group">
+        <div className="flex-shrink-0 mt-0.5">
+          <input
+            type="checkbox"
+            checked={agreed}
+            onChange={(e) => setAgreed(e.target.checked)}
+            className="w-4 h-4 rounded border-neutral-300 text-neutral-900 focus:ring-0 cursor-pointer"
+          />
+        </div>
+        <p className="text-xs text-neutral-600 leading-relaxed">
+          I confirm I have the right to share these conversations for analysis. I understand conversation text will be sent to Anthropic for processing.{" "}
+          <a href="/privacy" target="_blank" className="underline hover:text-neutral-900 transition-colors">Privacy policy</a>
+        </p>
+      </label>
+      <button
+        onClick={onAnalyze}
+        disabled={!agreed}
+        className="w-full bg-neutral-900 text-white text-sm font-semibold py-3 rounded-lg hover:bg-neutral-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        Run analysis →
+      </button>
+      <button onClick={onRetry} className="w-full text-xs text-neutral-400 hover:text-neutral-600 transition-colors py-1">
+        Use a different file
+      </button>
+    </div>
+  )
+}
+
 function ConnectModal({
   stage, parsed, fileName, error, dragging, inputRef,
   participantRoles, context,
@@ -577,17 +609,7 @@ function ConnectModal({
 
           {/* Footer CTA */}
           {stage === "ready" && (
-            <div className="px-6 py-4 border-t border-neutral-100 flex-shrink-0 space-y-2">
-              <p className="text-xs text-neutral-400 leading-relaxed">
-                By continuing, you confirm you have the right to share these conversations for analysis. Conversation text is sent to Anthropic for processing and stored securely. <a href="/privacy" target="_blank" className="underline hover:text-neutral-600 transition-colors">Privacy policy</a>
-              </p>
-              <button onClick={onAnalyze} className="w-full bg-neutral-900 text-white text-sm font-semibold py-3 rounded-lg hover:bg-neutral-700 transition-colors">
-                Run analysis →
-              </button>
-              <button onClick={onRetry} className="w-full text-xs text-neutral-400 hover:text-neutral-600 transition-colors py-1">
-                Use a different file
-              </button>
-            </div>
+            <ConsentFooter onAnalyze={onAnalyze} onRetry={onRetry} />
           )}
         </div>
       </div>
