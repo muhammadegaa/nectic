@@ -1,0 +1,73 @@
+[15/01/2025, 08:30:05] Farid Hakim: Selamat pagi semua! Ini grup implementasi FleetTrack untuk Armada Express. Saya Farid Account Executive, dan Nadia CSM dari tim kami. Dari PT Teknologi Maju ada Pak Reza sebagai implementation partner kami, dan dari Armada Express ada Pak Taufik
+[15/01/2025, 08:31:20] Nadia Permata: Pagi semua! Excited untuk mulai project ini
+[15/01/2025, 08:32:40] Reza Firmansyah: Selamat pagi! Saya Reza dari PT Teknologi Maju, authorized reseller FleetTrack. Saya yang akan jadi point of contact utama untuk implementasi di Armada Express
+[15/01/2025, 08:35:15] Pak Taufik Hidayat: Selamat pagi. Saya Taufik Operations Director Armada Express. Kami harap implementasi ini bisa berjalan lancar. Kami sudah lama butuh sistem tracking yang proper
+
+[20/01/2025, 10:20:33] Reza Firmansyah: Pak Taufik, sesuai diskusi kemarin, saya sudah coordinate dengan tim FleetTrack untuk jadwal kick-off. Kita sepakat minggu depan Selasa ya?
+[20/01/2025, 10:22:00] Pak Taufik Hidayat: Oke Pak Reza, tapi saya ingin Pak Farid dan tim FleetTrack juga hadir langsung. Ada beberapa hal teknikal yang perlu saya diskusikan dengan mereka
+[20/01/2025, 10:23:30] Reza Firmansyah: Pak Taufik, semua komunikasi teknikal sudah saya cover. Pak Farid dan Nadia tidak perlu hadir, saya yang represent mereka
+[20/01/2025, 10:24:45] Pak Taufik Hidayat: Saya lebih nyaman kalau ada orang FleetTrack langsung. Beberapa pertanyaan saya mungkin perlu dijawab oleh mereka
+[20/01/2025, 10:25:55] Farid Hakim: Pak Taufik, tentu kami bisa hadir. Nadia dan saya akan join Selasa
+[20/01/2025, 10:26:30] Reza Firmansyah: Sebenarnya tidak perlu ya Pak Farid, standar proses kami partner yang handle kick-off
+[20/01/2025, 10:27:15] Farid Hakim: Pak Reza, kehadiran kami adalah untuk memastikan Pak Taufik puas. Kami tetap join
+
+[28/01/2025, 14:05:00] Pak Taufik Hidayat: Nadia, ada pertanyaan soal API integrasi ke sistem dispatch kami. Tim IT kami mau tau apakah FleetTrack support real-time push notification ke driver app custom kami?
+[28/01/2025, 14:06:30] Reza Firmansyah: Pak Taufik, untuk pertanyaan teknikal tolong disampaikan ke saya dulu ya. Saya yang akan filter dan forward ke FleetTrack
+[28/01/2025, 14:07:20] Pak Taufik Hidayat: Pak Reza, saya tanya langsung ke Nadia karena ini technical specifics. Tidak perlu di-filter
+[28/01/2025, 14:08:05] Nadia Permata: Pak Taufik, pertanyaan bagus! FleetTrack support webhook untuk real-time events. Saya bisa share technical spec-nya ke tim IT Bapak langsung
+[28/01/2025, 14:08:50] Pak Taufik Hidayat: Terima kasih Nadia, please share ke email IT Manager kami, Pak Surya
+[28/01/2025, 14:09:30] Reza Firmansyah: Nadia, untuk dokumentasi teknikal harap koordinasikan melalui saya dulu. Ini sudah disepakati dalam partner agreement
+[28/01/2025, 14:10:45] Nadia Permata: Pak Reza, saya akan tetap share ke Pak Taufik karena ini informasi yang dia butuhkan untuk implementasi. Tentu saya CC Pak Reza juga
+
+[05/02/2025, 11:30:00] Pak Taufik Hidayat: Farid, ada concern yang perlu saya sampaikan. Tim kami merasa ada informasi yang tidak langsung sampai ke kami dari FleetTrack. Beberapa feature yang kami tanyakan, jawabannya tidak jelas
+[05/02/2025, 11:31:45] Farid Hakim: Pak Taufik, saya mendengar. Bisa lebih spesifik feature apa yang belum clear?
+[05/02/2025, 11:32:55] Pak Taufik Hidayat: Pertama, fitur geofencing alert. Pak Reza bilang "belum tersedia" tapi waktu saya baca website kalian, sepertinya ada?
+[05/02/2025, 11:34:00] Farid Hakim: Pak Taufik, geofencing ada dan sudah tersedia di plan yang Bapak berlangganan. Tidak tau kenapa dikatakan belum tersedia
+[05/02/2025, 11:35:20] Reza Firmansyah: Pak Farid, maksud saya adalah geofencing untuk multiple custom zone yang advanced. Versi basic memang ada
+[05/02/2025, 11:36:40] Pak Taufik Hidayat: Pak Reza, saya butuh versi yang bisa handle 200+ delivery zones. Itu basic atau advanced?
+[05/02/2025, 11:37:55] Farid Hakim: Pak Taufik, 200 zones itu supported di plan Bapak. Tidak ada pembatasan. Saya akan kirim dokumentasi langsung ke Bapak
+[05/02/2025, 11:38:30] Pak Taufik Hidayat: Terima kasih Pak Farid. Ini yang saya butuhkan - jawaban langsung
+[05/02/2025, 11:39:45] Reza Firmansyah: Farid, saya rasa kita perlu bicara dulu sebelum kasih informasi langsung ke customer
+
+[10/02/2025, 09:15:00] Pak Taufik Hidayat: Ada situasi urgent. 3 driver kami tidak muncul di tracking padahal GPS device sudah di-install. Ini sudah dari kemarin malam
+[10/02/2025, 09:16:30] Nadia Permata: Pak Taufik, ini urgent. Saya investigasi sekarang. Bisa share device ID ketiga driver tersebut?
+[10/02/2025, 09:17:00] Pak Taufik Hidayat: <Media omitted>
+[10/02/2025, 09:17:15] Pak Taufik Hidayat: Ini device ID-nya
+[10/02/2025, 09:18:00] Reza Firmansyah: Pak Taufik, seharusnya laporan issue ini ke saya dulu, saya yang akan eskalasi
+[10/02/2025, 09:18:45] Pak Taufik Hidayat: Pak Reza, ini situasi operasional. Saya tidak punya waktu untuk jalur birokrasi
+[10/02/2025, 09:19:30] Nadia Permata: Pak Taufik, saya sudah cek - device ID ini belum teregistrasi di sistem. Apakah instalasi dilakukan oleh tim Pak Reza?
+[10/02/2025, 09:20:15] Pak Taufik Hidayat: Iya, Pak Reza yang handle instalasi
+[10/02/2025, 09:21:00] Reza Firmansyah: Ada oversight di proses registrasi. Saya fix segera
+[10/02/2025, 09:21:45] Pak Taufik Hidayat: Ini artinya kemarin 3 driver kami beroperasi tanpa tracking. Itu risiko besar untuk bisnis kami
+[10/02/2025, 09:22:30] Nadia Permata: Pak Taufik, saya dan Pak Reza coordinate untuk fix sekarang. Estimasi 30 menit resolved
+[10/02/2025, 10:05:22] Nadia Permata: Pak Taufik, ketiga device sudah terdaftar dan tracking sudah aktif. Mohon dicek
+[10/02/2025, 10:07:00] Pak Taufik Hidayat: Confirmed sudah muncul. Terima kasih Nadia. Tapi ini harus ada audit untuk semua device yang diinstall
+
+[14/02/2025, 15:00:00] Pak Taufik Hidayat: Nadia, Farid - dari total 47 GPS device yang harusnya terinstall, setelah audit kami temukan 12 belum ter-register di sistem. Ini artinya 25% armada kami tidak ter-track selama 2 minggu
+[14/02/2025, 15:02:30] Farid Hakim: Pak Taufik, ini sangat serius. Saya minta maaf atas hal ini. Saya coordinate dengan Pak Reza untuk complete registration hari ini
+[14/02/2025, 15:03:45] Reza Firmansyah: Pak Taufik, ada miscommunication di tim instalasi kami. Kami akan selesaikan semua hari ini
+[14/02/2025, 15:04:30] Pak Taufik Hidayat: Pak Reza, ini bukan miscommunication. Ini quality control yang buruk. Untuk project senilai ini, saya harapkan proses yang lebih profesional
+[14/02/2025, 15:05:45] Farid Hakim: Pak Taufik, FleetTrack akan send technical engineer besok untuk verifikasi semua 47 device secara langsung. Tanpa charge tambahan
+[14/02/2025, 15:06:30] Pak Taufik Hidayat: Terima kasih Pak Farid. Itu yang seharusnya dilakukan dari awal
+[14/02/2025, 15:07:00] Reza Firmansyah: Pak Farid, kita harus diskusi dulu soal visit ke customer tanpa melalui partner
+[14/02/2025, 15:07:45] Farid Hakim: Pak Reza, ini exceptional situation yang membutuhkan exceptional response. Kita bicara offline
+
+[20/02/2025, 10:30:00] Pak Taufik Hidayat: Update positif - technical engineer dari FleetTrack sudah verify semua device. 47 dari 47 aktif. Tracking sekarang berjalan normal
+[20/02/2025, 10:31:30] Nadia Permata: Sangat lega Pak Taufik! Mohon maaf sekali atas pengalaman yang kurang baik di awal
+[20/02/2025, 10:32:15] Pak Taufik Hidayat: Terima kasih untuk respon cepat dari tim FleetTrack langsung. Itu yang membuat perbedaan
+[20/02/2025, 10:33:00] Pak Taufik Hidayat: Nadia, saya ingin kasih feedback jujur. Sistem FleetTrack sendiri bagus, tidak ada masalah dengan produknya. Masalah utama kami adalah dengan proses melalui Pak Reza yang sering tidak efisien
+[20/02/2025, 10:34:30] Nadia Permata: Pak Taufik, terima kasih feedbacknya. Kami sangat appreciate keterbukaan ini
+[20/02/2025, 10:35:00] Pak Taufik Hidayat: Untuk renewal nanti, kami ingin mempertimbangkan direct contract dengan FleetTrack, bukan melalui reseller
+
+[25/02/2025, 14:00:00] Pak Taufik Hidayat: Farid, kontrak kami expire 3 bulan lagi. Saya mau mulai diskusi renewal. Tapi seperti yang saya sampaikan ke Nadia, kami prefer direct
+[25/02/2025, 14:01:45] Reza Firmansyah: Pak Taufik, untuk renewal tentu melalui PT Teknologi Maju ya. Kami yang ada perjanjian dengan Armada Express
+[25/02/2025, 14:02:30] Pak Taufik Hidayat: Pak Reza, perjanjian awal memang melalui Bapak. Tapi saya berhak memilih cara kontrak yang paling baik untuk kami ke depan
+[25/02/2025, 14:03:45] Farid Hakim: Pak Taufik, saya akan cek apa yang bisa kami accommodate. Ada prosedur untuk konversi ke direct account. Saya coordinate dengan management kami
+[25/02/2025, 14:04:30] Reza Firmansyah: Farid, ini melanggar partner agreement kita. Saya tidak bisa terima ini
+[25/02/2025, 14:05:15] Farid Hakim: Pak Reza, saya akan koordinasi dengan Anda offline soal hal ini
+[25/02/2025, 14:06:00] Pak Taufik Hidayat: Apapun keputusannya, kami tetap ingin lanjut dengan FleetTrack. Produknya bagus. Hanya proses dan komunikasinya yang perlu diperbaiki
+[25/02/2025, 14:07:30] Nadia Permata: Pak Taufik, terima kasih atas kepercayaan terhadap produk kami. Kami akan pastikan proses ke depan jauh lebih smooth
+[25/02/2025, 14:08:15] Pak Taufik Hidayat: Satu lagi - kami juga tertarik dengan modul Route Optimization. Apakah bisa diinclude di renewal?
+[25/02/2025, 14:09:00] Farid Hakim: Tentu Pak Taufik, itu bisa kami include dalam package renewal. Saya prepare proposal minggu ini
+[25/02/2025, 14:09:45] Reza Firmansyah: Pak Taufik, proposal renewal harus melalui saya
+[25/02/2025, 14:10:30] Pak Taufik Hidayat: Pak Reza, saya menghargai kerja Bapak, tapi saya akan terima proposal dari siapapun yang bisa berikan deal terbaik untuk kami

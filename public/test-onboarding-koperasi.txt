@@ -1,0 +1,79 @@
+[03/02/2025, 08:00:22] Maya Sari: Selamat pagi tim Koperasi Digital Nusantara! Saya Maya dari tim implementasi KoperasiCore, dan ada Dian dari tim support kami. Ini grup untuk mendampingi go-live kalian yang sangat ditunggu-tunggu!
+[03/02/2025, 08:02:15] Dian Pratiwi: Pagi semua! Siap support 100%
+[03/02/2025, 08:05:40] Pak Bambang Susilo: Selamat pagi! Saya Bambang, IT Manager. Kami semua excited untuk mulai. Go-live hari ini ya!
+[03/02/2025, 08:07:00] Bu Fitri Handayani: Pagi! Saya Fitri dari operasional. Tim teller kami sudah siap
+[03/02/2025, 08:08:30] Pak Agus Pranoto: Pagi semua, Agus - head teller. Sudah buka sistem baru tadi pagi tapi masih loading
+
+[03/02/2025, 09:15:45] Pak Agus Pranoto: Maya, teller saya ada 5 orang, tapi yang bisa login baru 2. Yang 3 lagi dapat pesan "user not found"
+[03/02/2025, 09:17:00] Maya Sari: Pak Agus, user provisioning mungkin belum complete untuk 3 user itu. Bisa share username-nya?
+[03/02/2025, 09:17:45] Pak Agus Pranoto: Sri, Wati, dan Heru. Mereka sudah daftar kemarin
+[03/02/2025, 09:19:00] Dian Pratiwi: Pak Agus, saya cek di backend. Ternyata email yang didaftarkan untuk Wati ada typo - "wati@kdn.co.i" harusnya "wati@kdn.co.id". Saya fix sekarang
+[03/02/2025, 09:20:30] Dian Pratiwi: Sri dan Heru ada di sistem tapi role assignment belum selesai. Saya assign sekarang
+[03/02/2025, 09:22:00] Pak Agus Pranoto: Oke ditunggu
+[03/02/2025, 09:28:15] Pak Agus Pranoto: Sri dan Heru sudah bisa masuk. Tapi Wati masih tidak bisa
+[03/02/2025, 09:30:00] Dian Pratiwi: Pak Agus, Wati perlu reset password setelah email fix. Saya sudah kirim reset link ke email Wati. Minta Wati cek inbox
+[03/02/2025, 09:35:20] Pak Agus Pranoto: OK sudah bisa. Makasih!
+
+[03/02/2025, 11:00:00] Bu Fitri Handayani: Maya, ada yang bingung soal proses simpanan. Di sistem lama kami, deposit masuk otomatis ke rekening anggota. Sekarang teller bilang ada step tambahan yang tidak mereka mengerti
+[03/02/2025, 11:01:30] Maya Sari: Bu Fitri, di KoperasiCore ada approval workflow untuk deposit di atas Rp 10 juta untuk compliance. Apakah itu yang dimaksud?
+[03/02/2025, 11:02:45] Bu Fitri Handayani: Iya sepertinya. Tapi waktu training tidak ada yang explain soal ini. Semua deposit harus di-approve?
+[03/02/2025, 11:03:30] Maya Sari: Hanya deposit > 10 juta. Ini sesuai requirement KYC yang kita diskusikan di scoping. Saya kirimkan user guide spesifik untuk flow ini
+[03/02/2025, 11:04:15] Bu Fitri Handayani: Baik, tapi teller kami belum familiar. Apakah bisa ada session training lagi?
+[03/02/2025, 11:05:00] Maya Sari: Tentu Bu Fitri! Saya schedule refresher training untuk teller besok pagi ya
+[03/02/2025, 11:05:45] Bu Fitri Handayani: Terima kasih Maya
+
+[03/02/2025, 14:30:00] Pak Bambang Susilo: Dian, ada issue di modul pelaporan. Saya coba generate laporan harian posisi simpanan tapi formatnya berbeda dari yang biasanya kami submit ke Dinas Koperasi
+[03/02/2025, 14:31:30] Dian Pratiwi: Pak Bambang, format laporan di KoperasiCore mengikuti standar nasional SIKP (Sistem Informasi Koperasi Primer). Apakah format yang Bapak submit sebelumnya custom?
+[03/02/2025, 14:32:45] Pak Bambang Susilo: Iya, format kami sudah disesuaikan selama 5 tahun dengan Dinas setempat. Mereka biasa menerima format itu
+[03/02/2025, 14:33:30] Dian Pratiwi: Hmm, apakah Dinas bisa menerima format SIKP standar? Karena itu sebenarnya lebih benar secara regulasi
+[03/02/2025, 14:34:15] Pak Bambang Susilo: Saya tidak tahu. Selama ini kami pakai format yang sama. Kalau harus ganti, perlu koordinasi dulu dengan Dinas
+[03/02/2025, 14:35:00] Maya Sari: Pak Bambang, kami bisa bantu buat custom template jika diperlukan. Tapi perlu waktu 1-2 minggu. Untuk sementara bisa ekspor ke Excel dan format manual?
+[03/02/2025, 14:36:20] Pak Bambang Susilo: Untuk sementara bisa. Tapi ini harusnya dibahas sebelum go-live ya, bukan sesudah
+
+[07/02/2025, 09:00:00] Pak Agus Pranoto: Selamat pagi. Ada masalah lagi. Anggota kami banyak yang datang hari ini ingin lihat saldo. Tapi di passbook (buku tabungan) print-nya ada salah format tanggal - keluar "02/07/2025" harusnya "07/02/2025"
+[07/02/2025, 09:02:30] Dian Pratiwi: Pak Agus, ini masalah locale setting. Sistem menggunakan format MM/DD/YYYY, harusnya DD/MM/YYYY. Saya perbaiki sekarang
+[07/02/2025, 09:03:45] Pak Agus Pranoto: Cepat ya, anggota sudah antri
+[07/02/2025, 09:08:00] Dian Pratiwi: Pak Agus, sudah diperbaiki. Coba print ulang
+[07/02/2025, 09:10:30] Pak Agus Pranoto: Oke sudah benar. Terima kasih. Tapi ini membuat kami malu di depan anggota
+[07/02/2025, 09:11:15] Maya Sari: Pak Agus, kami minta maaf sekali. Ini seharusnya sudah di-catch di UAT. Kami akan lebih teliti
+
+[10/02/2025, 10:15:00] Bu Fitri Handayani: Maya, teller kami masih bingung dengan 2 hal: 1. Bagaimana cara reversal kalau ada input salah? 2. Cara tutup hari (end of day closing)?
+[10/02/2025, 10:16:30] Maya Sari: Bu Fitri, keduanya ada di user manual chapter 4 dan 5. Tapi saya buatkan video tutorial ya supaya lebih mudah
+[10/02/2025, 10:17:15] Bu Fitri Handayani: Video tutorial lebih baik. User manual 80 halaman terlalu panjang untuk teller kami baca
+[10/02/2025, 10:18:00] Maya Sari: Setuju. Saya akan buat video step-by-step untuk proses-proses utama minggu ini
+[10/02/2025, 10:18:45] Bu Fitri Handayani: Dan satu lagi - ada teller yang tidak sengaja close kasir padahal masih jam operasional. Sekarang kasirnya locked. Bisa dibuka?
+[10/02/2025, 10:19:30] Dian Pratiwi: Bu Fitri, kasir locked bisa di-unlock oleh supervisor. Ada fitur supervisor override di menu Manajemen Kasir. Tapi butuh role Supervisor. Apakah ada user dengan role itu?
+[10/02/2025, 10:20:15] Bu Fitri Handayani: Ada tapi Pak Suryo supervisornya lagi keluar kantor
+[10/02/2025, 10:21:00] Dian Pratiwi: Pak Bambang sebagai IT Manager punya admin access, bisa dia yang override untuk sementara
+[10/02/2025, 10:22:30] Pak Bambang Susilo: Oke saya coba
+[10/02/2025, 10:25:00] Pak Bambang Susilo: Berhasil. Tapi Bu Fitri, kita perlu briefing semua teller agar tidak close kasir sembarangan
+[10/02/2025, 10:26:15] Bu Fitri Handayani: Setuju. Maya, ini perlu dimasukkan ke training refresher ya
+
+[14/02/2025, 13:45:00] Pak Bambang Susilo: Maya, ada pertanyaan dari management. Mereka minta laporan konsolidasi semua produk simpanan (Simpanan Pokok, Simpanan Wajib, Simpanan Sukarela) dalam satu tampilan. Di sistem lama ada dashboard ringkasan ini. Di KoperasiCore ada tidak?
+[14/02/2025, 13:46:30] Maya Sari: Pak Bambang, untuk laporan konsolidasi ada di menu Laporan > Ringkasan Produk. Tapi tampilannya dalam bentuk tabel, bukan dashboard visual
+[14/02/2025, 13:47:15] Pak Bambang Susilo: Management minta yang ada grafiknya. Sistem lama kami ada pie chart dan trend line
+[14/02/2025, 13:48:00] Maya Sari: Untuk visualisasi itu ada di modul Analytics yang merupakan add-on terpisah. Tidak include di paket yang kalian ambil
+[14/02/2025, 13:49:30] Pak Bambang Susilo: Ini seharusnya diinfokan di awal ya? Kami tidak tahu ada add-on untuk fungsi basic seperti ini
+[14/02/2025, 13:50:15] Maya Sari: Saya memahami frustrasi Pak Bambang. Untuk sementara bisa export ke Excel dan buat grafik manual. Untuk add-on Analytics saya bisa tanyakan ke sales apakah ada promo untuk existing customer
+[14/02/2025, 13:51:00] Pak Bambang Susilo: Kalau kita harus bayar extra untuk sesuatu yang di sistem lama sudah ada, itu akan jadi masalah untuk approval budget
+
+[19/02/2025, 09:30:00] Pak Agus Pranoto: Dian, ada bug. Kalau proses tarik tunai lebih dari Rp 5 juta, sistem meminta OTP ke nomor HP anggota. Tapi banyak anggota kami adalah lansia yang tidak familiar dengan OTP. Mereka bingung dan proses jadi lama
+[19/02/2025, 09:31:30] Dian Pratiwi: Pak Agus, OTP untuk transaksi besar adalah fitur keamanan yang memang disengaja sesuai standar fintech
+[19/02/2025, 09:32:15] Pak Agus Pranoto: Saya mengerti dari sisi keamanan, tapi koperasi kami berbeda dengan bank. Anggota kami mayoritas petani dan pensiunan. Tidak semua punya smartphone
+[19/02/2025, 09:33:00] Dian Pratiwi: Ini bisa jadi feedback untuk product team. Mungkin ada opsi OTP via SMS atau bypass dengan tanda tangan fisik
+[19/02/2025, 09:33:45] Bu Fitri Handayani: Ini masalah nyata di lapangan. Kemarin ada anggota yang tunggu 30 menit karena OTP tidak masuk ke HP jadul-nya
+[19/02/2025, 09:34:30] Maya Sari: Tim, ini feedback yang sangat valid. Saya akan escalate sebagai feature request urgent untuk koperasi dengan profil anggota seperti ini
+[19/02/2025, 09:35:15] Pak Bambang Susilo: Maya, ini bukan hanya request. Ini blocker untuk operasional kami. Kalau tidak ada solusi cepat, kami harus minta exception process yang sangat tidak efisien
+[19/02/2025, 09:36:00] Maya Sari: Saya sangat mendengar Pak Bambang. Saya escalate ini sebagai high priority hari ini
+
+[24/02/2025, 11:00:00] Bu Fitri Handayani: Update: training refresher minggu lalu sangat membantu. Teller-teller sudah lebih confident dengan sistem. Terima kasih Maya dan Dian
+[24/02/2025, 11:01:30] Maya Sari: Senang sekali mendengarnya Bu Fitri!
+[24/02/2025, 11:02:00] Pak Agus Pranoto: Betul, video tutorial dari Maya lebih mudah dipahami dari manual. Kecepatan teller meningkat dibanding minggu pertama
+[24/02/2025, 11:03:15] Pak Bambang Susilo: Dari sisi sistem memang sudah lebih stabil. Tapi saya masih tunggu update untuk issue OTP dan laporan format Dinas
+[24/02/2025, 11:04:00] Maya Sari: Pak Bambang, OTP alternative (SMS ke nomor feature phone) sudah disetujui product team, estimasi release 2 minggu. Untuk laporan Dinas, custom template selesai minggu ini
+[24/02/2025, 11:04:45] Pak Bambang Susilo: Good, ditunggu. Kalau dua ini selesai, saya rasa adoption akan lebih smooth
+[24/02/2025, 11:05:30] Bu Fitri Handayani: Satu hal lagi - beberapa teller minta fitur shortcut keyboard untuk proses yang sering dilakukan. Sekarang terlalu banyak klik
+[24/02/2025, 11:06:15] Dian Pratiwi: Bu Fitri, ada keyboard shortcut yang sudah built-in! Sepertinya tidak dicover di training. Saya buatkan cheat sheet ya
+[24/02/2025, 11:07:00] Bu Fitri Handayani: Wah ada? Tolong ya Dian, ini pasti sangat membantu
+[24/02/2025, 11:07:45] Pak Agus Pranoto: Kalau ada shortcut, teller kami bakal happy. Mereka selalu komplain banyak klik
+[24/02/2025, 11:08:30] Maya Sari: Kami juga akan include shortcut guide di sesi training ke depan. Ini gap dari onboarding kami yang perlu kami perbaiki

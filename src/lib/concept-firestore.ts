@@ -35,6 +35,21 @@ export interface StoredAccount {
   context: AccountContext
   shareToken: string
   supplementalContext?: string
+  signalActions?: Record<string, SignalAction>
+}
+
+export type { SignalActionStatus, SignalAction } from "@/lib/signal-utils"
+export { signalKey, buildSignalActionsBlock } from "@/lib/signal-utils"
+import type { SignalAction } from "@/lib/signal-utils"
+
+export async function saveSignalAction(
+  uid: string,
+  accountId: string,
+  key: string,
+  action: SignalAction
+): Promise<void> {
+  const ref = doc(accountsRef(uid), accountId)
+  await setDoc(ref, { signalActions: { [key]: action } }, { merge: true })
 }
 
 export interface AggregatedSignal {

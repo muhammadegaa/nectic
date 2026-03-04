@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import type { AnalysisResult } from "@/app/api/concept/analyze/route"
+import { buildSignalActionsBlock, type SignalAction } from "@/lib/signal-utils"
 
 export const maxDuration = 60
 
@@ -27,7 +28,8 @@ const USER_PROMPT = (
   prior: AnalysisResult,
   newConversation: string | null,
   participantRoles: ParticipantRoles,
-  supplementalContext: string | null
+  supplementalContext: string | null,
+  signalActions: Record<string, SignalAction> | null
 ) => {
   const participantContext = Object.keys(participantRoles).length > 0
     ? buildParticipantBlock(participantRoles)
@@ -37,13 +39,17 @@ const USER_PROMPT = (
     ? `\nADDITIONAL CONTEXT PROVIDED BY PM:\n${supplementalContext.trim()}\n`
     : ""
 
+  const actionsBlock = signalActions
+    ? buildSignalActionsBlock(signalActions, prior)
+    : ""
+
   const messagesBlock = newConversation?.trim()
     ? `\nNEW MESSAGES TO INCORPORATE:\n${newConversation}`
     : "\nNO NEW MESSAGES — update is based on additional context only."
 
   return `${participantContext}PREVIOUS ANALYSIS (from ${prior.stats.dateRange}):
 ${JSON.stringify(prior, null, 2)}
-${contextBlock}${messagesBlock}
+${actionsBlock}${contextBlock}${messagesBlock}
 
 Produce a fully updated analysis using the same JSON structure as the previous analysis, adjusting confidence, health score, risk signals, caveats, and data gaps wherever the new context changes your assessment. Also add a "changesSince" field:
 
@@ -65,12 +71,14 @@ export async function POST(req: NextRequest) {
       messageCount,
       participantRoles = {},
       supplementalContext = null,
+      signalActions = null,
     } = await req.json() as {
       priorAnalysis: AnalysisResult
       conversation?: string | null
       messageCount?: number
       participantRoles?: Record<string, "vendor" | "customer" | "partner" | "other">
       supplementalContext?: string | null
+      signalActions?: Record<string, SignalAction> | null
     }
 
     if (!priorAnalysis) {
@@ -98,7 +106,7 @@ export async function POST(req: NextRequest) {
         temperature: 0.2,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: USER_PROMPT(priorAnalysis, conversation, participantRoles, supplementalContext) },
+          { role: "user", content: USER_PROMPT(priorAnalysis, conversation, participantRoles, supplementalContext, signalActions) },
         ],
       }),
     })

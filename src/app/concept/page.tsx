@@ -225,10 +225,17 @@ export default function ConceptPage() {
   return (
     <div className="min-h-screen bg-neutral-50">
       <nav className="bg-white border-b border-neutral-200 px-4 sm:px-6 h-12 flex items-center justify-between sticky top-0 z-10">
-        <Link href="/" className="flex items-center gap-2 hover:opacity-70 transition-opacity">
-          <LogoIcon size={20} />
-          <span className="text-sm font-semibold text-neutral-900">Nectic</span>
-        </Link>
+        <div className="flex items-center gap-4">
+          <Link href="/" className="flex items-center gap-2 hover:opacity-70 transition-opacity">
+            <LogoIcon size={20} />
+            <span className="text-sm font-semibold text-neutral-900">Nectic</span>
+          </Link>
+          <span className="text-neutral-200">·</span>
+          <div className="flex items-center gap-3 text-xs">
+            <span className="text-neutral-900 font-semibold border-b-2 border-neutral-900 pb-0.5">Accounts</span>
+            <Link href="/concept/board" className="text-neutral-400 hover:text-neutral-700 transition-colors">Signal board</Link>
+          </div>
+        </div>
         <div className="flex items-center gap-3">
           <span className="text-xs bg-amber-50 border border-amber-200 text-amber-700 px-3 py-1 rounded-full font-medium">Early access</span>
           {accounts.length > 0 && !loadingAccounts && (
@@ -243,6 +250,7 @@ export default function ConceptPage() {
           </div>
         </div>
       </nav>
+
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
         {loadingAccounts ? (

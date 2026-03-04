@@ -1,0 +1,79 @@
+[04/11/2024, 09:00:00] Kevin Santoso: Selamat pagi Pak Joko! Ini Kevin CSM baru untuk akun Pabrik Cerdas Indonesia. Perkenalkan diri, saya menggantikan Pak Denny yang sudah pindah divisi. Ada Lita juga dari tim support kami
+[04/11/2024, 09:01:30] Lita Wulandari: Pagi Pak Joko! Senang bisa support
+[04/11/2024, 09:05:45] Pak Joko Santoso: Pagi Kevin, pagi Lita. Oke noted. Saya Joko IT Manager di sini. Dengan Pak Denny sebelumnya sudah cukup baik kerjanya. Semoga dengan Kevin juga bisa lancar
+[04/11/2024, 09:07:00] Kevin Santoso: Terima kasih Pak Joko! Saya akan review history akun dan pastikan saya fully up-to-date. Ada concern atau request yang ingin Bapak sampaikan di awal?
+[04/11/2024, 09:08:30] Pak Joko Santoso: Untuk sekarang oke kok. Ada beberapa customization yang sempat diskusi sama Pak Denny tapi belum jalan. Nanti saya cek notulensinya dulu
+
+[11/11/2024, 14:20:00] Kevin Santoso: Pak Joko, saya sudah review notes dari Pak Denny. Ada request untuk custom dashboard produksi yang pending. Apakah masih relevan untuk diprioritaskan?
+[11/11/2024, 14:22:30] Pak Joko Santoso: Masih relevan. Tapi ini sudah diskusi dari 4 bulan lalu dan belum ada progress. Jujur saya agak kecewa dengan pace pengembangan fiturnya
+[11/11/2024, 14:24:00] Kevin Santoso: Saya mengerti Pak Joko. Saya akan push ini ke product team. Bisa saya jadwalkan call dengan product manager kami untuk bahas priority?
+[11/11/2024, 14:25:30] Pak Joko Santoso: Boleh. Tapi kami sudah meeting 3 kali soal ini sejak Februari. Setiap kali selalu "akan dipertimbangkan di roadmap". Kalau tidak ada progress nyata, susah saya justify nilai kontrak ini ke management
+[11/11/2024, 14:27:00] Kevin Santoso: Pak Joko, saya serius akan push ini. Izinkan saya minta commitment timeline dari product team minggu ini
+[11/11/2024, 14:28:15] Pak Joko Santoso: Oke Kevin, saya tunggu
+
+[18/11/2024, 10:00:00] Kevin Santoso: Pak Joko, update dari product team - custom dashboard masuk Q1 2025 roadmap dengan high priority. Saya minta mereka commit secara tertulis
+[18/11/2024, 10:02:30] Pak Joko Santoso: Q1 2025 berarti bulan Maret paling lambat. Noted. Saya catat ini
+[18/11/2024, 10:03:15] Kevin Santoso: Betul Pak, dan saya akan monitor progress-nya tiap 2 minggu untuk Bapak
+[18/11/2024, 10:04:00] Pak Joko Santoso: Oke. Ditunggu
+
+[02/12/2024, 09:45:00] Kevin Santoso: Pak Joko, check-in rutin. Bagaimana pemakaian sistem bulan ini? Ada hal yang perlu diaddress?
+[02/12/2024, 09:45:00] Pak Joko Santoso: Oke
+[02/12/2024, 09:46:30] Kevin Santoso: Tidak ada issue yang mau disampaikan?
+[02/12/2024, 16:30:00] Pak Joko Santoso: Tidak untuk sekarang
+
+[16/12/2024, 11:00:00] Kevin Santoso: Pak Joko, menjelang akhir tahun - ada agenda review penggunaan sistem bersama management? Kami biasa bantu prepare ROI summary
+[16/12/2024, 11:00:00] Kevin Santoso: Ini bisa berguna untuk renewal budget approval ya Pak
+[16/12/2024, 15:00:00] Pak Joko Santoso: Nanti saya koordinasikan dulu dengan atasan. Desember ini banyak agenda year-end
+
+[23/12/2024, 09:00:00] Kevin Santoso: Pak Joko, selamat hari raya dan tahun baru ya! Semoga 2025 berjalan lancar untuk Pabrik Cerdas Indonesia
+[23/12/2024, 09:00:00] Pak Joko Santoso: Sama-sama Kevin
+
+[06/01/2025, 09:30:00] Kevin Santoso: Selamat tahun baru Pak Joko! Semoga 2025 produktif. Mau kick off Q1 dengan review apakah ada target atau initiative dari Pabrik Cerdas yang bisa kami support?
+[06/01/2025, 13:00:00] Pak Joko Santoso: Happy new year. Nanti ya Kevin, masih banyak yang perlu diselesaikan pasca libur
+
+[13/01/2025, 10:00:00] Kevin Santoso: Pak Joko, minggu lalu ada maintenance update. Mohon dicek apakah ada perubahan yang terasa di sistem kalian
+[13/01/2025, 10:00:00] Kevin Santoso: Update ini include performance improvement untuk modul Production Planning
+[13/01/2025, 17:00:00] Pak Joko Santoso: Ok noted
+
+[20/01/2025, 09:00:00] Kevin Santoso: Pak Joko, ada kabar yang ingin saya sampaikan - Pabrik Cerdas akan masuk dalam pilot group untuk fitur Predictive Maintenance yang sedang kami develop. Ini karena Bapak termasuk customer lama dan kami appreciate loyalty-nya
+[20/01/2025, 09:00:00] Kevin Santoso: Apakah Bapak tertarik?
+[20/01/2025, 09:00:00] Lita Wulandari: Pak Joko ini bisa jadi value addition yang bagus untuk operasional pabrik!
+[21/01/2025, 14:30:00] Pak Joko Santoso: Saya perlu diskusi internal dulu
+
+[28/01/2025, 10:00:00] Kevin Santoso: Pak Joko, sudah ada update soal pilot Predictive Maintenance? Dan bagaimana rencana untuk review annual dengan management?
+[28/01/2025, 10:00:00] Kevin Santoso: Kontrak Pabrik Cerdas akan renew bulan Maret ya, jadi kalau ada hal yang perlu didiskusikan masih ada waktu
+[30/01/2025, 11:00:00] Pak Joko Santoso: Kevin, ada kabar yang perlu saya sampaikan. Saya akan resign dari Pabrik Cerdas Indonesia akhir Februari ini. Saya sudah accept offer dari perusahaan lain
+[30/01/2025, 11:01:30] Kevin Santoso: Wah Pak Joko, congratulations untuk opportunity barunya! Tapi kami pasti kehilangan. Apakah ada pengganti yang bisa kami kenali untuk handover?
+[30/01/2025, 11:02:45] Pak Joko Santoso: Nanti saya koordinasikan dengan HR. Kemungkinan Bu Rini dari tim IT yang akan handle sementara
+
+[10/02/2025, 09:00:00] Kevin Santoso: Pak Joko, sebelum Bapak resign, bisa bantu perkenalkan kami ke Bu Rini? Ingin pastikan transisi berjalan smooth
+[10/02/2025, 09:00:00] Kevin Santoso: Dan ada beberapa pending items yang perlu di-handover: custom dashboard request, pilot Predictive Maintenance, dan renewal diskusi
+[10/02/2025, 16:45:00] Pak Joko Santoso: Sudah saya cc Bu Rini di email. Untuk detailnya nanti dia yang follow up ya. Saya sendiri sudah sangat padat mempersiapkan exit
+
+[14/02/2025, 10:00:00] Kevin Santoso: Selamat pagi Bu Rini! Saya Kevin CSM untuk akun Pabrik Cerdas Indonesia. Pak Joko sudah perkenalkan kami. Kapan kita bisa ada brief call untuk handover?
+[14/02/2025, 10:00:00] Bu Rini Astuti: Halo Pak Kevin. Oke nanti saya cek jadwal
+[17/02/2025, 09:00:00] Kevin Santoso: Bu Rini, bagaimana untuk call handover? Kontrak akan renew Maret, jadi kami perlu mulai diskusi
+[19/02/2025, 15:00:00] Bu Rini Astuti: Maaf Kevin, minggu ini penuh. Minggu depan ya
+
+[24/02/2025, 09:00:00] Kevin Santoso: Bu Rini, bagaimana minggu ini? Kami juga ingin share beberapa updates produk yang relevan untuk Pabrik Cerdas
+[24/02/2025, 09:00:00] Lita Wulandari: Bu Rini, kalau belum sempat call, kami bisa juga via chat saja dulu untuk brief overview
+[25/02/2025, 17:30:00] Bu Rini Astuti: Maaf pak Kevin, lagi banyak project lain yang urgent. Untuk renewal nanti saya konsultasikan dulu dengan Pak Dadang manager saya
+
+[26/02/2025, 10:00:00] Kevin Santoso: Bu Rini, understood. Mungkin bisa bantu perkenalkan kami ke Pak Dadang? Renewal March 1 sudah sangat dekat dan ada beberapa hal yang perlu diputuskan
+[26/02/2025, 10:00:00] Kevin Santoso: Juga ada pertanyaan soal custom dashboard yang sudah di-commit Q1 - tim dev sudah mulai development, kami ingin pastikan spesifikasi yang benar dengan PIC yang baru
+[27/02/2025, 14:00:00] Bu Rini Astuti: Pak Kevin, jujur saya baru 2 minggu handle ini dan belum sepenuhnya familiar dengan sistemnya. Pak Dadang juga baru tau soal kontrak ini setelah Pak Joko resign
+[27/02/2025, 14:01:30] Kevin Santoso: Bu Rini, terima kasih sudah jujur. Ini situasi yang cukup umum terjadi saat ada transisi. Apakah ada yang bisa kami bantu untuk membantu Ibu dan Pak Dadang lebih familiar?
+[27/02/2025, 14:02:45] Bu Rini Astuti: Pak Dadang tanya - berapa nilai kontrak per tahun ini? Dan apa saja yang included?
+[27/02/2025, 14:03:30] Kevin Santoso: Bu Rini, kontrak saat ini Rp 180 juta per tahun, include modul Production Planning, Quality Control, dan Inventory Management untuk 50 user
+[27/02/2025, 14:04:15] Bu Rini Astuti: Ok saya sampaikan ke Pak Dadang
+[27/02/2025, 14:04:00] Lita Wulandari: Bu Rini, kami juga bisa siapkan dokumen ringkasan usage dan ROI yang selama ini dicapai dengan sistem kami. Mungkin membantu Pak Dadang untuk evaluasi
+[27/02/2025, 14:05:30] Bu Rini Astuti: Boleh, kirim saja ke email saya
+
+[28/02/2025, 09:00:00] Kevin Santoso: Bu Rini, sudah saya kirim dokumen ROI dan usage summary. Apakah Pak Dadang sudah bisa review?
+[28/02/2025, 09:00:00] Kevin Santoso: Renewal tanggal 1 Maret ya Bu, jadi hari ini adalah hari terakhir untuk konfirmasi
+[28/02/2025, 09:00:00] Lita Wulandari: Bu Rini, untuk proses renewal tidak lama kok, perlu tanda tangan PO saja
+[28/02/2025, 16:00:00] Bu Rini Astuti: Pak Kevin, Pak Dadang bilang perlu diskusi lebih lanjut dengan Direktur soal budget. Beliau baru aware ada kontrak ini. Minta extend renewal 1 bulan dulu bisa?
+[28/02/2025, 16:01:30] Kevin Santoso: Bu Rini, kami bisa berikan grace period 2 minggu. Tapi setelah itu sistem akan masuk mode read-only sesuai ketentuan kontrak. Apakah ada kemungkinan meeting dengan Pak Dadang dan Direktur minggu ini?
+[28/02/2025, 16:02:45] Bu Rini Astuti: Saya coba arrange. Tapi tidak bisa promise. Banyak agenda di sini
+[28/02/2025, 16:03:30] Kevin Santoso: Understood Bu Rini. Kami siap kapanpun Bapak dan Ibu siap. Tim kami juga bisa present value yang sudah dihasilkan selama setahun pemakaian. Sangat berharap bisa lanjut kerjasama
+[28/02/2025, 16:04:00] Bu Rini Astuti: Ok noted

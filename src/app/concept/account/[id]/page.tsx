@@ -8,7 +8,7 @@ import remarkGfm from "remark-gfm"
 import type { Components } from "react-markdown"
 import LogoIcon from "@/components/logo-icon"
 import { useAuth } from "@/contexts/auth-context"
-import { getAccount, deleteAccount, updateAccount, prefillFromContactBook, mergeContactBook, type StoredAccount, type ParticipantRole, type ParticipantRoles } from "@/lib/concept-firestore"
+import { getAccount, deleteAccount, updateAccount, prefillFromContactBook, mergeContactBook, saveSignalAction, signalKey, type StoredAccount, type ParticipantRole, type ParticipantRoles, type SignalAction, type SignalActionStatus } from "@/lib/concept-firestore"
 import { parseWhatsAppFile, formatForPrompt, type WaParsed } from "@/lib/whatsapp-parser"
 import type { AnalysisResult } from "@/app/api/concept/analyze/route"
 
@@ -249,6 +249,7 @@ export default function AccountPage() {
           conversation,
           messageCount: reanalyzeParsed.totalMessages,
           participantRoles: reanalyzeRoles,
+          signalActions: account.signalActions ?? null,
         }),
       })
       const data = await res.json()
@@ -449,6 +450,41 @@ export default function AccountPage() {
           fileName={account.fileName}
           analyzedAt={account.analyzedAt}
           onGenerateBrief={setBriefSignal}
+          account={account}
+          onSignalAction={async (key, action) => {
+            if (!user) return
+            await saveSignalAction(user.uid, account.id, key, action)
+            setAccount((prev) => prev ? { ...prev, signalActions: { ...prev.signalActions, [key]: action } } : prev)
+          }}
+          onSaveContext={async (ctx) => {
+            if (!user) return
+            await updateAccount(user.uid, id, { supplementalContext: ctx })
+            setAccount((prev) => prev ? { ...prev, supplementalContext: ctx } : prev)
+          }}
+          onReanalyzeWithContext={async (ctx) => {
+            if (!user) return
+            await updateAccount(user.uid, id, { supplementalContext: ctx })
+            setAccount((prev) => prev ? { ...prev, supplementalContext: ctx } : prev)
+            try {
+              const res = await fetch("/api/concept/reanalyze", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  priorAnalysis: account.result,
+                  participantRoles: account.participantRoles,
+                  supplementalContext: ctx,
+                  signalActions: account.signalActions ?? null,
+                }),
+              })
+              const data = await res.json()
+              if (!res.ok) throw new Error(data.error)
+              await updateAccount(user.uid, id, { result: data.result as AnalysisResult, updatedAt: new Date().toISOString() })
+              const updated = await getAccount(user.uid, id)
+              if (updated) setAccount(updated)
+            } catch (err) {
+              console.error("Context re-analysis failed:", err)
+            }
+          }}
         />
       </main>
 
@@ -474,11 +510,19 @@ function AnalysisReport({
   fileName,
   analyzedAt,
   onGenerateBrief,
+  account,
+  onSignalAction,
+  onSaveContext,
+  onReanalyzeWithContext,
 }: {
   result: AnalysisResult
   fileName: string
   analyzedAt: string
   onGenerateBrief: (signal: ProductSignal) => void
+  account: StoredAccount
+  onSignalAction: (key: string, action: SignalAction) => Promise<void>
+  onSaveContext: (ctx: string) => Promise<void>
+  onReanalyzeWithContext: (ctx: string) => Promise<void>
 }) {
   const risk = riskConfig[result.riskLevel] ?? riskConfig.medium
   const urgency = urgencyConfig[result.recommendedAction.urgency as keyof typeof urgencyConfig] ?? urgencyConfig.this_month
@@ -517,37 +561,8 @@ function AnalysisReport({
         <AnalysisQualityBanner
           quality={result.analysisQuality}
           savedContext={account.supplementalContext}
-          onSave={async (ctx) => {
-            if (!user) return
-            await updateAccount(user.uid, id, { supplementalContext: ctx })
-            setAccount((prev) => prev ? { ...prev, supplementalContext: ctx } : prev)
-          }}
-          onReanalyze={async (ctx) => {
-            if (!user) return
-            await updateAccount(user.uid, id, { supplementalContext: ctx })
-            setAccount((prev) => prev ? { ...prev, supplementalContext: ctx } : prev)
-            try {
-              const res = await fetch("/api/concept/reanalyze", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  priorAnalysis: result,
-                  participantRoles: account.participantRoles,
-                  supplementalContext: ctx,
-                }),
-              })
-              const data = await res.json()
-              if (!res.ok) throw new Error(data.error)
-              await updateAccount(user.uid, id, {
-                result: data.result as AnalysisResult,
-                updatedAt: new Date().toISOString(),
-              })
-              const updated = await getAccount(user.uid, id)
-              if (updated) setAccount(updated)
-            } catch (err) {
-              console.error("Context re-analysis failed:", err)
-            }
-          }}
+          onSave={onSaveContext}
+          onReanalyze={onReanalyzeWithContext}
         />
       )}
 
@@ -607,13 +622,21 @@ function AnalysisReport({
           <div className="divide-y divide-neutral-100">
             {result.riskSignals.map((s, i) => {
               const sev = s.severity === "high" ? "border-l-red-400" : s.severity === "medium" ? "border-l-amber-400" : "border-l-neutral-300"
+              const sType = (s as { type?: string }).type ?? "risk"
+              const sTitle = s.explanation.slice(0, 60)
+              const key = signalKey(sType, sTitle)
               return (
                 <div key={i} className={`p-5 border-l-4 ${sev}`}>
                   <div className="bg-neutral-50 rounded px-3 py-2 text-sm text-neutral-600 italic border border-neutral-100 mb-2">
                     &ldquo;{s.quote}&rdquo;
                     {s.date && <span className="ml-2 text-xs text-neutral-400 not-italic">{s.date}</span>}
                   </div>
-                  <p className="text-xs text-neutral-600 leading-relaxed">{s.explanation}</p>
+                  <p className="text-xs text-neutral-600 leading-relaxed mb-3">{s.explanation}</p>
+                  <SignalActionControl
+                    signalKey={key}
+                    action={account.signalActions?.[key]}
+                    onUpdate={onSignalAction}
+                  />
                 </div>
               )
             })}
@@ -632,6 +655,7 @@ function AnalysisReport({
             {result.productSignals.map((s, i) => {
               const typeCfg = signalTypeConfig[s.type] ?? signalTypeConfig.complaint
               const priColor = s.priority === "high" ? "text-red-600" : s.priority === "medium" ? "text-amber-600" : "text-neutral-400"
+              const key = signalKey(s.type, s.title)
               return (
                 <div key={i} className="p-5">
                   <div className="flex items-start justify-between gap-3 mb-2">
@@ -654,9 +678,14 @@ function AnalysisReport({
                   <div className="bg-neutral-50 rounded px-3 py-2 text-sm text-neutral-600 italic border border-neutral-100 mb-2">
                     &ldquo;{s.quote}&rdquo;
                   </div>
-                  <p className="text-xs text-neutral-500">
+                  <p className="text-xs text-neutral-500 mb-3">
                     <span className="font-medium text-neutral-600">PM action:</span> {s.pmAction}
                   </p>
+                  <SignalActionControl
+                    signalKey={key}
+                    action={account.signalActions?.[key]}
+                    onUpdate={onSignalAction}
+                  />
                 </div>
               )
             })}
@@ -826,6 +855,90 @@ function AnalysisQualityBanner({
               </button>
             </div>
           </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Signal action control ────────────────────────────────────────────────────
+
+const ACTION_OPTIONS: { value: SignalActionStatus; label: string; color: string }[] = [
+  { value: "open", label: "Open", color: "bg-neutral-100 text-neutral-500 border-neutral-200" },
+  { value: "in_progress", label: "In progress", color: "bg-amber-50 text-amber-700 border-amber-200" },
+  { value: "done", label: "Done", color: "bg-green-50 text-green-700 border-green-200" },
+  { value: "dismissed", label: "Dismissed", color: "bg-neutral-50 text-neutral-400 border-neutral-200" },
+]
+
+function SignalActionControl({
+  signalKey: key,
+  action,
+  onUpdate,
+}: {
+  signalKey: string
+  action?: SignalAction
+  onUpdate: (key: string, action: SignalAction) => Promise<void>
+}) {
+  const [status, setStatus] = useState<SignalActionStatus>(action?.status ?? "open")
+  const [note, setNote] = useState(action?.note ?? "")
+  const [expanded, setExpanded] = useState(!!action?.note)
+  const [saving, setSaving] = useState(false)
+
+  const current = ACTION_OPTIONS.find((o) => o.value === status)!
+
+  const handleStatusChange = async (next: SignalActionStatus) => {
+    setStatus(next)
+    setSaving(true)
+    await onUpdate(key, { status: next, note: note || undefined, updatedAt: new Date().toISOString() })
+    setSaving(false)
+    if (next !== "open") setExpanded(true)
+  }
+
+  const handleNoteSave = async () => {
+    setSaving(true)
+    await onUpdate(key, { status, note: note || undefined, updatedAt: new Date().toISOString() })
+    setSaving(false)
+  }
+
+  return (
+    <div className="mt-1">
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-1 p-0.5 bg-neutral-100 rounded-lg border border-neutral-200">
+          {ACTION_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => handleStatusChange(opt.value)}
+              className={`text-xs font-medium px-2.5 py-1 rounded-md transition-all ${
+                status === opt.value
+                  ? `${opt.color} border shadow-sm`
+                  : "text-neutral-400 hover:text-neutral-600 border border-transparent"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+        {status !== "open" && (
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="text-xs text-neutral-400 hover:text-neutral-600 transition-colors"
+          >
+            {expanded ? "hide note" : action?.note ? "edit note" : "+ add note"}
+          </button>
+        )}
+        {saving && <span className="text-xs text-neutral-300">saving…</span>}
+      </div>
+      {expanded && status !== "open" && (
+        <div className="mt-2 flex gap-2">
+          <input
+            type="text"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            onBlur={handleNoteSave}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleNoteSave() } }}
+            placeholder="What was decided or done…"
+            className="flex-1 text-xs border border-neutral-200 rounded-lg px-3 py-1.5 text-neutral-700 focus:outline-none focus:border-neutral-400 bg-white"
+          />
         </div>
       )}
     </div>

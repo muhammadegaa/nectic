@@ -1,0 +1,94 @@
+[06/01/2025, 09:02:11] Rina Kusumawati: Selamat pagi semua! Ini grup koordinasi Tokobagus Digital x WarehouseOS. Saya Rina Account Manager, ada Hendra Solutions Engineer dari tim kami
+[06/01/2025, 09:03:44] Hendra Wijaya: Pagi semua! Siap support ya
+[06/01/2025, 09:05:20] Mas Rio Andika: Halo! Saya Rio, Operations Head. Excited banget bisa mulai pakai WarehouseOS. Tim kami udah lama butuh sistem ini
+[06/01/2025, 09:06:33] Kak Dewi Lestari: Hai semua, Dewi dari IT. Saya yang handle integrasi teknikal di sini
+
+[13/01/2025, 10:15:05] Mas Rio Andika: Rina, Hendra - udah 1 minggu pakai WarehouseOS dan WOW. Tim gudang kami langsung ngerasain bedanya. Picking error turun drastis
+[13/01/2025, 10:16:22] Rina Kusumawati: Wah seneng banget dengernya Mas Rio! Ada angkanya?
+[13/01/2025, 10:17:45] Mas Rio Andika: Sebelumnya error rate picking kami sekitar 3.2%. Sekarang udah 0.8% dalam seminggu. Luar biasa!
+[13/01/2025, 10:18:30] Hendra Wijaya: Mantap! Itu improvement signifikan banget
+[13/01/2025, 10:19:00] Kak Dewi Lestari: Integrasi ke Tokopedia dan Shopee juga smooth. Jauh lebih baik dari sistem lama kami
+
+[20/01/2025, 14:22:08] Mas Rio Andika: Hendra, quick question - WarehouseOS bisa support multi-warehouse ngga? Kami lagi ekspansi, mau buka gudang ke-2 di Bekasi bulan Maret
+[20/01/2025, 14:23:40] Hendra Wijaya: Bisa Mas Rio! Plan yang kalian punya sekarang sudah include up to 3 warehouse locations
+[20/01/2025, 14:24:15] Mas Rio Andika: Oh nice! Dan bisa manage inventory cross-warehouse? Misalnya kalau stok habis di Tangerang bisa fulfill dari Bekasi?
+[20/01/2025, 14:25:30] Hendra Wijaya: Bisa, itu fitur Smart Fulfillment. Perlu aktifasi, saya bantu setup kalau mau coba
+[20/01/2025, 14:26:00] Mas Rio Andika: Mau banget! Kapan bisa?
+[20/01/2025, 14:27:10] Hendra Wijaya: Besok bisa. Saya kirimin jadwal ya
+[20/01/2025, 14:27:55] Mas Rio Andika: Gas!
+
+[23/01/2025, 11:05:33] Kak Dewi Lestari: Hendra, kita udah coba Smart Fulfillment - kereeen. Tapi ada pertanyaan teknikal: API-nya bisa di-customize response format-nya? Kami mau integrate ke dashboard internal yang kami bangun sendiri
+[23/01/2025, 11:07:20] Hendra Wijaya: Bisa Dewi! Kita ada REST API lengkap dengan custom webhook support. Dokumentasinya udah aku share di email kemarin
+[23/01/2025, 11:08:05] Kak Dewi Lestari: Oh iya udah aku baca. Rate limit-nya 1000 req/menit cukup untuk sekarang, tapi kalau kita scale ke beberapa gudang mungkin perlu lebih
+[23/01/2025, 11:09:30] Hendra Wijaya: Untuk enterprise tier rate limit bisa dinaikkan. Nanti bisa kita discuss sama Rina soal upgrade
+[23/01/2025, 11:10:15] Kak Dewi Lestari: Noted, makasih!
+
+[28/01/2025, 09:30:00] Mas Rio Andika: Rina, mau ngobrol soal sesuatu nih. Kita lagi diskusi internal untuk scale operasi. Dari 10 warehouse staff yang pakai sistem sekarang, kemungkinan kita bakal butuh untuk 50-60 user dalam 3-4 bulan ke depan karena kita mau onboard tim gudang Bekasi dan Surabaya juga
+[28/01/2025, 09:31:45] Rina Kusumawati: Wah exciting Mas Rio! Ekspansi ke Surabaya juga ya? Itu growth yang keren banget
+[28/01/2025, 09:32:30] Mas Rio Andika: Iya, funding baru masuk bulan Desember, jadi kita gas ekspansi. Problem-nya, kalau kita scale user, pricing gimana?
+[28/01/2025, 09:33:55] Rina Kusumawati: Kalau dari 10 ke 50 user ada price break yang signifikan. Dan ada paket Growth yang lebih pas untuk kalian - include advanced analytics, custom roles, dan dedicated SLA. Boleh aku kirim proposal?
+[28/01/2025, 09:35:00] Mas Rio Andika: Please! Dan kalau bisa breakdown juga untuk 100 user, buat proyeksi akhir tahun kami
+[28/01/2025, 09:36:10] Rina Kusumawati: Siap, saya prepare dua opsi - 50 user dan 100 user. Ada tambahan fitur yang pengen kalian pertimbangkan untuk scale ini?
+[28/01/2025, 09:37:40] Mas Rio Andika: Actually ada! Kami butuh banget fitur untuk tracking performa picker individual - KPI kayak productivity rate, accuracy rate per person. Sekarang kami masih manual di spreadsheet
+[28/01/2025, 09:38:55] Hendra Wijaya: Mas Rio itu ada di modul Labor Management kami. Bisa track semua metrics itu, bahkan ada gamifikasi untuk motivasi tim
+[28/01/2025, 09:39:30] Mas Rio Andika: SERIUS?? Itu yang kami cari dari dulu! Berapa tambahan cost-nya?
+[28/01/2025, 09:40:15] Rina Kusumawati: Labor Management adalah add-on. Saya include di proposal ya. Tapi trust me, ROI-nya cepet kalau tim kalian 50+ orang
+[28/01/2025, 09:41:00] Mas Rio Andika: Definitely. Kirim proposal secepatnya ya Rina!
+
+[03/02/2025, 14:15:22] Mas Rio Andika: Rina, proposalnya sudah kami review. Ada beberapa pertanyaan
+[03/02/2025, 14:16:30] Rina Kusumawati: Siap Mas Rio!
+[03/02/2025, 14:17:45] Mas Rio Andika: 1. Untuk Growth 50 user - apakah bisa mulai dari 30 user dulu dan nambah flexible? Kita masih ramp up hiring
+[03/02/2025, 14:18:55] Rina Kusumawati: Bisa! Kita ada elastis pricing, bayar per user actual. Minimum 30, bisa nambah kapan aja
+[03/02/2025, 14:19:30] Mas Rio Andika: Perfect. 2. Implementasi Labor Management untuk Bekasi - apakah bisa langsung dari Day 1 buka gudang?
+[03/02/2025, 14:20:45] Hendra Wijaya: Bisa Mas, kita bahkan rekomendasikan setup Labor Management sebelum operasional mulai. Jadi dari hari pertama udah punya baseline data
+[03/02/2025, 14:21:30] Mas Rio Andika: Smart. 3. Soal SLA - di plan baru ada dedicated support? Karena pas ada issue di gudang, downtime tuh menyakitkan banget
+[03/02/2025, 14:22:40] Rina Kusumawati: Di Growth plan ada dedicated CSM (saya tetap!) dan SLA 4 jam untuk critical issue. Untuk enterprise tier ada 24/7 hotline
+[03/02/2025, 14:23:15] Mas Rio Andika: 4 jam cukup. Sejauh ini kalian juga udah response cepet kok
+[03/02/2025, 14:24:00] Kak Dewi Lestari: Rina, satu lagi - kalau kita upgrade, data migration dari plan lama gimana? Ada risiko downtime?
+[03/02/2025, 14:25:10] Hendra Wijaya: Zero downtime Dewi. Upgrade plan itu instant, tidak ada migration data karena semua sudah di sistem yang sama
+[03/02/2025, 14:26:00] Kak Dewi Lestari: Oh nice, itu penting banget
+[03/02/2025, 14:27:30] Mas Rio Andika: Oke Rina, saya diskusi sama CEO kami. Feeling saya ini akan jalan. Budget untuk ini sudah kami alokasikan dari funding round
+
+[07/02/2025, 10:05:14] Mas Rio Andika: Rina! CEO approve budget. Kita mau go dengan Growth 30 user + Labor Management add-on. Start Maret bersamaan sama opening gudang Bekasi
+[07/02/2025, 10:06:30] Rina Kusumawati: YES! Congrats Mas Rio dan Tokobagus! Kami excited banget accompany perjalanan ekspansi kalian
+[07/02/2025, 10:07:15] Hendra Wijaya: Mantap! Nanti saya bantu prepare onboarding plan untuk tim Bekasi ya
+[07/02/2025, 10:08:00] Mas Rio Andika: Please! Dan Rina, satu permintaan - bisa ada sesi training khusus untuk supervisor Bekasi? Mereka belum pernah pakai sistem sebelumnya sama sekali
+[07/02/2025, 10:09:20] Rina Kusumawati: Absolutely! Kita akan scheduled dedicated training untuk tim Bekasi. Mau on-site atau remote?
+[07/02/2025, 10:10:05] Mas Rio Andika: On-site lebih baik untuk mereka. Budget kita cover untuk ini kok
+[07/02/2025, 10:11:30] Rina Kusumawati: Deal! Kita akan plan untuk minggu sebelum go-live. Saya siapkan kontrak baru dan SO-nya hari ini
+
+[12/02/2025, 15:20:00] Kak Dewi Lestari: Hendra, saya lagi explore API docs lebih dalam. Ada fitur batch update inventory via API? Kita mau build automated restocking trigger dari sistem supplier kami
+[12/02/2025, 15:21:45] Hendra Wijaya: Ada! Endpoint POST /inventory/batch-update support sampai 500 SKU per call. Butuh autentikasi OAuth2
+[12/02/2025, 15:22:30] Kak Dewi Lestari: Mantap. Dan ada webhook untuk event inventory low stock?
+[12/02/2025, 15:23:15] Hendra Wijaya: Ada, webhook event `inventory.threshold_breach`. Bisa customize threshold per SKU juga
+[12/02/2025, 15:24:00] Kak Dewi Lestari: Ini udah lengkap banget. Tim dev kami bakal happy. Btw Hendra, kami juga mau explore integrasi ke sistem ERP Odoo yang kami pakai. Apakah ada native connector?
+[12/02/2025, 15:25:30] Hendra Wijaya: Ada Odoo connector tapi masih beta. Kalau Dewi mau jadi early adopter bisa kita coordinate, kalian juga bisa influence development-nya
+[12/02/2025, 15:26:15] Kak Dewi Lestari: Mau! Ini bakal sangat useful untuk kami. Boleh aku di-CC ke beta program?
+[12/02/2025, 15:27:00] Hendra Wijaya: Done, aku forward ke tim product hari ini
+
+[19/02/2025, 09:45:00] Mas Rio Andika: Rina, quick update - kami udah officially onboard 2 brand baru ke platform kami (fashion dan beauty). Ini berarti SKU kami dari 8000 bakal jadi sekitar 25000 dalam 2 bulan. WarehouseOS ada limit untuk jumlah SKU?
+[19/02/2025, 09:46:30] Rina Kusumawati: Good news Mas Rio - tidak ada hard limit untuk SKU di semua plan kami! Tapi untuk 25K SKU lebih, recommend pakai fitur Advanced Search & Filtering yang ada di Growth plan
+[19/02/2025, 09:47:15] Mas Rio Andika: Oh bagus! Dan kalau nanti butuh lebih dari 30 user karena scale ke brand baru, bisa nambah on-demand kan?
+[19/02/2025, 09:48:00] Rina Kusumawati: Bisa, billing-nya prorated per hari. Sangat flexible
+[19/02/2025, 09:48:45] Mas Rio Andika: Rina jujur nih - sampai sekarang WarehouseOS adalah salah satu keputusan terbaik yang pernah kami buat. Tim kami produktivitasnya naik dan saya bisa tidur lebih tenang
+[19/02/2025, 09:49:30] Rina Kusumawati: Itu yang paling seneng kami dengar Mas Rio. Semangat terus ya buat Tokobagus!
+[19/02/2025, 09:50:00] Kak Dewi Lestari: Agreed. Kalau ada rekomendasi fitur baru btw, kami mau request dashboard analytics untuk C-level - sekarang CEO kami harus tanya kami dulu untuk lihat data real-time
+[19/02/2025, 09:51:20] Hendra Wijaya: Sudah ada Dewi! Executive Dashboard module, baru launch bulan ini. CEO kalian bisa lihat semua KPI dari mobile app
+[19/02/2025, 09:52:05] Kak Dewi Lestari: NO WAY. Kirim info-nya pak Hendra!
+[19/02/2025, 09:52:45] Hendra Wijaya: <Media omitted>
+[19/02/2025, 09:53:00] Hendra Wijaya: Ini screenshot dan docs-nya. Free untuk semua Growth plan users!
+[19/02/2025, 09:54:30] Mas Rio Andika: Rina ini harus saya show ke CEO sekarang juga. Dia selalu nanya "gimana kondisi gudang?" haha
+
+[24/02/2025, 11:00:00] Mas Rio Andika: Rina, ada competitor yang approach kami minggu ini - offering something similar tapi harga lebih murah 20%
+[24/02/2025, 11:01:30] Rina Kusumawati: Thanks udah transparan Mas Rio! Boleh tau siapa?
+[24/02/2025, 11:02:15] Mas Rio Andika: Mereka startup baru, StockMate namanya. Tapi franchly speaking, kami ngga terlalu tertarik pindah. Terlalu banyak yang harus di-migrate dan kami udah terlanjur puas
+[24/02/2025, 11:03:00] Rina Kusumawati: Seneng dengernya! Tapi tetap valid untuk compare. Kalau ada spesifik yang mereka tawarkan yang kita belum punya, let us know
+[24/02/2025, 11:03:45] Mas Rio Andika: Yang mereka pitch adalah fitur demand forecasting AI. Itu menarik sebenernya - bisa predict kapan harus restock berdasarkan sales pattern
+[24/02/2025, 11:04:30] Hendra Wijaya: Mas Rio, actually kami sedang develop fitur itu! Smart Replenishment - ETA Q2 2025. Mas Rio mau kami include sebagai beta tester?
+[24/02/2025, 11:05:15] Mas Rio Andika: Definitely! Kalau itu jadi, competitor ngga ada alasan lagi untuk kita pertimbangkan
+[24/02/2025, 11:05:50] Rina Kusumawati: I'll make sure you're on the beta list personally Mas Rio
+[24/02/2025, 11:06:30] Mas Rio Andika: Thanks Rina! Tim kami udah kasih banyak positive feedback soal WarehouseOS by the way. Bahkan head of operations Bekasi sebelum ketemu produk ini sempat skeptis, sekarang dia yang paling semangat
+[24/02/2025, 11:07:15] Rina Kusumawati: Itu sangat berarti untuk kami! Kalau berkenan, kami senang sekali kalau Mas Rio atau Dewi mau jadi referensi customer untuk potential clients kami
+[24/02/2025, 11:08:00] Mas Rio Andika: Sure, no problem. Referral program ada reward-nya ngga? Haha
+[24/02/2025, 11:08:45] Rina Kusumawati: Ada! 1 bulan gratis per referral yang convert. Saya kirimkan detail program-nya
+[24/02/2025, 11:09:30] Mas Rio Andika: Nice! Ada beberapa startup e-commerce yang kami kenal yang masih pakai spreadsheet. Mungkin bisa kami kenalkan

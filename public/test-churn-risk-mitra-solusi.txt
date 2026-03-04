@@ -1,0 +1,91 @@
+[03/02/2025, 08:12:04] Ahmad Fauzi: Selamat pagi semua, ini grup support untuk PT Mitra Solusi - HRD Connect implementation. Saya Ahmad sebagai CSM kalian, dan Budi dari tim teknikal kami.
+[03/02/2025, 08:13:17] Budi Santoso: Pagi semua! Siap membantu ya
+[03/02/2025, 08:15:42] Ibu Sari Rahayu: Pagi pak Ahmad, pagi pak Budi. Saya Sari, HR Manager disini. Nanti saya ajak Pak Doni dari IT juga masuk grup ini
+[03/02/2025, 08:16:30] Ahmad Fauzi: Siap Bu Sari, kami tunggu. Semoga implementasi berjalan lancar!
+[03/02/2025, 08:22:11] Pak Doni Kusuma: Halo semua, saya Doni IT Manager. Senang bisa gabung
+[03/02/2025, 08:23:05] Ahmad Fauzi: Selamat bergabung Pak Doni!
+
+[10/02/2025, 09:45:33] Ibu Sari Rahayu: Pak Ahmad, kami sudah coba input data karyawan kemarin. Ada issue di bagian BPJS - field nomor BPJS Ketenagakerjaan tidak bisa diisi lebih dari 11 digit. Padahal ada beberapa karyawan kami yang nomornya 13 digit
+[10/02/2025, 09:47:20] Ahmad Fauzi: Baik Bu Sari, terima kasih sudah disampaikan. Saya cek dulu ke tim ya
+[10/02/2025, 09:48:01] Budi Santoso: Bu Sari, bisa share screenshot-nya? Supaya kami bisa repro dulu
+[10/02/2025, 09:49:55] Ibu Sari Rahayu: <Media omitted>
+[10/02/2025, 09:50:12] Ibu Sari Rahayu: Ini ya pak, field-nya dibatasi 11 karakter. Padahal standar BPJS Ketenagakerjaan terbaru itu 13 digit untuk karyawan yang terdaftar sejak 2020
+[10/02/2025, 09:52:30] Budi Santoso: Noted Bu, saya escalate ke tim dev. Kemungkinan ini validasi yang perlu diupdate sesuai regulasi terbaru
+[10/02/2025, 09:53:00] Ibu Sari Rahayu: Oke, ditunggu ya. Ini cukup kritikal karena laporan BPJS kami harus selesai sebelum tanggal 15
+
+[10/02/2025, 14:30:22] Budi Santoso: Bu Sari, update dari tim dev: ini masuk backlog sprint berikutnya. Estimasi fix di update v2.3.1 sekitar 2 minggu lagi
+[10/02/2025, 14:31:45] Ibu Sari Rahayu: 2 minggu? Laporan saya tanggal 15 pak. Ini bagaimana solusinya sementara?
+[10/02/2025, 14:33:10] Budi Santoso: Untuk sementara bisa workaround dengan input manual di field notes, nanti kami bantu export custom report
+[10/02/2025, 14:34:55] Ibu Sari Rahayu: Workaround manual untuk 340 karyawan pak? Itu tidak efisien sekali
+[10/02/2025, 14:36:00] Ahmad Fauzi: Bu Sari, saya mengerti frustrasinya. Kami akan prioritaskan ini, saya akan push tim dev untuk expedite
+[10/02/2025, 14:38:20] Ibu Sari Rahayu: Baik, saya tunggu. Tapi kalau tidak selesai sebelum tanggal 15 kami terpaksa kembali ke proses manual semua
+
+[14/02/2025, 11:20:05] Ibu Sari Rahayu: Pak Ahmad, sudah ada update untuk issue BPJS? Besok sudah tanggal 15
+[14/02/2025, 11:35:42] Ahmad Fauzi: Bu Sari, mohon maaf belum ada update dari tim dev. Sprint masih berjalan
+[14/02/2025, 11:36:55] Ibu Sari Rahayu: Ini tidak bisa diterima pak. Kami bayar lisensi bukan untuk workaround manual. Saya terpaksa informasikan ke Pak Wahyu management kami
+[14/02/2025, 11:38:00] Ahmad Fauzi: Saya sangat minta maaf Bu Sari. Izinkan saya eskalasi langsung ke product manager kami hari ini
+[14/02/2025, 11:39:12] Ibu Sari Rahayu: Silakan. Dan tolong jawaban konkret, bukan estimasi lagi
+
+[15/02/2025, 08:05:44] Pak Wahyu Prasetyo: Selamat pagi, saya Wahyu Finance Director Mitra Solusi. Saya minta penjelasan mengenai issue compliance BPJS yang belum terselesaikan. Ini berdampak langsung ke pelaporan kami ke BPJSTK
+[15/02/2025, 08:10:20] Ahmad Fauzi: Selamat pagi Pak Wahyu, terima kasih sudah join. Kami sangat menyesal atas ketidaknyamanan ini. Saya pastikan ada hotfix hari ini
+[15/02/2025, 08:12:05] Pak Wahyu Prasetyo: Bukan soal hotfix saja pak. Ini sudah 5 hari sejak dilaporkan dan tidak ada progress. Saya perlu tau SLA yang kami punya untuk critical issue seperti ini
+[15/02/2025, 08:13:40] Ahmad Fauzi: Untuk critical compliance issue SLA kami adalah 48 jam, dan saya akui kami sudah melewati itu. Saya bertanggung jawab atas hal ini dan akan ada kompensasi yang sesuai
+[15/02/2025, 08:15:00] Pak Wahyu Prasetyo: Kami akan diskusikan ini. Untuk sekarang tim HRD kami bekerja overtime manual karena produk yang kami bayar tidak berfungsi
+
+[15/02/2025, 16:44:02] Budi Santoso: Bu Sari, Pak Doni - hotfix sudah kami deploy ke production. Field BPJS sekarang menerima hingga 15 digit. Mohon dicek
+[15/02/2025, 16:46:30] Pak Doni Kusuma: Oke saya cek dulu
+[15/02/2025, 17:02:11] Pak Doni Kusuma: Confirmed, sudah bisa input 13 digit sekarang
+[15/02/2025, 17:03:20] Ibu Sari Rahayu: Baik, terima kasih. Tapi kami sudah kehilangan satu hari kerja untuk proses manual. Ini tidak bisa terus terjadi
+
+[20/02/2025, 10:15:33] Ibu Sari Rahayu: Pak Budi, ada issue baru. Fitur sync ke sistem absensi fingerprint kami tidak berjalan. Data kehadiran tidak masuk ke HRD Connect sejak 3 hari lalu
+[20/02/2025, 10:18:45] Budi Santoso: Bu Sari, mohon maaf ada issue. Bisa share model fingerprint device yang dipakai?
+[20/02/2025, 10:20:00] Ibu Sari Rahayu: ZKTeco uFace800. Ini yang sudah kami pakai sejak dulu dan dulu bisa sync normal
+[20/02/2025, 10:22:30] Budi Santoso: Noted, kemungkinan ada perubahan di update v2.3.1 kemarin yang mempengaruhi connector ZKTeco. Kami investigasi
+[20/02/2025, 10:23:45] Ibu Sari Rahayu: Jadi update yang harusnya fix BPJS malah break fitur lain?
+[20/02/2025, 10:25:00] Budi Santoso: Kemungkinan ada regression. Kami prioritaskan investigasi ini
+[20/02/2025, 10:26:15] Pak Doni Kusuma: Ini sudah kejadian kedua kali. Update sebelumnya juga pernah break API ke sistem kami
+[20/02/2025, 10:27:44] Ibu Sari Rahayu: Pak Ahmad, saya harap ada quality control lebih baik sebelum deployment
+
+[20/02/2025, 15:30:10] Ahmad Fauzi: Bu Sari, Pak Doni - saya sudah koordinasi dengan tim. Root cause sudah ditemukan, estimasi fix besok pagi
+[20/02/2025, 15:31:22] Pak Doni Kusuma: Oke. Tapi ini perlu ada SOP testing yang lebih ketat sebelum production release
+[20/02/2025, 15:32:05] Ahmad Fauzi: Saya setuju dan sudah sampaikan feedback ini ke VP Engineering kami
+
+[25/02/2025, 09:00:14] Ibu Sari Rahayu: Pak Ahmad, saya ingin diskusi serius. Kami akan ada renewal contract bulan April. Saat ini kami sedang evaluasi apakah akan lanjut atau tidak
+[25/02/2025, 09:02:30] Ahmad Fauzi: Baik Bu Sari, saya sangat menghargai keterbukaan ini. Boleh saya tahu apa saja poin yang menjadi concern utama?
+[25/02/2025, 09:04:55] Ibu Sari Rahayu: Pertama, dua incident compliance yang critical dalam satu bulan. Kedua, respon time yang tidak memenuhi SLA. Ketiga, beberapa fitur yang dijanjikan saat demo belum ada
+[25/02/2025, 09:06:00] Ahmad Fauzi: Terima kasih Bu Sari. Fitur apa yang dimaksud?
+[25/02/2025, 09:07:45] Ibu Sari Rahayu: Waktu demo dijanjikan ada fitur auto-calculation PPh 21 dengan skema TER yang baru. Sampai sekarang masih manual
+[25/02/2025, 09:08:55] Ahmad Fauzi: Untuk PPh 21 TER memang masih dalam pengembangan, estimasi Q2 2025
+[25/02/2025, 09:10:20] Ibu Sari Rahayu: Q2 artinya setelah renewal. Kami bayar sekarang untuk fitur yang belum ada. Ini tidak fair
+[25/02/2025, 09:11:30] Pak Wahyu Prasetyo: Untuk informasi saja, kami sudah mendapat demo dari Gadjian dan mereka sudah punya fitur TER. Harga juga lebih kompetitif
+[25/02/2025, 09:13:00] Ahmad Fauzi: Pak Wahyu, Bu Sari, izinkan saya jadwalkan meeting dengan Head of Product kami pekan ini untuk membahas roadmap dan bagaimana kami bisa lebih baik melayani Mitra Solusi
+
+[26/02/2025, 11:44:02] Ibu Sari Rahayu: Pak Budi, laporan payslip bulan Februari tidak bisa di-generate. Error "timeout saat proses batch"
+[26/02/2025, 11:46:20] Budi Santoso: Bu Sari, berapa jumlah karyawan yang diproses?
+[26/02/2025, 11:47:00] Ibu Sari Rahayu: 340 karyawan seperti biasa
+[26/02/2025, 11:48:30] Budi Santoso: Kami ada issue di batch processing untuk tenant dengan >300 karyawan setelah update terbaru. Sedang dalam perbaikan
+[26/02/2025, 11:50:05] Ibu Sari Rahayu: Ini tidak bisa pak. Besok adalah payroll date. Karyawan harus terima payslip
+[26/02/2025, 11:51:22] Budi Santoso: Kami bisa proses manual dari backend untuk batch pertama, mohon izin akses data ya
+[26/02/2025, 11:52:40] Ibu Sari Rahayu: Tidak bisa, data karyawan kami confidential. Tolong selesaikan secara proper
+[26/02/2025, 11:54:00] Ahmad Fauzi: Bu Sari, saya eskalasi ini sebagai P1 sekarang. Tim akan fokus selesaikan sebelum EOD hari ini
+[26/02/2025, 11:55:15] Ibu Sari Rahayu: Saya tidak punya pilihan lain selain menunggu. Tapi ini sudah ketiga kalinya dalam satu bulan ada critical issue
+
+[27/02/2025, 08:30:00] Ahmad Fauzi: Bu Sari, laporan payslip sudah bisa diproses. Kami sudah fix issue batch processing semalam. Mohon dicoba
+[27/02/2025, 08:35:22] Ibu Sari Rahayu: Sudah saya coba, bisa jalan. Terima kasih
+[27/02/2025, 08:36:05] Ibu Sari Rahayu: Tapi saya perlu bicara jujur - tim kami sudah sangat lelah dengan kondisi ini. HR staff kami tidak seharusnya overtime karena software bermasalah
+[27/02/2025, 08:37:30] Ahmad Fauzi: Saya sepenuhnya memahami Bu Sari dan saya minta maaf
+[27/02/2025, 08:38:45] Ibu Sari Rahayu: Kami sudah jadwalkan demo dengan Gadjian Kamis ini. Apakah HRD Connect bisa tawarkan sesuatu sebelum kami ambil keputusan?
+
+[27/02/2025, 09:15:00] Ahmad Fauzi: Bu Sari, saya akan coordinate dengan management kami hari ini. Kami sangat ingin mempertahankan Mitra Solusi sebagai customer kami
+[27/02/2025, 09:16:30] Ibu Sari Rahayu: Kami terbuka untuk mendengar. Tapi perlu ada komitmen konkret, bukan janji saja
+[27/02/2025, 09:17:45] Pak Wahyu Prasetyo: Saya setuju dengan Bu Sari. Kami butuh improvement plan yang jelas, termasuk kompensasi untuk downtime yang sudah terjadi
+[27/02/2025, 09:19:00] Ahmad Fauzi: Baik, saya akan kirim improvement plan dan proposal kompensasi hari ini EOD. Terima kasih atas kesabaran Bapak dan Ibu
+
+[28/02/2025, 16:00:00] Ahmad Fauzi: <Media omitted>
+[28/02/2025, 16:01:20] Ahmad Fauzi: Bu Sari, Pak Wahyu, Pak Doni - ini improvement plan dan proposal dari kami. Ada: 1) Dedicated support engineer untuk Mitra Solusi, 2) SLA upgrade ke 24-jam untuk critical issue, 3) 1 bulan credit sebagai kompensasi, 4) Commit PPh 21 TER Q2 2025 dengan penalty clause jika miss
+[28/02/2025, 16:05:30] Pak Wahyu Prasetyo: Terima kasih Pak Ahmad. Kami akan review dan diskusikan internal
+[28/02/2025, 16:06:15] Ibu Sari Rahayu: Noted, kami review. Demo Gadjian kami tetap lanjutkan Kamis sebagai pembanding
+[28/02/2025, 16:07:00] Ahmad Fauzi: Tentu Bu Sari, itu hak Ibu. Kami harap proposal kami bisa dipertimbangkan. Kami berkomitmen untuk improve
+[28/02/2025, 16:08:30] Pak Doni Kusuma: Dari sisi teknikal saya juga perlu review reliability improvement yang ditawarkan. Ada banyak regression issue yang perlu address
+[28/02/2025, 16:09:45] Ahmad Fauzi: Untuk reliability, kami juga akan implement automated regression testing sebelum setiap release. Pak Doni bisa join review call dengan CTO kami jika berkenan
+[28/02/2025, 16:11:00] Pak Doni Kusuma: Bisa dipertimbangkan. Saya coordinate dengan Pak Wahyu dulu
