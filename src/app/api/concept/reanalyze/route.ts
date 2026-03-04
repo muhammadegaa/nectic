@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
         "X-Title": "Nectic - Account Re-analysis",
       },
       body: JSON.stringify({
-        model: "anthropic/claude-sonnet-4.6",
+        model: "anthropic/claude-haiku-4.5",
         temperature: 0.2,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },

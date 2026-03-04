@@ -77,6 +77,8 @@ export default function ConceptPage() {
   const [dragging, setDragging] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [participantRoles, setParticipantRoles] = useState<ParticipantRoles>({})
+  const [aiSuggestedRoles, setAiSuggestedRoles] = useState<Set<string>>(new Set())
+  const [classifying, setClassifying] = useState(false)
   const [context, setContext] = useState<AccountContext>({})
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -105,6 +107,8 @@ export default function ConceptPage() {
     setFileName("")
     setUploadError("")
     setParticipantRoles({})
+    setAiSuggestedRoles(new Set())
+    setClassifying(false)
     setContext({})
     setShowConnect(true)
   }
@@ -117,6 +121,8 @@ export default function ConceptPage() {
       setFileName("")
       setUploadError("")
       setParticipantRoles({})
+      setAiSuggestedRoles(new Set())
+      setClassifying(false)
       setContext({})
       if (inputRef.current) inputRef.current.value = ""
     }, 200)
@@ -139,16 +145,58 @@ export default function ConceptPage() {
         return
       }
       setParsed(p)
+
+      // Step 1: prefill known contacts from the contact book
       const prefilled = user
         ? await prefillFromContactBook(user.uid, p.participants)
         : p.participants.reduce<ParticipantRoles>((acc, n) => ({ ...acc, [n]: "other" }), {})
+
       setParticipantRoles(prefilled)
       setConnectStage("ready")
+
+      // Step 2: auto-classify any participants still marked "other"
+      const unknowns = p.participants.filter((name) => prefilled[name] === "other")
+      if (unknowns.length > 0) {
+        setClassifying(true)
+        try {
+          const samples = unknowns.map((name) => ({
+            name,
+            messages: p.messages
+              .filter((m) => m.sender === name)
+              .slice(0, 6)
+              .map((m) => m.body),
+          }))
+          const res = await fetch("/api/concept/classify-participants", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ participants: samples }),
+          })
+          if (res.ok) {
+            const { roles } = await res.json() as { roles: ParticipantRoles }
+            const suggested = new Set<string>()
+            setParticipantRoles((prev) => {
+              const next = { ...prev }
+              for (const [name, role] of Object.entries(roles)) {
+                if (role !== "other" && prev[name] === "other") {
+                  next[name] = role
+                  suggested.add(name)
+                }
+              }
+              return next
+            })
+            setAiSuggestedRoles(suggested)
+          }
+        } catch {
+          // best-effort, never block the flow
+        } finally {
+          setClassifying(false)
+        }
+      }
     } catch (err: unknown) {
       setUploadError(err instanceof Error ? err.message : "Failed to read file.")
       setConnectStage("error")
     }
-  }, [])
+  }, [user])
 
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -312,6 +360,8 @@ export default function ConceptPage() {
           dragging={dragging}
           inputRef={inputRef}
           participantRoles={participantRoles}
+          aiSuggestedRoles={aiSuggestedRoles}
+          classifying={classifying}
           context={context}
           onClose={closeConnect}
           onContinueToUpload={() => setConnectStage("upload")}
@@ -388,7 +438,7 @@ function ConsentFooter({ onAnalyze, onRetry }: { onAnalyze: () => void; onRetry:
 
 function ConnectModal({
   stage, parsed, fileName, error, dragging, inputRef,
-  participantRoles, context,
+  participantRoles, aiSuggestedRoles, classifying, context,
   onClose, onContinueToUpload, onBackToInstructions,
   onDrop, onDragOver, onDragLeave, onFileSelect, onInputChange,
   onSetRole, onContextChange, onAnalyze, onRetry,
@@ -400,6 +450,8 @@ function ConnectModal({
   dragging: boolean
   inputRef: React.RefObject<HTMLInputElement>
   participantRoles: ParticipantRoles
+  aiSuggestedRoles: Set<string>
+  classifying: boolean
   context: AccountContext
   onClose: () => void
   onContinueToUpload: () => void
@@ -514,13 +566,22 @@ function ConnectModal({
 
                 {/* Participant labelling */}
                 <div>
-                  <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-1">Who&apos;s who</p>
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest">Who&apos;s who</p>
+                    {classifying && (
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-3 h-3 border border-neutral-300 border-t-neutral-600 rounded-full animate-spin" />
+                        <span className="text-xs text-neutral-400">Detecting roles…</span>
+                      </div>
+                    )}
+                  </div>
                   <p className="text-xs text-neutral-500 mb-3">
-                    Label every participant — Nectic analyses only the non-vendor voice. Supports multi-party chats.
+                    Nectic auto-detects roles from message patterns. Correct any that look wrong.
                   </p>
                   <div className="space-y-2">
                     {parsed.participants.map((name) => {
                       const role = participantRoles[name] ?? "other"
+                      const isAiSuggested = aiSuggestedRoles.has(name)
                       return (
                         <div key={name} className="flex items-center gap-2">
                           <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -528,6 +589,9 @@ function ConnectModal({
                               {ROLE_LABEL[role]}
                             </span>
                             <span className="text-xs text-neutral-700 truncate font-medium">{name}</span>
+                            {isAiSuggested && (
+                              <span className="text-xs text-neutral-400 flex-shrink-0">AI</span>
+                            )}
                           </div>
                           <select
                             value={role}
@@ -586,7 +650,7 @@ function ConnectModal({
               <div className="py-8 text-center">
                 <div className="w-12 h-12 border-2 border-neutral-200 border-t-neutral-900 rounded-full animate-spin mx-auto mb-4" />
                 <p className="text-sm font-semibold text-neutral-900">Analysing {parsed?.totalMessages} messages</p>
-                <p className="mt-1 text-xs text-neutral-400">Claude Sonnet 4.6 · ~20 seconds</p>
+                <p className="mt-1 text-xs text-neutral-400">Claude Haiku 4.5 · ~10 seconds</p>
                 <div className="mt-5 space-y-2 text-left">
                   {["Identifying customer voice…", "Extracting risk signals…", "Clustering product signals…", "Scoring account health…"].map((s, i) => (
                     <div key={i} className="flex items-center gap-2">

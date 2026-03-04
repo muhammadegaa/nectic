@@ -116,7 +116,7 @@ function isSystemBody(body: string, sender: string): boolean {
   )
 }
 
-export function parseWhatsAppExport(raw: string, maxMessages = 500): WaParsed {
+export function parseWhatsAppExport(raw: string, maxMessages = 250): WaParsed {
   // Normalise line endings and strip BOM
   const lines = raw.replace(/^\uFEFF/, "").split(/\r?\n/)
   const messages: WaMessage[] = []
