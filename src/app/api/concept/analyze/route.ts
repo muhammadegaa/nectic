@@ -90,8 +90,15 @@ const USER_PROMPT = (
     "participantCount": <number>,
     "dateRange": "<e.g. Mar 19 – Mar 28, 2024>",
     "languages": ["Bahasa Indonesia", "English"]
+  },
+  "analysisQuality": {
+    "confidence": "high" | "medium" | "low",
+    "caveats": ["<e.g. 'Only 18 messages — signals may not be representative'>", "<e.g. 'Conversation went quiet after Mar 15 — issues may have moved to another channel'>"],
+    "dataGaps": ["<e.g. 'Contract value unknown — cannot score renewal risk accurately'>", "<e.g. 'No customer-side messages in the last 7 days'>"]
   }
 }
+
+Confidence rules: high = 50+ messages with clear customer voice; medium = 20-49 messages OR ambiguous signals OR uncertain participant roles; low = under 20 messages OR mostly vendor-side OR very short date range.
 
 CONVERSATION:
 ${conversation}`
@@ -109,6 +116,7 @@ export interface AnalysisResult {
   competitorMentions: string[]
   recommendedAction: { what: string; owner: string; urgency: string }
   stats: { messageCount: number; participantCount: number; dateRange: string; languages: string[] }
+  analysisQuality?: { confidence: "high" | "medium" | "low"; caveats: string[]; dataGaps: string[] }
   changesSince?: { summary: string; newRiskSignals: number; resolvedSignals: number; healthDelta: number }
 }
 

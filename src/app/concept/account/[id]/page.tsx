@@ -34,11 +34,80 @@ const urgencyConfig = {
   this_month: { label: "This month", color: "text-neutral-600 bg-neutral-100 border-neutral-200" },
 }
 
-const STARTER_PROMPTS = [
-  "What should I say in the next CS call?",
-  "Is renewal realistically at risk?",
-  "What's the #1 thing the PM should fix this week?",
-]
+// ─── Agentic prompt helpers ───────────────────────────────────────────────────
+
+function getDynamicPrompts(account: StoredAccount): string[] {
+  const r = account.result
+  const prompts: string[] = []
+
+  if (r.riskLevel === "critical") {
+    prompts.push("Account is critical — what do I do in the next 24 hours?")
+  } else if (r.riskLevel === "high") {
+    prompts.push("Account is high risk — what's the fastest way to stabilise it?")
+  }
+
+  if (r.riskSignals?.length > 0) {
+    const q = r.riskSignals[0].quote
+    const trimmed = q.length > 55 ? q.slice(0, 52) + "…" : q
+    prompts.push(`Help me respond to: "${trimmed}"`)
+  }
+
+  if (r.competitorMentions?.length > 0) {
+    prompts.push(`${r.competitorMentions[0]} was mentioned — how do I handle it?`)
+  }
+
+  if (account.context?.renewalMonth && prompts.length < 3) {
+    prompts.push(`Renewal is ${account.context.renewalMonth} — write me a prep plan`)
+  }
+
+  if (r.sentimentTrend === "declining" && prompts.length < 3) {
+    prompts.push("Sentiment is declining — what should CS say to turn it around?")
+  }
+
+  if (r.recommendedAction && prompts.length < 3) {
+    const action = r.recommendedAction.what
+    const trimmed = action.length > 60 ? action.slice(0, 57) + "…" : action
+    prompts.push(`Walk me through: "${trimmed}"`)
+  }
+
+  const highPri = r.productSignals?.find((s) => s.priority === "high")
+  if (highPri && prompts.length < 3) {
+    prompts.push(`Draft a Jira ticket for "${highPri.title}"`)
+  }
+
+  if (prompts.length === 0) {
+    prompts.push("What's the most important thing I'm missing in this account?")
+    prompts.push("Is renewal realistically at risk?")
+    prompts.push("What's the #1 thing the PM should fix this week?")
+  }
+
+  return prompts.slice(0, 3)
+}
+
+function getFollowUpSuggestions(lastMsg: string, account: StoredAccount): string[] {
+  const msg = lastMsg.toLowerCase()
+  const r = account.result
+  const out: string[] = []
+
+  if (msg.includes("renewal") || msg.includes("renew")) out.push("Draft the renewal prep email")
+  if (msg.includes("jira") || msg.includes("ticket") || msg.includes("sprint")) out.push("Format this as a Jira ticket")
+  if (msg.includes("email") || msg.includes("message") || msg.includes("whatsapp")) out.push("Make it shorter for WhatsApp")
+  if (msg.includes("churn") || msg.includes("cancel") || msg.includes("leaving")) out.push("What's the strongest argument to prevent churn?")
+  if ((msg.includes("feature") || msg.includes("build") || msg.includes("roadmap")) && r.productSignals?.length > 0)
+    out.push("Generate a brief for the top product signal")
+  if (r.competitorMentions?.length > 0 && msg.includes(r.competitorMentions[0].toLowerCase()))
+    out.push(`Write a battle card against ${r.competitorMentions[0]}`)
+  if (msg.includes("call") || msg.includes("meeting")) out.push("Write a meeting agenda")
+  if (msg.includes("assume") || msg.includes("uncertain") || msg.includes("not sure") || msg.includes("unclear"))
+    out.push("What context would make you more confident?")
+
+  if (out.length === 0) {
+    out.push("What should I do next?")
+    out.push("What am I missing?")
+  }
+
+  return out.slice(0, 2)
+}
 
 // ─── Markdown renderers ───────────────────────────────────────────────────────
 
@@ -91,6 +160,7 @@ interface ChatMessage {
 interface ProductSignal {
   type: string
   title: string
+  problemStatement?: string
   quote: string
   priority: string
   pmAction: string
@@ -384,14 +454,13 @@ export default function AccountPage() {
       {briefSignal && (
         <BriefPanel
           signal={briefSignal}
-          accountName={account.result.accountName}
-          accountSummary={account.result.summary}
+          account={account}
           onClose={() => setBriefSignal(null)}
         />
       )}
 
       {/* Chat panel — sticky bottom */}
-      <ChatPanel analysis={account.result} />
+      <ChatPanel account={account} />
     </div>
   )
 }
@@ -439,6 +508,11 @@ function AnalysisReport({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Analysis quality / caveats */}
+      {result.analysisQuality && (result.analysisQuality.caveats.length > 0 || result.analysisQuality.dataGaps.length > 0) && (
+        <AnalysisQualityBanner quality={result.analysisQuality} />
       )}
 
       {/* Health score */}
@@ -595,13 +669,81 @@ function AnalysisReport({
   )
 }
 
+// ─── Analysis quality banner ──────────────────────────────────────────────────
+
+function AnalysisQualityBanner({
+  quality,
+}: {
+  quality: NonNullable<AnalysisResult["analysisQuality"]>
+}) {
+  const [expanded, setExpanded] = useState(false)
+  const confColor = quality.confidence === "low"
+    ? "bg-amber-50 border-amber-200"
+    : quality.confidence === "medium"
+    ? "bg-neutral-50 border-neutral-200"
+    : "bg-green-50 border-green-200"
+  const confText = quality.confidence === "low"
+    ? "text-amber-700"
+    : quality.confidence === "medium"
+    ? "text-neutral-600"
+    : "text-green-700"
+  const confLabel = { high: "High confidence", medium: "Medium confidence", low: "Low confidence" }[quality.confidence]
+
+  return (
+    <div className={`border rounded-lg overflow-hidden ${confColor}`}>
+      <button
+        className="w-full px-5 py-3 flex items-center justify-between"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <div className="flex items-center gap-2">
+          <span className={`text-xs font-semibold ${confText}`}>{confLabel}</span>
+          {quality.confidence !== "high" && (
+            <span className="text-xs text-neutral-500">· Nectic flagged {quality.caveats.length + quality.dataGaps.length} limitation{quality.caveats.length + quality.dataGaps.length !== 1 ? "s" : ""}</span>
+          )}
+        </div>
+        <span className="text-neutral-400 text-xs">{expanded ? "▾" : "▴"}</span>
+      </button>
+      {expanded && (
+        <div className="px-5 pb-4 space-y-3 border-t border-black/5 pt-3">
+          {quality.caveats.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1.5">What Nectic is uncertain about</p>
+              <ul className="space-y-1">
+                {quality.caveats.map((c, i) => (
+                  <li key={i} className="text-xs text-neutral-600 flex gap-2">
+                    <span className="text-amber-500 flex-shrink-0">⚠</span>{c}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {quality.dataGaps.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1.5">What would improve accuracy</p>
+              <ul className="space-y-1">
+                {quality.dataGaps.map((g, i) => (
+                  <li key={i} className="text-xs text-neutral-600 flex gap-2">
+                    <span className="text-blue-400 flex-shrink-0">→</span>{g}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Chat panel ───────────────────────────────────────────────────────────────
 
-function ChatPanel({ analysis }: { analysis: AnalysisResult }) {
+function ChatPanel({ account }: { account: StoredAccount }) {
+  const analysis = account.result
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState("")
   const [streaming, setStreaming] = useState(false)
   const [open, setOpen] = useState(true)
+  const [followUps, setFollowUps] = useState<string[]>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -609,15 +751,29 @@ function ChatPanel({ analysis }: { analysis: AnalysisResult }) {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
 
+  const dynamicPrompts = getDynamicPrompts(account)
+
+  const buildAccountMeta = () => {
+    const roles = account.participantRoles ?? {}
+    const vendorTeam = Object.entries(roles).filter(([, r]) => r === "vendor").map(([n]) => n)
+    const customerTeam = Object.entries(roles).filter(([, r]) => r === "customer").map(([n]) => n)
+    return {
+      industry: account.context?.industry,
+      contractTier: account.context?.contractTier,
+      renewalMonth: account.context?.renewalMonth,
+      vendorTeam,
+      customerTeam,
+    }
+  }
+
   const send = async (question: string) => {
     if (!question.trim() || streaming) return
     const q = question.trim()
     setInput("")
+    setFollowUps([])
     const newMessages: ChatMessage[] = [...messages, { role: "user", content: q }]
     setMessages(newMessages)
     setStreaming(true)
-
-    // Append empty assistant message to stream into
     setMessages((prev) => [...prev, { role: "assistant", content: "" }])
 
     try {
@@ -626,8 +782,9 @@ function ChatPanel({ analysis }: { analysis: AnalysisResult }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           analysis,
-          messages: messages, // previous history (not including current question)
+          messages,
           question: q,
+          accountMeta: buildAccountMeta(),
         }),
       })
 
@@ -649,6 +806,14 @@ function ChatPanel({ analysis }: { analysis: AnalysisResult }) {
           return updated
         })
       }
+      // Generate follow-up suggestions after streaming completes
+      setMessages((prev) => {
+        const last = prev[prev.length - 1]
+        if (last?.role === "assistant" && last.content) {
+          setFollowUps(getFollowUpSuggestions(last.content, account))
+        }
+        return prev
+      })
     } catch {
       setMessages((prev) => {
         const updated = [...prev]
@@ -687,37 +852,56 @@ function ChatPanel({ analysis }: { analysis: AnalysisResult }) {
           {/* Messages */}
           <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 min-h-0">
             {messages.length === 0 ? (
-              <div className="flex flex-wrap gap-2 pt-1">
-                {STARTER_PROMPTS.map((p) => (
-                  <button
-                    key={p}
-                    onClick={() => send(p)}
-                    className="text-xs text-neutral-600 bg-neutral-100 border border-neutral-200 hover:bg-neutral-900 hover:text-white hover:border-neutral-900 px-3 py-1.5 rounded-full transition-colors"
-                  >
-                    {p}
-                  </button>
-                ))}
+              <div>
+                <p className="text-xs text-neutral-400 mb-2 mt-1">Suggested questions for this account</p>
+                <div className="flex flex-wrap gap-2">
+                  {dynamicPrompts.map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => send(p)}
+                      className="text-xs text-neutral-600 bg-neutral-100 border border-neutral-200 hover:bg-neutral-900 hover:text-white hover:border-neutral-900 px-3 py-1.5 rounded-full transition-colors text-left"
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
               </div>
             ) : (
-              messages.map((m, i) => (
-                <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-                  {m.role === "user" ? (
-                    <div className="max-w-[80%] text-sm px-3 py-2 rounded-lg bg-neutral-900 text-white leading-relaxed">
-                      {m.content}
-                    </div>
-                  ) : (
-                    <div className="max-w-[80%] text-sm px-3 py-2 rounded-lg bg-neutral-100 text-neutral-800">
-                      {m.content === "" && streaming && i === messages.length - 1 ? (
-                        <span className="inline-block w-1.5 h-3.5 bg-neutral-400 animate-pulse ml-0.5 align-middle" />
-                      ) : (
-                        <ReactMarkdown remarkPlugins={[remarkGfm]} components={chatMarkdownComponents}>
-                          {m.content}
-                        </ReactMarkdown>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))
+              <>
+                {messages.map((m, i) => (
+                  <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                    {m.role === "user" ? (
+                      <div className="max-w-[80%] text-sm px-3 py-2 rounded-lg bg-neutral-900 text-white leading-relaxed">
+                        {m.content}
+                      </div>
+                    ) : (
+                      <div className="max-w-[80%] text-sm px-3 py-2 rounded-lg bg-neutral-100 text-neutral-800">
+                        {m.content === "" && streaming && i === messages.length - 1 ? (
+                          <span className="inline-block w-1.5 h-3.5 bg-neutral-400 animate-pulse ml-0.5 align-middle" />
+                        ) : (
+                          <ReactMarkdown remarkPlugins={[remarkGfm]} components={chatMarkdownComponents}>
+                            {m.content}
+                          </ReactMarkdown>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+                {/* Follow-up suggestions after last AI response */}
+                {!streaming && followUps.length > 0 && (
+                  <div className="flex flex-wrap gap-2 pl-1">
+                    {followUps.map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => send(s)}
+                        className="text-xs text-neutral-500 border border-neutral-200 bg-white hover:bg-neutral-900 hover:text-white hover:border-neutral-900 px-3 py-1.5 rounded-full transition-colors"
+                      >
+                        {s} →
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
             <div ref={messagesEndRef} />
           </div>
@@ -751,31 +935,42 @@ function ChatPanel({ analysis }: { analysis: AnalysisResult }) {
 
 // ─── Brief slide-over panel ───────────────────────────────────────────────────
 
+type RoadmapStatus = "new" | "planned" | "partial" | "unknown"
+
+const ROADMAP_OPTIONS: { value: RoadmapStatus; label: string; sub: string }[] = [
+  { value: "new", label: "Not on roadmap", sub: "Brief will include discovery validation steps" },
+  { value: "planned", label: "Already planned", sub: "Brief will focus on implementation scope and closing the gap" },
+  { value: "partial", label: "Similar thing planned", sub: "Brief will highlight what the current plan may miss" },
+  { value: "unknown", label: "Not sure", sub: "Brief will cover both validation and initial scope" },
+]
+
 function BriefPanel({
   signal,
-  accountName,
-  accountSummary,
+  account,
   onClose,
 }: {
   signal: ProductSignal
-  accountName: string
-  accountSummary: string
+  account: StoredAccount
   onClose: () => void
 }) {
+  const accountName = account.result.accountName
+  const accountSummary = account.result.summary
+  const [phase, setPhase] = useState<"context" | "generating">("context")
+  const [roadmapStatus, setRoadmapStatus] = useState<RoadmapStatus>("unknown")
+  const [additionalContext, setAdditionalContext] = useState("")
   const [content, setContent] = useState("")
   const [generating, setGenerating] = useState(false)
   const [done, setDone] = useState(false)
   const [copied, setCopied] = useState(false)
-  const startedRef = useRef(false)
 
-  useEffect(() => {
-    if (startedRef.current) return
-    startedRef.current = true
-    generate()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  const copyToClipboard = async () => {
+    await navigator.clipboard.writeText(content)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
-  const generate = async () => {
+  const generate = async (status: RoadmapStatus, extra: string) => {
+    setPhase("generating")
     setGenerating(true)
     setContent("")
     setDone(false)
@@ -784,7 +979,7 @@ function BriefPanel({
       const res = await fetch("/api/concept/brief", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ signal, accountName, accountSummary }),
+        body: JSON.stringify({ signal, accountName, accountSummary, roadmapStatus: status, additionalContext: extra }),
       })
 
       if (!res.ok || !res.body) throw new Error("Brief generation failed")
@@ -807,31 +1002,22 @@ function BriefPanel({
     }
   }
 
-  const copyToClipboard = async () => {
-    await navigator.clipboard.writeText(content)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
   return (
     <>
-      {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/20 z-40" onClick={onClose} />
-
-      {/* Panel */}
+      <div className="fixed inset-0 bg-black/20 z-40" onClick={phase === "generating" && generating ? undefined : onClose} />
       <div className="fixed right-0 top-0 bottom-0 w-full sm:w-[480px] bg-white border-l border-neutral-200 z-50 flex flex-col shadow-xl">
+
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100 flex-shrink-0">
           <div>
-            <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-0.5">Feature brief</p>
+            <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-0.5">
+              {phase === "context" ? "Before writing the brief" : "Feature brief"}
+            </p>
             <p className="text-sm font-semibold text-neutral-900 truncate max-w-[300px]">{signal.title}</p>
           </div>
           <div className="flex items-center gap-2">
             {done && (
-              <button
-                onClick={copyToClipboard}
-                className="text-xs text-neutral-600 border border-neutral-200 bg-white hover:bg-neutral-50 px-3 py-1.5 rounded transition-colors font-medium"
-              >
+              <button onClick={copyToClipboard} className="text-xs text-neutral-600 border border-neutral-200 bg-white hover:bg-neutral-50 px-3 py-1.5 rounded transition-colors font-medium">
                 {copied ? "Copied!" : "Copy"}
               </button>
             )}
@@ -839,34 +1025,83 @@ function BriefPanel({
           </div>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto px-5 py-4">
-          {!content && generating && (
-            <div className="flex items-center gap-2 text-sm text-neutral-500 pt-4">
-              <div className="w-4 h-4 border-2 border-neutral-300 border-t-neutral-700 rounded-full animate-spin flex-shrink-0" />
-              <span>Writing brief…</span>
-            </div>
-          )}
-          {content && (
-            <div className="pb-2">
-              <ReactMarkdown remarkPlugins={[remarkGfm]} components={briefMarkdownComponents}>
-                {content}
-              </ReactMarkdown>
-              {generating && <span className="inline-block w-1.5 h-4 bg-neutral-400 animate-pulse ml-0.5 align-middle" />}
-            </div>
-          )}
-        </div>
+        {/* Context phase */}
+        {phase === "context" && (
+          <div className="flex-1 overflow-y-auto px-5 py-5 flex flex-col">
+            <p className="text-xs text-neutral-500 mb-5 leading-relaxed">
+              This context shapes the brief. Nectic writes differently depending on whether this is new, already planned, or somewhere in between.
+            </p>
 
-        {/* Footer */}
-        {done && (
-          <div className="px-5 py-3 border-t border-neutral-100 flex-shrink-0">
+            {/* Problem statement */}
+            {signal.problemStatement && (
+              <div className="bg-neutral-50 border border-neutral-200 rounded-lg px-4 py-3 mb-5">
+                <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-1">Underlying problem</p>
+                <p className="text-xs text-neutral-700 leading-relaxed">{signal.problemStatement}</p>
+              </div>
+            )}
+
+            <p className="text-xs font-semibold text-neutral-700 mb-3">Is this already on your roadmap?</p>
+            <div className="space-y-2 mb-5">
+              {ROADMAP_OPTIONS.map((o) => (
+                <button
+                  key={o.value}
+                  onClick={() => setRoadmapStatus(o.value)}
+                  className={`w-full text-left px-4 py-3 rounded-lg border transition-colors ${roadmapStatus === o.value ? "border-neutral-900 bg-neutral-900 text-white" : "border-neutral-200 bg-white hover:border-neutral-400"}`}
+                >
+                  <p className={`text-sm font-semibold ${roadmapStatus === o.value ? "text-white" : "text-neutral-800"}`}>{o.label}</p>
+                  <p className={`text-xs mt-0.5 ${roadmapStatus === o.value ? "text-neutral-300" : "text-neutral-400"}`}>{o.sub}</p>
+                </button>
+              ))}
+            </div>
+
+            <p className="text-xs font-semibold text-neutral-700 mb-2">Anything else Nectic should know? <span className="font-normal text-neutral-400">(optional)</span></p>
+            <textarea
+              value={additionalContext}
+              onChange={(e) => setAdditionalContext(e.target.value)}
+              placeholder="e.g. we tried fixing this in Q3 but it didn't ship, this is blocking 2 enterprise deals, we already have a design for this…"
+              rows={3}
+              className="w-full text-xs border border-neutral-200 rounded-lg px-3 py-2.5 text-neutral-700 placeholder:text-neutral-400 focus:outline-none focus:border-neutral-400 resize-none mb-5"
+            />
+
             <button
-              onClick={generate}
-              className="text-xs text-neutral-500 hover:text-neutral-700 transition-colors"
+              onClick={() => generate(roadmapStatus, additionalContext)}
+              className="w-full bg-neutral-900 text-white text-sm font-semibold py-3 rounded-lg hover:bg-neutral-700 transition-colors mt-auto"
             >
-              Regenerate →
+              Write brief →
             </button>
           </div>
+        )}
+
+        {/* Generating phase */}
+        {phase === "generating" && (
+          <>
+            <div className="flex-1 overflow-y-auto px-5 py-4">
+              {!content && generating && (
+                <div className="flex items-center gap-2 text-sm text-neutral-500 pt-4">
+                  <div className="w-4 h-4 border-2 border-neutral-300 border-t-neutral-700 rounded-full animate-spin flex-shrink-0" />
+                  <span>Writing brief…</span>
+                </div>
+              )}
+              {content && (
+                <div className="pb-2">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={briefMarkdownComponents}>
+                    {content}
+                  </ReactMarkdown>
+                  {generating && <span className="inline-block w-1.5 h-4 bg-neutral-400 animate-pulse ml-0.5 align-middle" />}
+                </div>
+              )}
+            </div>
+            {done && (
+              <div className="px-5 py-3 border-t border-neutral-100 flex-shrink-0 flex items-center gap-4">
+                <button onClick={() => generate(roadmapStatus, additionalContext)} className="text-xs text-neutral-500 hover:text-neutral-700 transition-colors">
+                  Regenerate →
+                </button>
+                <button onClick={() => { setPhase("context"); setContent(""); setDone(false) }} className="text-xs text-neutral-400 hover:text-neutral-600 transition-colors">
+                  Change context
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </>

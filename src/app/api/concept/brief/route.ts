@@ -2,58 +2,95 @@ import { NextRequest } from "next/server"
 
 export const maxDuration = 60
 
+type RoadmapStatus = "new" | "planned" | "partial" | "unknown"
+
 interface ProductSignal {
   type: string
   title: string
+  problemStatement?: string
   quote: string
   priority: string
   pmAction: string
 }
 
-const SYSTEM_PROMPT = `You are a senior product manager writing a concise feature brief.
-Output clean, structured markdown. Be specific. Use the customer quote as direct evidence.
-Do not add preamble or explanation outside the brief structure.`
+const SYSTEM_PROMPT = `You are a senior product manager writing a feature brief. Output clean, structured markdown. Be specific — ground every claim in the customer evidence provided. Do not add preamble or explanation outside the brief structure.`
 
-const USER_PROMPT = (signal: ProductSignal, accountName: string, accountSummary: string) =>
-  `Write a PM feature brief for the following product signal from account "${accountName}".
+const USER_PROMPT = (
+  signal: ProductSignal,
+  accountName: string,
+  accountSummary: string,
+  roadmapStatus: RoadmapStatus,
+  additionalContext: string
+) => {
+  const roadmapNote = {
+    new: "This is not on the roadmap. The brief should include a discovery validation section — what to confirm before committing to build.",
+    planned: "This is already planned. The brief should focus on implementation scope, acceptance criteria, and ensuring the build actually addresses the root problem the customer described.",
+    partial: "Something similar is planned but this specific problem may not be fully addressed. The brief should highlight the gap between what's planned and what the customer actually needs.",
+    unknown: "Roadmap status is unknown. Include both a discovery validation section and an initial implementation scope.",
+  }[roadmapStatus]
+
+  return `Write a PM feature brief for the following product signal from account "${accountName}".
 
 ACCOUNT CONTEXT: ${accountSummary}
-
+ROADMAP STATUS: ${roadmapNote}
+${additionalContext ? `ADDITIONAL CONTEXT FROM PM: ${additionalContext}\n` : ""}
 SIGNAL:
 - Type: ${signal.type}
 - Title: ${signal.title}
+${signal.problemStatement ? `- Underlying problem: ${signal.problemStatement}` : ""}
 - Priority: ${signal.priority}
 - Customer quote: "${signal.quote}"
 - PM action noted: ${signal.pmAction}
 
 Output ONLY this structure in markdown:
 
-## Feature: ${signal.title}
+## ${signal.title}
 
-**Problem**
-[2-3 sentences describing the problem from the customer's perspective. Ground it in what they actually said.]
+**Problem (Jobs to be Done framing)**
+[2-3 sentences. What job is the customer trying to get done? The quote is a solution proposal — articulate the underlying need. Ground it in what they actually said.]
 
 **Customer evidence**
 > "${signal.quote}"
 > — ${accountName}
 
-**Proposed solution**
-[Specific, scoped solution. One clear paragraph. What exactly gets built.]
+**What we know vs. what we're assuming**
+- Know: [what the signal clearly tells us]
+- Assuming: [what we're inferring that needs validation]
+- Don't know yet: [what to confirm before building]
 
-**Priority rationale**
-[Why this matters now. Reference the account risk, renewal timing, or competitive pressure if relevant.]
+${roadmapStatus === "planned" || roadmapStatus === "partial" ? `**Gap analysis**
+[If similar work is planned, what specifically does this signal reveal that the current plan may miss?]
+
+` : `**Validation before building**
+- [ ] [specific thing to confirm with the customer or via data]
+- [ ] [specific thing to confirm]
+
+`}**Proposed solution**
+[Specific, scoped solution. One clear paragraph. What exactly gets built — not a feature wish list.]
 
 **Acceptance criteria**
 - [ ] [specific, testable criterion]
 - [ ] [specific, testable criterion]
-- [ ] [specific, testable criterion]`
+- [ ] [specific, testable criterion]
+
+**Priority rationale**
+[Why this matters now relative to other work. Reference account risk level, renewal timing, or competitive pressure if relevant. Be honest about trade-offs.]`
+}
 
 export async function POST(req: NextRequest) {
   try {
-    const { signal, accountName, accountSummary } = await req.json() as {
+    const {
+      signal,
+      accountName,
+      accountSummary,
+      roadmapStatus = "unknown",
+      additionalContext = "",
+    } = await req.json() as {
       signal: ProductSignal
       accountName: string
       accountSummary: string
+      roadmapStatus?: RoadmapStatus
+      additionalContext?: string
     }
 
     if (!signal || !accountName) {
@@ -79,7 +116,7 @@ export async function POST(req: NextRequest) {
         stream: true,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: USER_PROMPT(signal, accountName, accountSummary) },
+          { role: "user", content: USER_PROMPT(signal, accountName, accountSummary, roadmapStatus, additionalContext) },
         ],
       }),
     })
@@ -98,10 +135,7 @@ export async function POST(req: NextRequest) {
       try {
         while (true) {
           const { done, value } = await reader.read()
-          if (done) {
-            await writer.close()
-            break
-          }
+          if (done) { await writer.close(); break }
           const chunk = decoder.decode(value, { stream: true })
           for (const line of chunk.split("\n")) {
             if (!line.startsWith("data: ")) continue
@@ -110,17 +144,11 @@ export async function POST(req: NextRequest) {
             try {
               const parsed = JSON.parse(data)
               const token = parsed.choices?.[0]?.delta?.content
-              if (token) {
-                await writer.write(new TextEncoder().encode(token))
-              }
-            } catch {
-              // skip malformed chunks
-            }
+              if (token) await writer.write(new TextEncoder().encode(token))
+            } catch { /* skip malformed */ }
           }
         }
-      } catch {
-        await writer.abort()
-      }
+      } catch { await writer.abort() }
     })()
 
     return new Response(readable, {
@@ -131,7 +159,6 @@ export async function POST(req: NextRequest) {
       },
     })
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Unknown error"
-    return new Response(message, { status: 500 })
+    return new Response(err instanceof Error ? err.message : "Unknown error", { status: 500 })
   }
 }
