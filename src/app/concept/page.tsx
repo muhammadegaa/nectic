@@ -11,6 +11,8 @@ import {
   saveAccount,
   deleteAccount,
   aggregateSignals,
+  prefillFromContactBook,
+  mergeContactBook,
   type StoredAccount,
   type AccountContext,
   type ParticipantRole,
@@ -137,10 +139,10 @@ export default function ConceptPage() {
         return
       }
       setParsed(p)
-      // Default all participants to "other" (unlabelled)
-      const defaults: ParticipantRoles = {}
-      for (const name of p.participants) defaults[name] = "other"
-      setParticipantRoles(defaults)
+      const prefilled = user
+        ? await prefillFromContactBook(user.uid, p.participants)
+        : p.participants.reduce<ParticipantRoles>((acc, n) => ({ ...acc, [n]: "other" }), {})
+      setParticipantRoles(prefilled)
       setConnectStage("ready")
     } catch (err: unknown) {
       setUploadError(err instanceof Error ? err.message : "Failed to read file.")
@@ -190,6 +192,7 @@ export default function ConceptPage() {
         context,
         shareToken,
       })
+      await mergeContactBook(user.uid, participantRoles)
 
       await refreshAccounts()
       closeConnect()

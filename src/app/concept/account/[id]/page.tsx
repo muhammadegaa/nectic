@@ -8,7 +8,7 @@ import remarkGfm from "remark-gfm"
 import type { Components } from "react-markdown"
 import LogoIcon from "@/components/logo-icon"
 import { useAuth } from "@/contexts/auth-context"
-import { getAccount, deleteAccount, updateAccount, type StoredAccount, type ParticipantRole, type ParticipantRoles } from "@/lib/concept-firestore"
+import { getAccount, deleteAccount, updateAccount, prefillFromContactBook, mergeContactBook, type StoredAccount, type ParticipantRole, type ParticipantRoles } from "@/lib/concept-firestore"
 import { parseWhatsAppFile, formatForPrompt, type WaParsed } from "@/lib/whatsapp-parser"
 import type { AnalysisResult } from "@/app/api/concept/analyze/route"
 
@@ -217,15 +217,16 @@ export default function AccountPage() {
   }
 
   const handleReanalyzeFileSelect = async (file: File) => {
-    if (!account) return
+    if (!account || !user) return
     try {
       const parsed = await parseWhatsAppFile(file)
       if (parsed.messages.length < 5) return
       const savedRoles = account.participantRoles ?? {}
-      // Pre-fill from saved roles; mark any new participant as "other"
+      // Pre-fill from account's saved roles, then fall back to contact book for any new names
+      const contactBook = await prefillFromContactBook(user.uid, parsed.participants)
       const merged: ParticipantRoles = {}
       for (const name of parsed.participants) {
-        merged[name] = savedRoles[name] ?? "other"
+        merged[name] = savedRoles[name] ?? contactBook[name] ?? "other"
       }
       setReanalyzeFile(file)
       setReanalyzeParsed(parsed)
@@ -258,6 +259,7 @@ export default function AccountPage() {
         participantRoles: reanalyzeRoles,
         updatedAt: new Date().toISOString(),
       })
+      await mergeContactBook(user.uid, reanalyzeRoles)
       const updated = await getAccount(user.uid, id)
       if (updated) setAccount(updated)
       setShowReanalyze(false)

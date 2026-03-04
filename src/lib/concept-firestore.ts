@@ -9,7 +9,6 @@ import {
   deleteDoc,
   query,
   orderBy,
-  where,
   serverTimestamp,
 } from "firebase/firestore"
 import { db } from "@/infrastructure/firebase/firebase-client"
@@ -125,6 +124,42 @@ export function buildParticipantContext(roles: ParticipantRoles): {
     groups[role].push(name)
   }
   return groups
+}
+
+// ─── Contact book ─────────────────────────────────────────────────────────────
+// Stored at users/{uid} document field `contactBook: Record<string, ParticipantRole>`
+// Keys are exact participant name strings as they appear in WhatsApp exports.
+
+export async function getContactBook(uid: string): Promise<ParticipantRoles> {
+  const snap = await getDoc(doc(db, "users", uid))
+  if (!snap.exists()) return {}
+  return (snap.data().contactBook as ParticipantRoles) ?? {}
+}
+
+// Merges roles into the contact book — only adds/overwrites non-"other" roles
+// so that explicit labels are never silently downgraded back to "other".
+export async function mergeContactBook(uid: string, roles: ParticipantRoles): Promise<void> {
+  const existing = await getContactBook(uid)
+  const merged: ParticipantRoles = { ...existing }
+  for (const [name, role] of Object.entries(roles)) {
+    if (role !== "other" || !merged[name]) {
+      merged[name] = role
+    }
+  }
+  await setDoc(doc(db, "users", uid), { contactBook: merged }, { merge: true })
+}
+
+// Pre-fills known contacts into a fresh participant map, defaulting unknowns to "other"
+export async function prefillFromContactBook(
+  uid: string,
+  participants: string[]
+): Promise<ParticipantRoles> {
+  const book = await getContactBook(uid)
+  const roles: ParticipantRoles = {}
+  for (const name of participants) {
+    roles[name] = book[name] ?? "other"
+  }
+  return roles
 }
 
 export function aggregateSignals(accounts: StoredAccount[]): AggregatedSignal[] {
