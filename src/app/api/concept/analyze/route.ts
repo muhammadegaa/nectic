@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
         "HTTP-Referer": "https://nectic.vercel.app",
-        "X-Title": "Nectic — WhatsApp Signal Extractor",
+        "X-Title": "Nectic - WhatsApp Signal Extractor",
       },
       body: JSON.stringify({
         model: "openai/gpt-4o",
