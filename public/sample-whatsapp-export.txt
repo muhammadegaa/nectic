@@ -1,0 +1,42 @@
+[01/02/2026, 09:14:32] Rina Kusuma (CS): Selamat pagi Pak Budi, Pak Denny! Mau follow up soal renewal kontrak yang jatuh tempo bulan April. Ada waktu untuk brief call minggu ini?
+[01/02/2026, 09:47:15] Budi Santoso: Pagi Rin. Boleh, tapi saya mau bahas beberapa hal dulu sebelum kita bicara renewal
+[01/02/2026, 09:48:02] Budi Santoso: Tim saya masih ngeluh soal fitur bulk import. Sudah berapa bulan ini ya?
+[01/02/2026, 09:51:30] Denny Prasetyo: Iya betul. Setiap minggu harus manual upload satu-satu, sangat buang waktu
+[01/02/2026, 10:02:45] Rina Kusuma (CS): Noted Pak. Untuk bulk import memang sedang dalam roadmap, saya akan cek update dari tim product
+[01/02/2026, 10:03:11] Budi Santoso: Saya dengar ini sudah di roadmap sejak Q3 tahun lalu Rin 😅
+[01/02/2026, 10:05:33] Denny Prasetyo: Competitor kita pakai Salesforce dan mereka sudah punya fitur ini. Jujur saja beberapa orang di tim mulai tanya kenapa kita tidak pindah
+[01/02/2026, 10:12:00] Rina Kusuma (CS): Saya mengerti frustrasinya Pak Denny. Biar saya eskalasi langsung ke Product Manager kita ya
+[01/02/2026, 10:13:45] Budi Santoso: Tolong ya. Dan satu lagi — dashboard reporting kita sering loading lama, kadang sampai 30 detik. Tim finance sudah komplain ke saya
+[01/02/2026, 10:15:22] Denny Prasetyo: Iya performance issue ini sudah kita laporkan sejak Desember. Tiketnya ada tapi belum ada update
+[01/02/2026, 10:18:00] Rina Kusuma (CS): Wah maaf sekali Pak, saya cek tiketnya sekarang
+[03/02/2026, 14:30:00] Rina Kusuma (CS): Halo Pak Budi, Pak Denny. Sudah dapat update dari Engineering — performance issue akan di-fix dalam sprint ini (estimasi 2 minggu). Untuk bulk import, masuk prioritas Q1
+[03/02/2026, 15:45:12] Budi Santoso: Ok noted. Kita tunggu dulu ya. Kalau sampai akhir Februari belum ada progress, kita perlu reconsider
+[03/02/2026, 16:00:01] Denny Prasetyo: Setuju sama Pak Budi. We need to see real progress, bukan cuma janji
+[05/02/2026, 11:22:33] Rina Kusuma (CS): Selamat pagi semua! Update: dashboard performance sudah dipatch kemarin. Bisa dicoba?
+[05/02/2026, 13:14:55] Denny Prasetyo: Sudah coba, ada improvement. Tapi masih sekitar 15 detik, belum ideal
+[05/02/2026, 13:20:00] Budi Santoso: Better tapi belum solved ya. Ekspektasi kita under 5 detik seperti yang dijanjikan waktu onboarding
+[05/02/2026, 13:35:44] Rina Kusuma (CS): Understood, saya feedback ke Engineering. Target mereka memang under 5 detik
+[10/02/2026, 09:05:17] Denny Prasetyo: Rina, ada yang mau saya tanyakan soal pricing untuk renewal. Kalau kita nambah 10 seats, gimana struktur harganya?
+[10/02/2026, 10:30:00] Rina Kusuma (CS): Halo Pak Denny! Untuk expansion ke 10 seats tambahan, harganya Rp 8 juta/bulan untuk paket Growth. Saya kirim proposal formalnya ya
+[10/02/2026, 10:45:22] Denny Prasetyo: Hmm agak mahal ya. Kita juga dapat offer dari vendor lain lebih murah 20%
+[10/02/2026, 10:50:01] Budi Santoso: Denny betul. Kita perlu justifikasi yang kuat ke CFO kita untuk perpanjang, apalagi dengan isu-isu yang masih ada
+[10/02/2026, 11:02:44] Rina Kusuma (CS): Saya sangat mengerti Pak Budi. Bisa kita set up call dengan Account Executive kita untuk diskusi lebih lanjut soal value dan pricing?
+[10/02/2026, 11:15:00] Budi Santoso: Bisa, tapi pastikan yang join dari pihak kalian bisa ambil keputusan ya, bukan cuma dengerin
+[12/02/2026, 16:00:00] Denny Prasetyo: Update: kita baru saja selesai demo dengan Zoho CRM. Fitur mereka cukup lengkap dan harga lebih kompetitif
+[12/02/2026, 16:30:11] Rina Kusuma (CS): Terima kasih info-nya Pak Denny. Saya akan koordinasi dengan tim untuk ada penawaran yang lebih kompetitif
+[12/02/2026, 17:02:33] Budi Santoso: Rina, jujur ya — tim saya sudah agak lelah dengan issue yang berulang. Kita butuh keputusan cepat, April tidak lama lagi
+[14/02/2026, 10:15:00] Rina Kusuma (CS): Selamat pagi Pak Budi! Saya ada kabar baik — bulk import feature sudah masuk sprint yang mulai minggu depan. Target release 28 Feb
+[14/02/2026, 11:00:22] Budi Santoso: Ok good. Kita tunggu sampai end of Feb ya, kalau benar release dan performancenya bagus, kita siap lanjut diskusi renewal
+[14/02/2026, 11:05:44] Denny Prasetyo: Betul. Dan tolong juga ada dedicated support contact untuk kita ya, tired of going through the general ticket queue
+[14/02/2026, 11:10:00] Rina Kusuma (CS): Absolutely Pak Denny. Untuk akun seperti kalian seharusnya memang ada dedicated CSM. Saya urus minggu ini
+[17/02/2026, 09:30:00] Budi Santoso: Rina, satu lagi — apakah ada fitur untuk custom report? Finance team kita butuh export dalam format tertentu yang belum supported
+[17/02/2026, 10:00:15] Rina Kusuma (CS): Untuk custom report saat ini belum ada, tapi ada workaround via API. Saya bisa connect Pak Budi dengan technical team kita
+[17/02/2026, 10:15:33] Budi Santoso: API workaround artinya butuh developer kita sendiri. Itu resource yang tidak gratis Rin
+[17/02/2026, 10:22:00] Denny Prasetyo: Exactly. Kita bayar SaaS bukan buat DIY semuanya sendiri
+[17/02/2026, 10:30:44] Rina Kusuma (CS): Noted, feedback ini sangat valuable. Saya akan masukkan sebagai product feedback formal
+[20/02/2026, 15:00:00] Budi Santoso: Rina update dong, bulk import gimana? Masih on track 28 Feb?
+[20/02/2026, 16:45:22] Rina Kusuma (CS): Halo Pak Budi, maaf baru balas. Saya sedang konfirmasi ke Product team
+[20/02/2026, 17:30:00] Rina Kusuma (CS): Ada sedikit delay Pak, estimasi sekarang jadi 7 Maret. Tapi performance fix sudah 100% resolved ya, sudah di bawah 5 detik
+[20/02/2026, 17:45:11] Budi Santoso: Delay lagi? Ini pattern yang sama terus Rin. Kita seriously reconsider nih
+[20/02/2026, 17:50:33] Denny Prasetyo: Pak Budi, saya suggest kita set deadline untuk keputusan. Kalau 28 Feb tidak ada perubahan signifikan, kita move forward dengan evaluasi vendor lain secara serius
+[20/02/2026, 18:05:00] Budi Santoso: Setuju. Rina, tolong sampaikan ke management kalian — we're serious about this. Bukan gertakan

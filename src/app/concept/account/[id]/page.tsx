@@ -3,6 +3,9 @@
 import { useEffect, useRef, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
+import type { Components } from "react-markdown"
 import LogoIcon from "@/components/logo-icon"
 import { useAuth } from "@/contexts/auth-context"
 import { getAccount, deleteAccount, type StoredAccount } from "@/lib/concept-firestore"
@@ -36,6 +39,47 @@ const STARTER_PROMPTS = [
   "What's the #1 thing the PM should fix this week?",
 ]
 
+// ─── Markdown renderers ───────────────────────────────────────────────────────
+
+const chatMarkdownComponents: Components = {
+  p: ({ children }) => <p className="mb-2 last:mb-0 leading-relaxed">{children}</p>,
+  strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+  em: ({ children }) => <em className="italic">{children}</em>,
+  ul: ({ children }) => <ul className="list-disc list-outside ml-4 mb-2 space-y-0.5">{children}</ul>,
+  ol: ({ children }) => <ol className="list-decimal list-outside ml-4 mb-2 space-y-0.5">{children}</ol>,
+  li: ({ children }) => <li className="text-sm">{children}</li>,
+  blockquote: ({ children }) => (
+    <blockquote className="border-l-2 border-neutral-400 pl-3 italic text-neutral-600 my-2">{children}</blockquote>
+  ),
+  code: ({ children }) => (
+    <code className="bg-neutral-200 text-neutral-800 rounded px-1 py-0.5 text-xs font-mono">{children}</code>
+  ),
+  h1: ({ children }) => <h1 className="font-semibold text-base mb-1 mt-2">{children}</h1>,
+  h2: ({ children }) => <h2 className="font-semibold text-sm mb-1 mt-2">{children}</h2>,
+  h3: ({ children }) => <h3 className="font-semibold text-sm mb-1 mt-1">{children}</h3>,
+}
+
+const briefMarkdownComponents: Components = {
+  p: ({ children }) => <p className="text-sm text-neutral-700 leading-relaxed mb-3 last:mb-0">{children}</p>,
+  strong: ({ children }) => <strong className="font-semibold text-neutral-900">{children}</strong>,
+  em: ({ children }) => <em className="italic text-neutral-600">{children}</em>,
+  h1: ({ children }) => <h1 className="text-base font-bold text-neutral-900 mt-6 mb-2 first:mt-0">{children}</h1>,
+  h2: ({ children }) => <h2 className="text-sm font-bold text-neutral-900 uppercase tracking-wide mt-5 mb-2 first:mt-0">{children}</h2>,
+  h3: ({ children }) => <h3 className="text-sm font-semibold text-neutral-800 mt-4 mb-1">{children}</h3>,
+  ul: ({ children }) => <ul className="list-disc list-outside ml-4 mb-3 space-y-1">{children}</ul>,
+  ol: ({ children }) => <ol className="list-decimal list-outside ml-4 mb-3 space-y-1">{children}</ol>,
+  li: ({ children }) => <li className="text-sm text-neutral-700 leading-relaxed">{children}</li>,
+  blockquote: ({ children }) => (
+    <blockquote className="border-l-3 border-neutral-300 pl-4 py-1 my-3 bg-neutral-50 rounded-r text-sm italic text-neutral-600">
+      {children}
+    </blockquote>
+  ),
+  code: ({ children }) => (
+    <code className="bg-neutral-100 border border-neutral-200 text-neutral-700 rounded px-1.5 py-0.5 text-xs font-mono">{children}</code>
+  ),
+  hr: () => <hr className="border-neutral-200 my-4" />,
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface ChatMessage {
@@ -49,6 +93,10 @@ interface ProductSignal {
   quote: string
   priority: string
   pmAction: string
+}
+
+function canGenerateBrief(signal: ProductSignal): boolean {
+  return (signal.type === "complaint" || signal.type === "feature_request") && signal.priority !== "low"
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -271,12 +319,14 @@ function AnalysisReport({
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <span className={`text-xs font-semibold ${priColor}`}>{s.priority.charAt(0).toUpperCase() + s.priority.slice(1)}</span>
-                      <button
-                        onClick={() => onGenerateBrief(s)}
-                        className="text-xs text-neutral-500 border border-neutral-200 bg-white hover:bg-neutral-900 hover:text-white hover:border-neutral-900 px-2.5 py-1 rounded transition-colors font-medium"
-                      >
-                        Generate brief →
-                      </button>
+                      {canGenerateBrief(s) && (
+                        <button
+                          onClick={() => onGenerateBrief(s)}
+                          className="text-xs text-neutral-500 border border-neutral-200 bg-white hover:bg-neutral-900 hover:text-white hover:border-neutral-900 px-2.5 py-1 rounded transition-colors font-medium"
+                        >
+                          Generate brief →
+                        </button>
+                      )}
                     </div>
                   </div>
                   <div className="bg-neutral-50 rounded px-3 py-2 text-sm text-neutral-600 italic border border-neutral-100 mb-2">
@@ -439,16 +489,21 @@ function ChatPanel({ analysis }: { analysis: AnalysisResult }) {
             ) : (
               messages.map((m, i) => (
                 <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-                  <div className={`max-w-[80%] text-sm px-3 py-2 rounded-lg whitespace-pre-wrap leading-relaxed ${
-                    m.role === "user"
-                      ? "bg-neutral-900 text-white"
-                      : "bg-neutral-100 text-neutral-800"
-                  }`}>
-                    {m.content}
-                    {m.role === "assistant" && streaming && i === messages.length - 1 && m.content === "" && (
-                      <span className="inline-block w-1.5 h-3.5 bg-neutral-400 animate-pulse ml-0.5 align-middle" />
-                    )}
-                  </div>
+                  {m.role === "user" ? (
+                    <div className="max-w-[80%] text-sm px-3 py-2 rounded-lg bg-neutral-900 text-white leading-relaxed">
+                      {m.content}
+                    </div>
+                  ) : (
+                    <div className="max-w-[80%] text-sm px-3 py-2 rounded-lg bg-neutral-100 text-neutral-800">
+                      {m.content === "" && streaming && i === messages.length - 1 ? (
+                        <span className="inline-block w-1.5 h-3.5 bg-neutral-400 animate-pulse ml-0.5 align-middle" />
+                      ) : (
+                        <ReactMarkdown remarkPlugins={[remarkGfm]} components={chatMarkdownComponents}>
+                          {m.content}
+                        </ReactMarkdown>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))
             )}
@@ -581,11 +636,11 @@ function BriefPanel({
             </div>
           )}
           {content && (
-            <div className="prose prose-sm max-w-none">
-              <pre className="whitespace-pre-wrap font-sans text-sm text-neutral-800 leading-relaxed">
+            <div className="pb-2">
+              <ReactMarkdown remarkPlugins={[remarkGfm]} components={briefMarkdownComponents}>
                 {content}
-                {generating && <span className="inline-block w-1.5 h-4 bg-neutral-400 animate-pulse ml-0.5 align-middle" />}
-              </pre>
+              </ReactMarkdown>
+              {generating && <span className="inline-block w-1.5 h-4 bg-neutral-400 animate-pulse ml-0.5 align-middle" />}
             </div>
           )}
         </div>
