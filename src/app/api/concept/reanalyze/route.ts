@@ -13,6 +13,24 @@ Return ONLY valid JSON. No markdown wrapper, no explanation.`
 type ParticipantRole = "vendor" | "customer" | "partner" | "other"
 type ParticipantRoles = Record<string, ParticipantRole>
 
+interface WorkspaceContext {
+  productDescription?: string
+  featureAreas?: string
+  roadmapFocus?: string
+  knownIssues?: string
+}
+
+function buildWorkspaceBlock(ws?: WorkspaceContext): string {
+  if (!ws) return ""
+  const lines = [
+    ws.productDescription && `Product: ${ws.productDescription}`,
+    ws.featureAreas && `Feature areas: ${ws.featureAreas}`,
+    ws.roadmapFocus && `Roadmap this quarter: ${ws.roadmapFocus}`,
+    ws.knownIssues && `Known issues: ${ws.knownIssues}`,
+  ].filter(Boolean)
+  return lines.length ? `WORKSPACE CONTEXT:\n${lines.join("\n")}\n\n` : ""
+}
+
 function buildParticipantBlock(roles: ParticipantRoles): string {
   const groups: Record<ParticipantRole, string[]> = { vendor: [], customer: [], partner: [], other: [] }
   for (const [name, role] of Object.entries(roles)) groups[role].push(name)
@@ -29,7 +47,8 @@ const USER_PROMPT = (
   newConversation: string | null,
   participantRoles: ParticipantRoles,
   supplementalContext: string | null,
-  signalActions: Record<string, SignalAction> | null
+  signalActions: Record<string, SignalAction> | null,
+  workspace?: WorkspaceContext
 ) => {
   const participantContext = Object.keys(participantRoles).length > 0
     ? buildParticipantBlock(participantRoles)
@@ -47,7 +66,7 @@ const USER_PROMPT = (
     ? `\nNEW MESSAGES TO INCORPORATE:\n${newConversation}`
     : "\nNO NEW MESSAGES — update is based on additional context only."
 
-  return `${participantContext}PREVIOUS ANALYSIS (from ${prior.stats.dateRange}):
+  return `${buildWorkspaceBlock(workspace)}${participantContext}PREVIOUS ANALYSIS (from ${prior.stats.dateRange}):
 ${JSON.stringify(prior, null, 2)}
 ${actionsBlock}${contextBlock}${messagesBlock}
 
@@ -72,6 +91,7 @@ export async function POST(req: NextRequest) {
       participantRoles = {},
       supplementalContext = null,
       signalActions = null,
+      workspace,
     } = await req.json() as {
       priorAnalysis: AnalysisResult
       conversation?: string | null
@@ -79,6 +99,7 @@ export async function POST(req: NextRequest) {
       participantRoles?: Record<string, "vendor" | "customer" | "partner" | "other">
       supplementalContext?: string | null
       signalActions?: Record<string, SignalAction> | null
+      workspace?: WorkspaceContext
     }
 
     if (!priorAnalysis) {
@@ -106,7 +127,7 @@ export async function POST(req: NextRequest) {
         temperature: 0.2,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: USER_PROMPT(priorAnalysis, conversation, participantRoles, supplementalContext, signalActions) },
+          { role: "user", content: USER_PROMPT(priorAnalysis, conversation, participantRoles, supplementalContext, signalActions, workspace) },
         ],
       }),
     })

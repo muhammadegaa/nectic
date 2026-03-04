@@ -242,6 +242,11 @@ function BoardSignalRow({
   const [note, setNote] = useState(signal.action?.note ?? "")
   const [expanded, setExpanded] = useState(false)
 
+  useEffect(() => {
+    setStatus(signal.action?.status ?? "open")
+    setNote(signal.action?.note ?? "")
+  }, [signal.action])
+
   const riskColors: Record<string, string> = {
     critical: "bg-red-500",
     high: "bg-orange-400",

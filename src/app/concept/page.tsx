@@ -13,10 +13,12 @@ import {
   aggregateSignals,
   prefillFromContactBook,
   mergeContactBook,
+  getWorkspace,
   type StoredAccount,
   type AccountContext,
   type ParticipantRole,
   type ParticipantRoles,
+  type WorkspaceContext,
 } from "@/lib/concept-firestore"
 import type { AnalysisResult } from "@/app/api/concept/analyze/route"
 
@@ -69,6 +71,7 @@ export default function ConceptPage() {
 
   const [accounts, setAccounts] = useState<StoredAccount[]>([])
   const [loadingAccounts, setLoadingAccounts] = useState(true)
+  const [workspace, setWorkspace] = useState<WorkspaceContext>({})
   const [showConnect, setShowConnect] = useState(false)
   const [connectStage, setConnectStage] = useState<ConnectStage>("instructions")
   const [parsed, setParsed] = useState<WaParsed | null>(null)
@@ -93,6 +96,7 @@ export default function ConceptPage() {
       .then(setAccounts)
       .catch(console.error)
       .finally(() => setLoadingAccounts(false))
+    getWorkspace(user.uid).then(setWorkspace).catch(() => {})
   }, [user])
 
   const refreshAccounts = async () => {
@@ -225,6 +229,7 @@ export default function ConceptPage() {
           participants: parsed.participants.length,
           participantRoles,
           context,
+          workspace,
         }),
       })
 
@@ -266,9 +271,12 @@ export default function ConceptPage() {
     )
   }
 
+  const riskOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 }
+  const sortedAccounts = [...accounts].sort((a, b) => (riskOrder[a.result.riskLevel] ?? 3) - (riskOrder[b.result.riskLevel] ?? 3))
   const aggregated = aggregateSignals(accounts)
   const atRisk = accounts.filter((a) => a.result.riskLevel === "high" || a.result.riskLevel === "critical").length
-  const sharedSignals = aggregated.filter((s) => s.accountCount > 1).length
+  const sharedPatterns = aggregated.filter((s) => s.accountCount > 1)
+  const hasWorkspace = !!(workspace.productDescription || workspace.featureAreas || workspace.roadmapFocus || workspace.knownIssues)
 
   return (
     <div className="min-h-screen bg-neutral-50">
@@ -282,6 +290,7 @@ export default function ConceptPage() {
           <div className="flex items-center gap-3 text-xs">
             <span className="text-neutral-900 font-semibold border-b-2 border-neutral-900 pb-0.5">Accounts</span>
             <Link href="/concept/board" className="text-neutral-400 hover:text-neutral-700 transition-colors">Signal board</Link>
+            <Link href="/concept/workspace" className="text-neutral-400 hover:text-neutral-700 transition-colors">Workspace</Link>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -299,8 +308,7 @@ export default function ConceptPage() {
         </div>
       </nav>
 
-
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
         {loadingAccounts ? (
           <div className="flex items-center justify-center py-24">
             <div className="w-5 h-5 border-2 border-neutral-300 border-t-neutral-900 rounded-full animate-spin" />
@@ -309,27 +317,41 @@ export default function ConceptPage() {
           <>
             {accounts.length === 0 && <EmptyState onConnect={openConnect} userName={user.displayName?.split(" ")[0] ?? null} />}
             {accounts.length > 0 && (
-              <>
-                <div className="grid grid-cols-3 gap-4 mb-8">
-                  <div className="bg-white border border-neutral-200 rounded-lg p-5">
-                    <p className="text-3xl font-light text-neutral-900">{accounts.length}</p>
-                    <p className="text-xs text-neutral-500 mt-1">accounts connected</p>
-                  </div>
-                  <div className={`border rounded-lg p-5 ${atRisk > 0 ? "bg-red-50 border-red-200" : "bg-white border-neutral-200"}`}>
-                    <p className={`text-3xl font-light ${atRisk > 0 ? "text-red-600" : "text-neutral-900"}`}>{atRisk}</p>
-                    <p className={`text-xs mt-1 ${atRisk > 0 ? "text-red-500" : "text-neutral-500"}`}>at high / critical risk</p>
-                  </div>
-                  <div className={`border rounded-lg p-5 ${sharedSignals > 0 ? "bg-blue-50 border-blue-200" : "bg-white border-neutral-200"}`}>
-                    <p className={`text-3xl font-light ${sharedSignals > 0 ? "text-blue-600" : "text-neutral-900"}`}>{sharedSignals}</p>
-                    <p className={`text-xs mt-1 ${sharedSignals > 0 ? "text-blue-600" : "text-neutral-500"}`}>
-                      {sharedSignals > 0 ? "signals across accounts" : "shared signals (add more)"}
-                    </p>
+              <div className="space-y-6">
+                {/* Stats + actions row */}
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-5 text-xs text-neutral-500">
+                    <span><span className="text-lg font-light text-neutral-900 mr-1.5">{accounts.length}</span>accounts</span>
+                    {atRisk > 0 ? (
+                      <span><span className="text-lg font-light text-red-600 mr-1.5">{atRisk}</span><span className="text-red-500">need attention</span></span>
+                    ) : (
+                      <span className="text-green-600 font-medium">All accounts healthy</span>
+                    )}
+                    {sharedPatterns.length > 0 && (
+                      <span><span className="text-lg font-light text-blue-600 mr-1.5">{sharedPatterns.length}</span><span className="text-blue-500">cross-account patterns</span></span>
+                    )}
                   </div>
                 </div>
-                <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-                  <div className="lg:col-span-3 space-y-3">
-                    <h2 className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-4">Connected accounts</h2>
-                    {accounts.map((account) => (
+
+                {/* Workspace setup nudge */}
+                {!hasWorkspace && (
+                  <Link href="/concept/workspace" className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 hover:bg-amber-100 transition-colors group">
+                    <div>
+                      <p className="text-xs font-semibold text-amber-800">Set up your workspace to improve analysis quality</p>
+                      <p className="text-xs text-amber-600 mt-0.5">Tell Nectic what your product does, your roadmap, and known issues. Takes 2 minutes.</p>
+                    </div>
+                    <span className="text-amber-600 text-sm group-hover:translate-x-0.5 transition-transform">→</span>
+                  </Link>
+                )}
+
+                {/* Account list — sorted by risk */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="text-xs font-semibold text-neutral-400 uppercase tracking-widest">Accounts</h2>
+                    <span className="text-xs text-neutral-400">Sorted by risk</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {sortedAccounts.map((account) => (
                       <AccountCard
                         key={account.id}
                         account={account}
@@ -340,12 +362,49 @@ export default function ConceptPage() {
                       />
                     ))}
                   </div>
-                  <div className="lg:col-span-2">
-                    <h2 className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-4">Product signals</h2>
-                    <CrossAccountSignals signals={aggregated} accountCount={accounts.length} />
-                  </div>
                 </div>
-              </>
+
+                {/* Cross-account patterns — compact, max 3, link to board */}
+                {aggregated.length > 0 && (
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <h2 className="text-xs font-semibold text-neutral-400 uppercase tracking-widest">
+                        {sharedPatterns.length > 0 ? "Patterns across accounts" : "Product signals"}
+                      </h2>
+                      <Link href="/concept/board" className="text-xs text-neutral-400 hover:text-neutral-700 transition-colors">
+                        All signals →
+                      </Link>
+                    </div>
+                    {accounts.length < 2 && (
+                      <p className="text-xs text-neutral-400 mb-3">Connect more accounts to see patterns that repeat across your customer base.</p>
+                    )}
+                    <div className="space-y-2">
+                      {aggregated.slice(0, 4).map((sig, i) => {
+                        const typeCfg = signalTypeConfig[sig.type] ?? signalTypeConfig.complaint
+                        const isShared = sig.accountCount > 1
+                        return (
+                          <div key={i} className={`bg-white border rounded-lg px-4 py-3 flex items-start gap-3 ${isShared ? "border-blue-200" : "border-neutral-200"}`}>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                <span className={`text-xs font-medium px-2 py-0.5 border rounded-full flex-shrink-0 ${typeCfg.color}`}>{typeCfg.label}</span>
+                                {isShared && <span className="text-xs font-semibold text-blue-600">{sig.accountCount} accounts</span>}
+                                {sig.priority === "high" && !isShared && <span className="text-xs font-semibold text-red-500">High</span>}
+                              </div>
+                              <p className="text-xs font-semibold text-neutral-800 leading-snug">{sig.problemStatement || sig.title}</p>
+                              {isShared && <p className="text-xs text-neutral-400 mt-0.5 truncate">{sig.accountNames.join(", ")}</p>}
+                            </div>
+                          </div>
+                        )
+                      })}
+                      {aggregated.length > 4 && (
+                        <Link href="/concept/board" className="block text-center text-xs text-neutral-400 hover:text-neutral-700 transition-colors py-2">
+                          +{aggregated.length - 4} more on signal board →
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </>
         )}

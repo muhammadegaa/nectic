@@ -16,7 +16,14 @@ interface AccountMeta {
   customerTeam: string[]
 }
 
-const SYSTEM_PROMPT = (analysis: AnalysisResult, meta: AccountMeta) => {
+interface WorkspaceContext {
+  productDescription?: string
+  featureAreas?: string
+  roadmapFocus?: string
+  knownIssues?: string
+}
+
+const SYSTEM_PROMPT = (analysis: AnalysisResult, meta: AccountMeta, workspace?: WorkspaceContext) => {
   const qualityWarning = analysis.analysisQuality?.confidence === "low"
     ? `\n⚠️ ANALYSIS QUALITY: Low confidence (${analysis.analysisQuality.caveats.join("; ")}). Be explicit about this when answering — do not overstate certainty.`
     : analysis.analysisQuality?.confidence === "medium"
@@ -31,11 +38,19 @@ const SYSTEM_PROMPT = (analysis: AnalysisResult, meta: AccountMeta) => {
     meta.customerTeam.length && `Customer team: ${meta.customerTeam.join(", ")}`,
   ].filter(Boolean).join("\n")
 
+  const workspaceBlock = workspace ? [
+    workspace.productDescription && `Product: ${workspace.productDescription}`,
+    workspace.featureAreas && `Feature areas: ${workspace.featureAreas}`,
+    workspace.roadmapFocus && `Roadmap this quarter: ${workspace.roadmapFocus}`,
+    workspace.knownIssues && `Known issues: ${workspace.knownIssues}`,
+  ].filter(Boolean).join("\n") : ""
+
   return `You are Nectic, an agentic PM co-pilot embedded in a B2B SaaS customer intelligence tool. You are talking to a product manager or CS manager who is trying to understand and act on a specific customer account.
 
 ACCOUNT DATA:
 ${JSON.stringify(analysis, null, 2)}
 ${metaBlock ? `\nACCOUNT META:\n${metaBlock}` : ""}
+${workspaceBlock ? `\nWORKSPACE CONTEXT:\n${workspaceBlock}` : ""}
 ${qualityWarning}
 
 ## Your role and behavior
@@ -76,11 +91,12 @@ Do not pretend certainty you don't have. If signals in the analysis are thin (fe
 
 export async function POST(req: NextRequest) {
   try {
-    const { analysis, messages, question, accountMeta = {} } = await req.json() as {
+    const { analysis, messages, question, accountMeta = {}, workspace } = await req.json() as {
       analysis: AnalysisResult
       messages: ChatMessage[]
       question: string
       accountMeta?: Partial<AccountMeta>
+      workspace?: WorkspaceContext
     }
 
     if (!question || !analysis) {
@@ -115,7 +131,7 @@ export async function POST(req: NextRequest) {
         temperature: 0.3,
         stream: true,
         messages: [
-          { role: "system", content: SYSTEM_PROMPT(analysis, meta) },
+          { role: "system", content: SYSTEM_PROMPT(analysis, meta, workspace) },
           ...chatMessages,
         ],
       }),

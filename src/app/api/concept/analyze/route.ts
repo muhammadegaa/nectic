@@ -11,6 +11,13 @@ interface AccountContext {
   renewalMonth?: string
 }
 
+interface WorkspaceContext {
+  productDescription?: string
+  featureAreas?: string
+  roadmapFocus?: string
+  knownIssues?: string
+}
+
 const SYSTEM_PROMPT = `You are a B2B SaaS customer intelligence analyst specialising in Southeast Asia markets.
 
 You will receive a WhatsApp group conversation, participant roles, and optional account context. The conversation may be in Bahasa Indonesia, English, or code-switched. Analyse it deeply from the CUSTOMER's perspective only.
@@ -32,10 +39,22 @@ function buildParticipantBlock(roles: ParticipantRoles): string {
     : ""
 }
 
+function buildWorkspaceBlock(ws?: WorkspaceContext): string {
+  if (!ws) return ""
+  const lines = [
+    ws.productDescription && `Product: ${ws.productDescription}`,
+    ws.featureAreas && `Feature areas: ${ws.featureAreas}`,
+    ws.roadmapFocus && `Roadmap this quarter: ${ws.roadmapFocus}`,
+    ws.knownIssues && `Known issues: ${ws.knownIssues}`,
+  ].filter(Boolean)
+  return lines.length ? `WORKSPACE CONTEXT:\n${lines.join("\n")}\n\n` : ""
+}
+
 const USER_PROMPT = (
   conversation: string,
   participantRoles: ParticipantRoles,
-  context: AccountContext
+  context: AccountContext,
+  workspace?: WorkspaceContext
 ) => {
   const participantContext = Object.keys(participantRoles).length > 0
     ? buildParticipantBlock(participantRoles)
@@ -47,7 +66,7 @@ const USER_PROMPT = (
     context.renewalMonth && `Renewal: ${context.renewalMonth}`,
   ].filter(Boolean).join("\n")
 
-  return `${participantContext ? participantContext + "\n\n" : ""}${accountContext ? `ACCOUNT CONTEXT:\n${accountContext}\n\n` : ""}Analyse this WhatsApp conversation and return a JSON object with EXACTLY this structure:
+  return `${buildWorkspaceBlock(workspace)}${participantContext ? participantContext + "\n\n" : ""}${accountContext ? `ACCOUNT CONTEXT:\n${accountContext}\n\n` : ""}Analyse this WhatsApp conversation and return a JSON object with EXACTLY this structure:
 
 {
   "accountName": "infer customer company name from context, or 'Unknown Account'",
@@ -128,12 +147,14 @@ export async function POST(req: NextRequest) {
       participants: participantCount,
       participantRoles = {},
       context = {},
+      workspace,
     } = await req.json() as {
       conversation: string
       messageCount?: number
       participants?: number
       participantRoles?: ParticipantRoles
       context?: AccountContext
+      workspace?: WorkspaceContext
     }
 
     if (!conversation || typeof conversation !== "string") {
@@ -158,7 +179,7 @@ export async function POST(req: NextRequest) {
         temperature: 0.2,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: USER_PROMPT(conversation, participantRoles, context) },
+          { role: "user", content: USER_PROMPT(conversation, participantRoles, context, workspace) },
         ],
       }),
     })

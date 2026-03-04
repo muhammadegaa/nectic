@@ -8,7 +8,7 @@ import remarkGfm from "remark-gfm"
 import type { Components } from "react-markdown"
 import LogoIcon from "@/components/logo-icon"
 import { useAuth } from "@/contexts/auth-context"
-import { getAccount, deleteAccount, updateAccount, prefillFromContactBook, mergeContactBook, saveSignalAction, signalKey, type StoredAccount, type ParticipantRole, type ParticipantRoles, type SignalAction, type SignalActionStatus } from "@/lib/concept-firestore"
+import { getAccount, deleteAccount, updateAccount, prefillFromContactBook, mergeContactBook, saveSignalAction, signalKey, getWorkspace, type StoredAccount, type ParticipantRole, type ParticipantRoles, type SignalAction, type SignalActionStatus, type WorkspaceContext } from "@/lib/concept-firestore"
 import { parseWhatsAppFile, formatForPrompt, type WaParsed } from "@/lib/whatsapp-parser"
 import type { AnalysisResult } from "@/app/api/concept/analyze/route"
 
@@ -178,6 +178,7 @@ export default function AccountPage() {
   const { user, loading: authLoading } = useAuth()
   const [account, setAccount] = useState<StoredAccount | null>(null)
   const [loadingAccount, setLoadingAccount] = useState(true)
+  const [workspace, setWorkspace] = useState<WorkspaceContext>({})
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [briefSignal, setBriefSignal] = useState<ProductSignal | null>(null)
@@ -199,6 +200,7 @@ export default function AccountPage() {
       .then(setAccount)
       .catch(console.error)
       .finally(() => setLoadingAccount(false))
+    getWorkspace(user.uid).then(setWorkspace).catch(() => {})
   }, [user, id])
 
   const handleDelete = async () => {
@@ -250,6 +252,7 @@ export default function AccountPage() {
           messageCount: reanalyzeParsed.totalMessages,
           participantRoles: reanalyzeRoles,
           signalActions: account.signalActions ?? null,
+          workspace,
         }),
       })
       const data = await res.json()
@@ -309,6 +312,13 @@ export default function AccountPage() {
           <span className="text-sm text-neutral-700 truncate max-w-32">{account.result.accountName}</span>
         </div>
         <div className="flex items-center gap-2">
+          <Link
+            href="/concept/workspace"
+            className="text-xs text-neutral-400 hover:text-neutral-700 transition-colors hidden sm:block"
+            title="Workspace settings"
+          >
+            ⚙
+          </Link>
           <button
             onClick={() => setShowReanalyze(true)}
             className="text-xs text-neutral-500 border border-neutral-200 bg-white hover:bg-neutral-50 px-3 py-1.5 rounded-lg transition-colors font-medium"
@@ -474,6 +484,7 @@ export default function AccountPage() {
                   participantRoles: account.participantRoles,
                   supplementalContext: ctx,
                   signalActions: account.signalActions ?? null,
+                  workspace,
                 }),
               })
               const data = await res.json()
@@ -493,12 +504,13 @@ export default function AccountPage() {
         <BriefPanel
           signal={briefSignal}
           account={account}
+          workspace={workspace}
           onClose={() => setBriefSignal(null)}
         />
       )}
 
       {/* Chat panel — sticky bottom */}
-      <ChatPanel account={account} />
+      <ChatPanel account={account} workspace={workspace} />
     </div>
   )
 }
@@ -623,7 +635,7 @@ function AnalysisReport({
             {result.riskSignals.map((s, i) => {
               const sev = s.severity === "high" ? "border-l-red-400" : s.severity === "medium" ? "border-l-amber-400" : "border-l-neutral-300"
               const sType = (s as { type?: string }).type ?? "risk"
-              const sTitle = s.explanation.slice(0, 60)
+              const sTitle = s.explanation.slice(0, 80)
               const key = signalKey(sType, sTitle)
               return (
                 <div key={i} className={`p-5 border-l-4 ${sev}`}>
@@ -947,7 +959,7 @@ function SignalActionControl({
 
 // ─── Chat panel ───────────────────────────────────────────────────────────────
 
-function ChatPanel({ account }: { account: StoredAccount }) {
+function ChatPanel({ account, workspace }: { account: StoredAccount; workspace: WorkspaceContext }) {
   const analysis = account.result
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState("")
@@ -995,6 +1007,7 @@ function ChatPanel({ account }: { account: StoredAccount }) {
           messages,
           question: q,
           accountMeta: buildAccountMeta(),
+          workspace,
         }),
       })
 
@@ -1157,10 +1170,12 @@ const ROADMAP_OPTIONS: { value: RoadmapStatus; label: string; sub: string }[] = 
 function BriefPanel({
   signal,
   account,
+  workspace,
   onClose,
 }: {
   signal: ProductSignal
   account: StoredAccount
+  workspace: WorkspaceContext
   onClose: () => void
 }) {
   const accountName = account.result.accountName
@@ -1189,7 +1204,7 @@ function BriefPanel({
       const res = await fetch("/api/concept/brief", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ signal, accountName, accountSummary, roadmapStatus: status, additionalContext: extra }),
+        body: JSON.stringify({ signal, accountName, accountSummary, roadmapStatus: status, additionalContext: extra, workspace }),
       })
 
       if (!res.ok || !res.body) throw new Error("Brief generation failed")

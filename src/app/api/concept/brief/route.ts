@@ -4,6 +4,13 @@ export const maxDuration = 60
 
 type RoadmapStatus = "new" | "planned" | "partial" | "unknown"
 
+interface WorkspaceContext {
+  productDescription?: string
+  featureAreas?: string
+  roadmapFocus?: string
+  knownIssues?: string
+}
+
 interface ProductSignal {
   type: string
   title: string
@@ -20,8 +27,16 @@ const USER_PROMPT = (
   accountName: string,
   accountSummary: string,
   roadmapStatus: RoadmapStatus,
-  additionalContext: string
+  additionalContext: string,
+  workspace?: WorkspaceContext
 ) => {
+  const workspaceBlock = workspace ? [
+    workspace.productDescription && `Product: ${workspace.productDescription}`,
+    workspace.featureAreas && `Feature areas: ${workspace.featureAreas}`,
+    workspace.roadmapFocus && `Roadmap this quarter: ${workspace.roadmapFocus}`,
+    workspace.knownIssues && `Known issues: ${workspace.knownIssues}`,
+  ].filter(Boolean).join("\n") : ""
+
   const roadmapNote = {
     new: "This is not on the roadmap. The brief should include a discovery validation section — what to confirm before committing to build.",
     planned: "This is already planned. The brief should focus on implementation scope, acceptance criteria, and ensuring the build actually addresses the root problem the customer described.",
@@ -30,7 +45,7 @@ const USER_PROMPT = (
   }[roadmapStatus]
 
   return `Write a PM feature brief for the following product signal from account "${accountName}".
-
+${workspaceBlock ? `\nWORKSPACE CONTEXT:\n${workspaceBlock}\n` : ""}
 ACCOUNT CONTEXT: ${accountSummary}
 ROADMAP STATUS: ${roadmapNote}
 ${additionalContext ? `ADDITIONAL CONTEXT FROM PM: ${additionalContext}\n` : ""}
@@ -85,12 +100,14 @@ export async function POST(req: NextRequest) {
       accountSummary,
       roadmapStatus = "unknown",
       additionalContext = "",
+      workspace,
     } = await req.json() as {
       signal: ProductSignal
       accountName: string
       accountSummary: string
       roadmapStatus?: RoadmapStatus
       additionalContext?: string
+      workspace?: WorkspaceContext
     }
 
     if (!signal || !accountName) {
@@ -116,7 +133,7 @@ export async function POST(req: NextRequest) {
         stream: true,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: USER_PROMPT(signal, accountName, accountSummary, roadmapStatus, additionalContext) },
+          { role: "user", content: USER_PROMPT(signal, accountName, accountSummary, roadmapStatus, additionalContext, workspace) },
         ],
       }),
     })

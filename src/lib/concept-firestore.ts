@@ -6,6 +6,7 @@ import {
   getDocs,
   getDoc,
   setDoc,
+  updateDoc,
   deleteDoc,
   query,
   orderBy,
@@ -23,6 +24,14 @@ export interface AccountContext {
   industry?: string
   contractTier?: "starter" | "growth" | "enterprise"
   renewalMonth?: string // "YYYY-MM"
+}
+
+export interface WorkspaceContext {
+  productDescription?: string
+  featureAreas?: string
+  roadmapFocus?: string
+  knownIssues?: string
+  updatedAt?: string
 }
 
 export interface StoredAccount {
@@ -49,7 +58,7 @@ export async function saveSignalAction(
   action: SignalAction
 ): Promise<void> {
   const ref = doc(accountsRef(uid), accountId)
-  await setDoc(ref, { signalActions: { [key]: action } }, { merge: true })
+  await updateDoc(ref, { [`signalActions.${key}`]: action })
 }
 
 export interface AggregatedSignal {
@@ -140,6 +149,19 @@ export function buildParticipantContext(roles: ParticipantRoles): {
     groups[role].push(name)
   }
   return groups
+}
+
+// ─── Workspace context ────────────────────────────────────────────────────────
+// Stored at users/{uid} document field `workspace: WorkspaceContext`
+
+export async function getWorkspace(uid: string): Promise<WorkspaceContext> {
+  const snap = await getDoc(doc(db, "users", uid))
+  if (!snap.exists()) return {}
+  return (snap.data().workspace as WorkspaceContext) ?? {}
+}
+
+export async function saveWorkspace(uid: string, ctx: WorkspaceContext): Promise<void> {
+  await setDoc(doc(db, "users", uid), { workspace: { ...ctx, updatedAt: new Date().toISOString() } }, { merge: true })
 }
 
 // ─── Contact book ─────────────────────────────────────────────────────────────
