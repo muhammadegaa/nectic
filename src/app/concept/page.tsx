@@ -567,6 +567,9 @@ function ConnectModal({
           {/* Footer CTA */}
           {stage === "ready" && (
             <div className="px-6 py-4 border-t border-neutral-100 flex-shrink-0 space-y-2">
+              <p className="text-xs text-neutral-400 leading-relaxed">
+                By continuing, you confirm you have the right to share these conversations for analysis. Conversation text is sent to Anthropic for processing and stored securely. <a href="/privacy" target="_blank" className="underline hover:text-neutral-600 transition-colors">Privacy policy</a>
+              </p>
               <button onClick={onAnalyze} className="w-full bg-neutral-900 text-white text-sm font-semibold py-3 rounded-lg hover:bg-neutral-700 transition-colors">
                 Run analysis →
               </button>
