@@ -111,7 +111,7 @@ export async function POST(req: NextRequest) {
         "X-Title": "Nectic - Feature Brief Generator",
       },
       body: JSON.stringify({
-        model: "anthropic/claude-3.5-haiku",
+        model: "anthropic/claude-sonnet-4.6",
         temperature: 0.2,
         stream: true,
         messages: [

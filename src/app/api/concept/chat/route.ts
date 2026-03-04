@@ -111,7 +111,7 @@ export async function POST(req: NextRequest) {
         "X-Title": "Nectic - PM Agent Chat",
       },
       body: JSON.stringify({
-        model: "anthropic/claude-3.5-haiku",
+        model: "anthropic/claude-haiku-4.5",
         temperature: 0.3,
         stream: true,
         messages: [
