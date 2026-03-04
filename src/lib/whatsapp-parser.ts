@@ -40,6 +40,19 @@ const SYSTEM_KEYWORDS = [
   "keluar",
 ]
 
+// Strip invisible unicode control characters WhatsApp injects
+function cleanText(s: string): string {
+  return s
+    .replace(/[\u200e\u200f\u202a-\u202e\u2066-\u2069]/g, "") // directional marks
+    .replace(/@\u2060?\u202a?⁨([^⁩]*)⁩/g, "@$1")              // @⁨Name⁩ mention tags
+    .trim()
+}
+
+// Strip leading ~ from contact names (non-phonebook contacts)
+function cleanSender(s: string): string {
+  return s.replace(/^~\s*/, "").trim()
+}
+
 export function parseWhatsAppExport(raw: string, maxMessages = 400): WaParsed {
   const lines = raw.split(/\r?\n/)
   const messages: WaMessage[] = []
@@ -52,14 +65,16 @@ export function parseWhatsAppExport(raw: string, maxMessages = 400): WaParsed {
       const m = line.match(pattern)
       if (m) {
         if (current) messages.push(current)
-        const [, date, time, sender, body] = m
+        const [, date, time, rawSender, rawBody] = m
+        const sender = cleanSender(rawSender.trim())
+        const body = cleanText(rawBody)
         const isSystem = SYSTEM_KEYWORDS.some((kw) =>
           body.toLowerCase().includes(kw) || sender.toLowerCase().includes(kw)
         )
         current = {
           timestamp: `${date} ${time}`.trim(),
-          sender: sender.trim(),
-          body: body.trim(),
+          sender,
+          body,
           isSystem,
         }
         matched = true
@@ -69,14 +84,19 @@ export function parseWhatsAppExport(raw: string, maxMessages = 400): WaParsed {
 
     // Continuation line (multi-line message)
     if (!matched && current && line.trim()) {
-      current.body += "\n" + line.trim()
+      current.body += "\n" + cleanText(line)
     }
   }
 
   if (current) messages.push(current)
 
-  // Filter system messages, empty bodies
-  const real = messages.filter((m) => !m.isSystem && m.body.length > 1 && m.body !== "<Media omitted>" && m.body !== "image omitted")
+  // Filter system messages, empty bodies, media-only messages
+  const MEDIA_PLACEHOLDERS = ["<media omitted>", "image omitted", "video omitted", "audio omitted", "sticker omitted", "gif omitted", "document omitted"]
+  const real = messages.filter((m) => {
+    if (m.isSystem || m.body.length <= 1) return false
+    const lower = m.body.toLowerCase()
+    return !MEDIA_PLACEHOLDERS.some((p) => lower === p)
+  })
 
   const participants = [...new Set(real.map((m) => m.sender))].filter(Boolean)
 

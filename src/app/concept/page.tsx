@@ -107,8 +107,8 @@ export default function ConceptPage() {
   }
 
   const handleFile = useCallback((file: File) => {
-    if (!file.name.endsWith(".txt") && file.type !== "text/plain") {
-      setUploadError("Please upload a .txt file exported from WhatsApp.")
+    if (!file.name.endsWith(".txt") && file.name !== "_chat.txt" && file.type !== "text/plain") {
+      setUploadError("Please upload the _chat.txt file from your WhatsApp export folder.")
       setConnectStage("error")
       return
     }
