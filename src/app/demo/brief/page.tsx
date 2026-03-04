@@ -1,5 +1,5 @@
 import Link from "next/link"
-import Image from "next/image"
+import LogoIcon from "@/components/logo-icon"
 import { demoWeek, demoSignals } from "@/lib/demo-data"
 
 const priorityConfig = {
@@ -25,7 +25,7 @@ export default function BriefPage() {
             </Link>
             <div className="w-px h-4 bg-neutral-200" />
             <Link href="/" className="flex items-center gap-2">
-              <Image src="/logo-nectic-icon.png" alt="Nectic" width={20} height={20} className="rounded" />
+              <LogoIcon size={20} />
               <span className="text-sm font-medium text-neutral-900">Nectic</span>
             </Link>
           </div>

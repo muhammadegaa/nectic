@@ -1,5 +1,5 @@
 import Link from "next/link"
-import Image from "next/image"
+import LogoIcon from "@/components/logo-icon"
 import { demoWeek } from "@/lib/demo-data"
 
 export default function DemoPage() {
@@ -8,7 +8,7 @@ export default function DemoPage() {
       <nav className="border-b border-neutral-100 px-6 py-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <Image src="/logo-nectic-icon.png" alt="Nectic" width={24} height={24} className="rounded" />
+            <LogoIcon size={24} />
             <span className="text-sm font-medium text-neutral-900">Nectic</span>
           </Link>
           <span className="text-xs text-neutral-400 bg-neutral-50 border border-neutral-200 px-3 py-1 rounded-full">

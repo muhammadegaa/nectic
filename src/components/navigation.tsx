@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Menu, X } from "lucide-react"
 import Link from "next/link"
-import Image from "next/image"
+import LogoIcon from "@/components/logo-icon"
 
 export default function Navigation() {
   const [isOpen, setIsOpen] = useState(false)
@@ -24,7 +24,7 @@ export default function Navigation() {
       <div className="max-w-5xl mx-auto px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <Link href="/" className="flex items-center gap-2 hover:opacity-70 transition-opacity">
-            <Image src="/logo-nectic-icon.png" alt="Nectic" width={24} height={24} className="rounded" />
+            <LogoIcon size={24} />
             <span className="text-base font-medium text-neutral-900 tracking-tight">Nectic</span>
           </Link>
 

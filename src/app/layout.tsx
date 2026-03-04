@@ -12,10 +12,10 @@ export const metadata: Metadata = {
   generator: "v0.app",
   icons: {
     icon: [
-      { url: "/logo-nectic-icon.png", type: "image/png" },
+      { url: "/logo-nectic-icon.svg", type: "image/svg+xml" },
     ],
-    apple: "/logo-nectic-icon.png",
-    shortcut: "/logo-nectic-icon.png",
+    apple: "/logo-nectic-icon.svg",
+    shortcut: "/logo-nectic-icon.svg",
   },
 }
 
