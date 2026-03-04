@@ -42,7 +42,7 @@ export default function CtaSection() {
         </h2>
 
         <p className="text-neutral-400 text-base mb-10 max-w-md">
-          We&apos;re working closely with a small group of B2B SaaS teams in Southeast Asia. Tell us about yourself and we&apos;ll be in touch.
+          We&apos;re in early conversations with B2B SaaS teams in Southeast Asia. Drop your details and we&apos;ll reach out directly.
         </p>
 
         {submitted ? (

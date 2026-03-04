@@ -84,7 +84,7 @@ export default function SignalPreview() {
         </div>
 
         <p className="mt-6 text-xs text-neutral-400 max-w-md">
-          Every signal includes the original quote, the customer name, and the deal context — so your PM can verify and act.
+          Every signal comes with the original quote, the customer name, and the deal context. Your PM can verify and act without chasing anyone.
         </p>
       </div>
     </section>

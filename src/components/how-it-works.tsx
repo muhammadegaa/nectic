@@ -17,7 +17,7 @@ const steps = [
     number: "03",
     title: "Brief",
     description:
-      "Every Monday, your PM gets a brief. What customers said, clustered by theme, ranked by frequency. With the exact quotes to back it up.",
+      "Every Monday, your PM gets a brief. Top issues by how often they came up, with the actual quotes. No filtering, no editorializing.",
   },
 ]
 
