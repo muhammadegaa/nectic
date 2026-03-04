@@ -1,8 +1,9 @@
 # Nectic — Product Documentation
 
-**Last updated:** February 2026  
-**Status:** Early access  
-**Version:** MVP
+**Last updated:** March 2026  
+**Status:** Early access (pre-revenue)  
+**Version:** MVP+  
+**Document owner:** Product
 
 ---
 
@@ -11,13 +12,18 @@
 1. [What Nectic is](#1-what-nectic-is)
 2. [Who it is for](#2-who-it-is-for)
 3. [Product principles](#3-product-principles)
-4. [Feature inventory](#4-feature-inventory)
-5. [Data model](#5-data-model)
-6. [AI pipeline](#6-ai-pipeline)
-7. [API reference](#7-api-reference)
-8. [Infrastructure and security](#8-infrastructure-and-security)
-9. [Known limitations](#9-known-limitations)
-10. [Roadmap](#10-roadmap)
+4. [Current state assessment](#4-current-state-assessment)
+5. [Feature inventory](#5-feature-inventory)
+6. [Data model](#6-data-model)
+7. [AI pipeline](#7-ai-pipeline)
+8. [API reference](#8-api-reference)
+9. [Business model](#9-business-model)
+10. [Competitive landscape](#10-competitive-landscape)
+11. [Infrastructure and security](#11-infrastructure-and-security)
+12. [Legal and compliance](#12-legal-and-compliance)
+13. [Known limitations and technical debt](#13-known-limitations-and-technical-debt)
+14. [Roadmap and priorities](#14-roadmap-and-priorities)
+15. [Success metrics](#15-success-metrics)
 
 ---
 
@@ -25,7 +31,7 @@
 
 Nectic is an AI product intelligence tool for B2B SaaS teams operating in WhatsApp-first markets — primarily Southeast Asia, MENA, and LATAM.
 
-It reads WhatsApp account groups, extracts customer signals (churn risk, product pain points, feature requests, relationship health), and gives product managers and CS teams a structured, always-current view of what customers actually said — not what sales decided to pass on.
+It reads WhatsApp account groups, extracts customer signals (churn risk, product pain points, feature requests, relationship health), and gives product managers and customer success teams a structured, always-current view of what customers actually said — not what sales decided to pass on.
 
 ### The core problem
 
@@ -33,15 +39,22 @@ In B2B SaaS companies operating in Southeast Asia, WhatsApp is the primary chann
 
 PMs receive a filtered, summarised, often delayed version of what customers say. Sales reps decide what to escalate. Important signals get lost, misrepresented, or deprioritised. Product roadmaps end up reflecting what sales found easy to communicate, not what customers actually need.
 
+This isn't a process failure. It's a structural one. The PM's inbox is not connected to the channel where customers actually speak.
+
 ### The thesis
 
-> WhatsApp IS the CRM, the support desk, the sales pipeline, and the product feedback loop. The PM who reads every conversation knows more than the PM who waits for a standup summary.
-
-Nectic automates the reading. Then it reasons about it.
+> WhatsApp IS the CRM, the support desk, the sales pipeline, and the product feedback loop for SEA B2B SaaS. The PM who reads every conversation knows more than the PM who waits for a standup summary. Nectic automates the reading. Then it reasons about it.
 
 ### Positioning
 
-Nectic targets the gap that enterprise conversation intelligence tools (e.g. ClosedLoop) ignore: companies at **Product Discovery Maturity Level 0–1** that operate entirely in WhatsApp and have no existing structured feedback pipeline. These companies cannot adopt enterprise tooling because their conversations don't happen in Slack, Salesforce, or Zoom. Nectic meets them where they are.
+Nectic targets the gap that enterprise conversation intelligence tools (e.g. Gong, Chorus, ClosedLoop) ignore: companies at **Product Discovery Maturity Level 0–1** that operate entirely in WhatsApp and have no existing structured feedback pipeline.
+
+These companies cannot adopt enterprise tooling because:
+- Their conversations don't happen in Salesforce, Zoom, or Slack
+- They don't have dedicated product ops or research functions  
+- The signal volume is high but the infrastructure to capture it is zero
+
+Nectic meets them where they are.
 
 ---
 
@@ -51,8 +64,8 @@ Nectic targets the gap that enterprise conversation intelligence tools (e.g. Clo
 
 | Role | Job to be done | How Nectic helps |
 |---|---|---|
-| Product Manager | Understand what customers need without attending every customer call or relying on secondhand sales summaries | Weekly signal brief, cross-account clustering, AI chat for deep-dive |
-| Customer Success Manager | Know which accounts are at risk before the customer says so explicitly | Risk signals, health score, relationship signal tracking |
+| Product Manager | Understand what customers need without attending every customer call or relying on secondhand sales summaries | Signal extraction, cross-account clustering, AI agent for deep-dive |
+| Customer Success Manager | Know which accounts are at risk before the customer says so explicitly | Risk signals, health score, signal action tracking, renewal alerts |
 | Founder / CEO | Maintain customer proximity as the team grows | Single dashboard view across all accounts |
 
 ### Secondary users (share recipients)
@@ -65,6 +78,7 @@ Teammates who receive a shared analysis link can read the full account report wi
 - 5–100 person teams
 - WhatsApp Business as primary customer communication channel
 - Bahasa Indonesia and/or English-speaking teams
+- Product discovery maturity: low (no dedicated research ops, no Productboard/Coda setup)
 
 ---
 
@@ -80,11 +94,60 @@ Teammates who receive a shared analysis link can read the full account report wi
 
 **5. No feature factory.** Every feature exists because it removes a specific pain in the PM or CS workflow. Features are not added because they are technically interesting.
 
+**6. Close the loop.** A signal that doesn't drive action is noise. The product is designed to move signals through a pipeline: detect → surface → track → act → re-evaluate.
+
 ---
 
-## 4. Feature inventory
+## 4. Current state assessment
 
-### 4.1 Connect flow
+*As of March 2026. Honest evaluation for internal use.*
+
+### What is working
+
+- **Core analysis quality** is strong. Claude Sonnet 4.6 extracts meaningful, quote-backed signals from real WhatsApp exports with high fidelity, including in Bahasa Indonesia.
+- **The product loop exists end-to-end.** Upload → Analyze → Track signal actions → Re-analyze with delta → Generate brief. No competitor has this in a WhatsApp-native context.
+- **Workspace context is a genuine differentiator.** Injecting company product knowledge (features, roadmap, known issues) into every analysis and chat session meaningfully improves output quality and reduces hallucinated priorities.
+- **The PM agent is actually agentic.** It applies JTBD framing, surfaces concerns the PM didn't ask about, asks for clarifying context, and writes PM artifacts (tickets, emails, battle cards) on demand. Dynamic starter prompts and follow-up suggestions are generated per account, not hardcoded.
+- **Participant role modelling is correct.** Four-role model (vendor/customer/partner/other) handles real-world multi-party chat structures that the binary model breaks on.
+- **The client-side parsing approach is a privacy advantage.** Raw exports never leave the browser. This is a selling point with enterprise customers, not a limitation.
+- **Signal actions and the signal board close a real PM workflow gap.** Tracking open/in-progress/done/dismissed status per signal and feeding that back into re-analysis is unique and creates the "Nectic learns what you've done" value prop.
+
+### What is not working / gaps
+
+**Critical (blocking growth):**
+1. **No billing or pricing.** There is no paywall, no Stripe, no plan limits. The product cannot generate revenue today.
+2. **250-message cap is too low.** Reduced from 500 to address Vercel 60-second timeout. Active accounts with daily conversations often exceed this. Analysis silently loses early context. The real fix is chunked analysis or increased Vercel timeout (pro plan), not a lower cap.
+3. **No proactive alerts.** The PM must remember to log in and check. A product that requires the user to come to it is not an agent — it's a report viewer. Without email digests or risk alerts, the product cannot defend "agentic" positioning.
+4. **No team accounts.** Nectic is strictly single-user. PMs cannot share a workspace with their CS manager. Collaboration is the primary growth vector for B2B tools and it doesn't exist yet.
+
+**Important (affecting retention):**
+5. **Chat history is in-memory only.** Lost on page reload. The PM has context on this account, has asked good questions, and has received valuable answers — and it evaporates. This breaks the "Nectic remembers" value prop.
+6. **No signal feedback loop.** The PM cannot mark a signal as incorrect. Without feedback, analysis quality cannot improve over time. This is the engine of the data moat and it's not built.
+7. **No account rename.** Claude infers the account name from conversation context. It's often wrong or generic ("Hello Group", "Admin"). Users cannot correct it.
+8. **Workspace context has no onboarding.** It's a powerful feature that most users will not discover or fill in. No nudge during onboarding, no "your analysis quality would improve if..." prompt.
+
+**Secondary (affecting perception):**
+9. **Dashboard lacks a "what do I do today" frame.** The account list with risk-sorted cards is good, but the PM's real question is "what needs my attention right now?" — not "which accounts exist." The top of the dashboard should be a prioritised action queue, not a sorted list.
+10. **No error monitoring.** There is no Sentry or equivalent. Bugs in production are invisible until a user reports them.
+11. **No product analytics.** We do not know which features are used, where users drop off, or what analyses are run. Flying blind on product decisions.
+
+### Honest VC readiness score
+
+| Dimension | Score | Rationale |
+|---|---|---|
+| Product thesis | 9/10 | Clear, specific, contrarian, and right about the market |
+| Product quality | 6/10 | The core works well but major gaps in alerting, team, and retention |
+| Business model | 3/10 | No pricing, no revenue, no growth mechanism |
+| Technical foundation | 7/10 | Clean stack, serverless, good security model; some debt |
+| Market size | 8/10 | SEA B2B SaaS alone is massive; WhatsApp-first markets extend globally |
+| Competition | 7/10 | No direct competitor; large incumbents are not addressing this gap |
+| Team | TBD | — |
+
+---
+
+## 5. Feature inventory
+
+### 5.1 Connect flow
 
 **What it is:** A multi-stage guided flow for connecting a new WhatsApp account group to Nectic.
 
@@ -95,7 +158,7 @@ Teammates who receive a shared analysis link can read the full account report wi
 | Instructions | Step-by-step export guide for iOS and Android. Explains the "Without media" requirement. |
 | Upload | Drag-and-drop zone accepting `.txt` (plain export) and `.zip` (folder export). Both are parsed client-side — the file never leaves the browser before analysis. |
 | Ready | Three-panel review screen: parsed stats, participant labelling, and optional account context. |
-| Analyzing | Progress screen with animated steps. Model and estimated time shown. |
+| Analyzing | Progress screen with animated steps. |
 | Error | Failure state with specific error message and retry action. |
 
 **File format support:**
@@ -113,11 +176,13 @@ Teammates who receive a shared analysis link can read the full account report wi
 - Consecutive duplicate messages (deduplicated)
 - Three timestamp format variants: iOS bracket format, Android dash format, dot-separated locales
 
-**Maximum message cap:** 500 messages. If the export exceeds this, the most recent 500 are used and a truncation warning is shown.
+**Current message cap:** 250 (reduced from 500 to prevent API timeout). A truncation warning is shown.
+
+**Known issue:** 250 is too low for active production accounts. Planned fix: increase Vercel function timeout to 5 minutes (Pro plan) and raise cap to 500+.
 
 ---
 
-### 4.2 Participant labelling
+### 5.2 Participant labelling
 
 **What it is:** Per-participant role assignment before analysis runs. Ensures Claude attributes signals to the correct party.
 
@@ -130,16 +195,15 @@ Teammates who receive a shared analysis link can read the full account report wi
 | `partner` | Resellers, implementation partners | Secondary signal source |
 | `other` | Unknown participants | Passed to Claude as context, not attributed |
 
-**Behaviour:**
-- On first connect: all participants default to `other`, user labels each via dropdown
-- On re-analysis: roles are pre-filled from the saved account. Only new/unknown participants need labelling. If all participants are recognised, a "all recognised" confirmation is shown and labelling is skipped.
-- Roles are stored on the account and used for all future analyses
+**Auto-classification:** On first connect, participants are auto-classified by Claude Haiku 4.5 using name patterns and sample messages. User corrects any misclassifications.
+
+**Global contact book:** Once a participant is labelled, that name-to-role mapping is saved across the user's entire account. On future uploads or re-analyses, known participants are pre-filled. Only new participants require manual labelling.
 
 **Design rationale:** The binary vendor/customer model breaks with multi-party chats (reseller + vendor + customer, or multiple customer contacts). Four roles covers all real-world cases seen in SEA B2B contexts.
 
 ---
 
-### 4.3 Account context
+### 5.3 Account context
 
 **What it is:** Optional metadata attached to an account that improves analysis accuracy and urgency scoring.
 
@@ -158,9 +222,34 @@ Teammates who receive a shared analysis link can read the full account report wi
 
 ---
 
-### 4.4 Analysis
+### 5.4 Workspace context
 
-**What it is:** The core AI processing step. A WhatsApp conversation is sent to Claude Sonnet 4.6 with participant context and account context. Claude returns a structured JSON analysis.
+**What it is:** Company-level product knowledge injected into every AI operation. Answers the question "How does Nectic know what your product is about?"
+
+**Fields:**
+
+| Field | Purpose |
+|---|---|
+| What your product does | Company description, market, customer profile. Prevents Claude from confusing generic terms. |
+| Main feature areas | Core modules. Prevents "request for X" being flagged as a gap when X already exists. |
+| Roadmap this quarter | Active development. Helps Claude distinguish "we know about this, it's in progress" from a genuine blind spot. |
+| Known issues | Bugs your team already knows about. Prevents Claude from surfacing these as new discoveries. |
+
+**Where it is used:**
+- Every `/api/concept/analyze` call (prepended as `WORKSPACE CONTEXT` block)
+- Every `/api/concept/reanalyze` call
+- Every `/api/concept/chat` message (in the system prompt)
+- Every `/api/concept/brief` generation
+
+**Storage:** Stored on `users/{uid}` in Firestore as a `workspace` map field. Updated atomically with `setDoc + merge`.
+
+**Setup nudge:** If workspace is empty, an amber nudge appears on the main dashboard with a link to the workspace settings page.
+
+---
+
+### 5.5 Analysis
+
+**What it is:** The core AI processing step. A WhatsApp conversation is sent to Claude Sonnet 4.6 with workspace context, participant context, and account context. Claude returns a structured JSON analysis.
 
 **Output fields:**
 
@@ -185,17 +274,17 @@ Teammates who receive a shared analysis link can read the full account report wi
 - `medium`: 20–49 messages OR ambiguous signals OR participant roles uncertain
 - `low`: Under 20 messages OR mostly vendor-side messages OR very short date range
 
-**Model:** `anthropic/claude-sonnet-4.6`  
-**Temperature:** 0.2 (low to ensure consistent structured output)  
-**Timeout:** 60 seconds
+**Model:** `anthropic/claude-haiku-4.5` (via OpenRouter)  
+**Temperature:** 0.2  
+**Timeout:** 60 seconds (Vercel default)
 
 ---
 
-### 4.5 Account dashboard
+### 5.6 Account dashboard
 
 **What it is:** The main authenticated view showing all connected accounts and cross-account signal intelligence.
 
-**Left panel — Account cards:**
+**Account cards (sorted by risk level: critical → high → medium → low):**
 - Account name, risk badge, health score
 - Top risk quote preview
 - Message count, signal count, time since last analysis
@@ -203,73 +292,79 @@ Teammates who receive a shared analysis link can read the full account report wi
 - WhatsApp source indicator
 - Delete with confirmation
 
-**Right panel — Product signals (cross-account):**
-- All product signals aggregated across accounts
-- Grouped by `problemStatement` (semantic problem, not surface-level title)
-- Accounts reporting the same underlying problem are clustered
-- Sorted by account count descending, then priority
-- "X accounts" badge on signals appearing in more than one account
-- PM action shown for each cluster
+**Summary row:**
+- Total accounts, accounts needing attention (high/critical), cross-account patterns
 
-**Summary stats:**
-- Total accounts connected
-- Accounts at high/critical risk (highlighted in red when > 0)
-- Cross-account signal count (highlighted in blue when > 0)
+**Workspace nudge:**
+- Amber callout if workspace is unconfigured, linking to workspace settings
+
+**Pattern panel (bottom):**
+- Top 4 cross-account product signal clusters, capped to avoid information overload
+- Each cluster shows type badge, title, problem statement, account count, and suggested action
+- Link to full Signal Board for the complete view
 
 ---
 
-### 4.6 Account detail
+### 5.7 Account detail
 
-**What it is:** The full analysis view for a single account. Contains the complete report, the PM agent chat, and the brief generator.
+**What it is:** Full analysis view for a single account. The co-pilot layout places the analysis report on the left and the AI agent on the right (desktop), so the PM can read and ask questions simultaneously.
 
-**Sections:**
+**Layout:**
+- Desktop (xl+): 3/5 report + 2/5 sticky chat panel (co-pilot pattern)
+- Mobile: stacked, report above chat
+
+**Report sections:**
 1. Analysis quality banner (collapsible) — confidence level, caveats, data gaps
 2. Changes since banner — shown after re-analysis, with health delta
 3. Health score card — score, risk level, summary, sentiment trend, stats
 4. Recommended action — what, owner, urgency badge
-5. Risk signals — quotes with severity, date, explanation
-6. Product signals — type badge, title, priority, quote, PM action, Generate brief button
+5. Risk signals — quotes with severity, date, explanation, signal action controls
+6. Product signals — type badge, title, priority, quote, suggested action, Generate brief button
 7. Relationship signals — observation + implication
 8. Competitor mentions
-9. Back link and file metadata
+
+**Signal action controls:**  
+On every risk and product signal: Open / In progress / Done / Dismissed + note field. Status persists to Firestore and is included in the next re-analysis prompt, closing the action→insight loop.
 
 ---
 
-### 4.7 PM agent chat
+### 5.8 PM agent (chat co-pilot)
 
-**What it is:** A persistent chat panel docked to the bottom of the account detail page. Claude Haiku 4.5 acts as a PM co-pilot with full account context.
+**What it is:** A persistent chat panel docked alongside the analysis report. Claude Haiku 4.5 acts as a PM co-pilot with full account context, workspace knowledge, and conversation history.
+
+**Panel design:**
+- Sticky right column (xl+), stacked below report on mobile
+- Header shows signal counts and health score so the PM knows what the agent has read
+- Context pill in the empty state ("I've read the full conversation for [account name]. X risk signals flagged.")
+- Dynamic suggested prompts generated from account state
+- Full-width AI message bubbles with animated thinking dots during generation
+- Follow-up suggestions after each response (never static, generated from conversation context)
+- Input contained in a focus-ring box with keyboard shortcut (⌘+Enter)
 
 **Agentic behaviour:**
-- Asks ONE clarifying question when it needs context before answering (e.g. "Is this account on trial or paid?")
-- Applies JTBD framing to product discussions ("The feature request is a solution proposal — what job are they actually trying to get done?")
+- Asks ONE clarifying question when it needs context before answering
+- Applies JTBD framing to product discussions
 - Factors contract tier and renewal timing into urgency assessments
-- Acknowledges data limitations explicitly ("I'm working with 18 messages — that's thin")
-- Surfaces things the user hasn't asked about when they're important
-- Updates its reasoning when the user provides new context ("That changes things — if X is resolved...")
-- Writes full PM artifacts when asked: Jira tickets, emails, battle cards, meeting agendas, CS talking points
+- Acknowledges data limitations explicitly
+- Surfaces concerns the PM didn't ask about when they're material
+- Updates reasoning when the user provides new context
+- Writes full PM artifacts on demand: Jira tickets, CS emails, battle cards, meeting agendas
 
-**Dynamic starter prompts:**
-Generated from the actual account data, not static. Examples based on account state:
+**Dynamic starter prompts (examples by account state):**
 - High/critical risk → "Account is critical — what do I do in the next 24 hours?"
 - Top risk quote → `Help me respond to: "[quote]"`
 - Competitor mention → "[Competitor] was mentioned — how do I handle it?"
 - Renewal month set → "Renewal is [month] — write me a prep plan"
 - Declining sentiment → "Sentiment is declining — what should CS say to turn it around?"
 
-**Follow-up suggestion chips:**
-After each AI response, 2 contextual follow-up prompts appear based on what was just discussed. Examples:
-- If renewal was discussed → "Draft the renewal prep email"
+**Follow-up suggestions:**
+Generated after each AI response from conversation context. Examples:
+- If renewal discussed → "Draft the renewal prep email"
 - If a ticket was mentioned → "Format this as a Jira ticket"
-- If churn risk was discussed → "What's the strongest argument to prevent churn?"
-- If a competitor was named → "Write a battle card against [name]"
+- If churn risk discussed → "What's the strongest argument to prevent churn here?"
+- If a competitor named → "Write a battle card against [name]"
 
-Chips regenerate every turn. They are never static.
-
-**Context passed to model:**
-- Full `AnalysisResult` JSON
-- Account meta: industry, contract tier, renewal month, vendor team names, customer team names
-- Full conversation history (all prior turns)
-- Analysis quality confidence level (low confidence triggers an explicit warning in the system prompt)
+**Known limitation:** Chat history is in-memory only. Lost on page reload. Persisting to Firestore is on the near-term roadmap.
 
 **Model:** `anthropic/claude-haiku-4.5`  
 **Temperature:** 0.3  
@@ -277,31 +372,24 @@ Chips regenerate every turn. They are never static.
 
 ---
 
-### 4.8 Feature brief generator
+### 5.9 Feature brief generator
 
 **What it is:** A slide-over panel that generates a structured PM feature brief from a product signal. Only available on signals of type `complaint` or `feature_request` with `medium` or `high` priority.
 
 **Context step (before generation):**
-The user is asked two questions before the brief is written:
-1. **Is this already on your roadmap?** — Four options: Not on roadmap / Already planned / Similar thing planned / Not sure
-2. **Additional context** — Free text. Examples: "tried this in Q3 but didn't ship", "blocking 2 enterprise deals", "design already exists"
-
-The brief prompt adapts based on roadmap status:
-- `new` — Includes a JTBD problem framing and validation checklist (what to confirm before building)
-- `planned` — Focuses on implementation scope and closing the gap between plan and customer need
-- `partial` — Highlights what the current plan may miss based on the signal
-- `unknown` — Includes both validation steps and initial implementation scope
+1. **Is this already on your roadmap?** — Not on roadmap / Already planned / Similar thing planned / Not sure
+2. **Additional context** — Free text (e.g. "tried this in Q3 but didn't ship", "blocking 2 enterprise deals")
 
 **Brief structure (markdown output):**
 1. Problem (JTBD framing — what job is the customer trying to get done?)
 2. Customer evidence (verbatim quote)
 3. What we know vs. what we're assuming vs. what we don't know yet
-4. Gap analysis (if planned/partial) OR Validation before building (if new/unknown)
+4. Gap analysis OR Validation before building (based on roadmap status)
 5. Proposed solution (specific, scoped)
 6. Acceptance criteria (testable checkboxes)
 7. Priority rationale (accounts for risk level, renewal timing, competitive pressure)
 
-**Actions:** Copy to clipboard, Regenerate, Change context (returns to context step)
+**Actions:** Copy to clipboard, Regenerate, Change context
 
 **Model:** `anthropic/claude-sonnet-4.6`  
 **Temperature:** 0.2  
@@ -309,19 +397,19 @@ The brief prompt adapts based on roadmap status:
 
 ---
 
-### 4.9 Re-analysis
+### 5.10 Re-analysis
 
-**What it is:** Update an existing account analysis with new WhatsApp messages. Claude compares the new conversation against the prior analysis and produces an updated result with a `changesSince` delta.
+**What it is:** Update an existing account analysis with new WhatsApp messages.
 
 **Flow:**
 1. User clicks "Update →" on the account page
 2. Uploads a newer WhatsApp export (.txt or .zip)
-3. Nectic parses the file and compares participant list against saved roles
-4. If all participants are recognised: "All N participants recognised" — proceed immediately
-5. If new participants appear: labelling step shown for new participants only, existing roles pre-filled
-6. On confirmation: sends prior analysis JSON + new conversation to Claude Sonnet 4.6
-7. Account is updated in Firestore with new result and `updatedAt` timestamp
-8. `changesSince` banner appears at the top of the account detail page
+3. Nectic compares participant list against saved roles
+4. If all participants are recognised: proceed immediately
+5. If new participants appear: labelling step for new participants only
+6. Sends prior analysis JSON + new conversation + signal actions + workspace context to Claude
+7. Account updated in Firestore with new result and `updatedAt` timestamp
+8. `changesSince` banner appears at the top of the page
 
 **`changesSince` fields:**
 - `summary` — 1–2 sentence description of what changed
@@ -329,11 +417,41 @@ The brief prompt adapts based on roadmap status:
 - `resolvedSignals` — count of issues that appear resolved
 - `healthDelta` — integer (positive = improved, negative = declined, 0 = stable)
 
-**Model:** `anthropic/claude-sonnet-4.6`
+**Signal action feedback:** Signal actions (what the PM has marked as done/in-progress) are included in the re-analysis prompt. Claude knows which issues have been actioned and adjusts its delta assessment accordingly.
+
+**Model:** `anthropic/claude-haiku-4.5`
 
 ---
 
-### 4.10 Shareable read-only link
+### 5.11 Signal board
+
+**What it is:** Cross-account triage view showing all open and in-progress signals across every connected account.
+
+**Filtering:** All / Needs action (open) / In progress / Done
+
+**Per signal:**
+- Account name, risk level badge, signal category (risk / product), type, title, quote
+- Priority badge
+- Signal action control (same Open/In progress/Done/Dismissed as account detail)
+- Note field
+
+**Behaviour:** Signal status changes on the board update Firestore and are immediately reflected in the account detail view (and vice versa). The board syncs on initial load.
+
+**Purpose:** "Which signals across all my accounts need my attention right now?" without clicking into individual accounts.
+
+---
+
+### 5.12 Re-analysis with context
+
+**What it is:** Lightweight update path when the PM has new non-WhatsApp context to add (e.g. a customer call summary, a support ticket, internal background). No new WhatsApp export required.
+
+**Flow:** On the account detail page, the PM enters free text supplemental context in the quality banner's "Missing context" field. On "Re-analyse now", this context is added to the re-analysis prompt alongside the existing conversation.
+
+**Use case:** "I talked to the customer on a call yesterday and they mentioned contract value is $120k/year. Re-analyse with this."
+
+---
+
+### 5.13 Shareable read-only link
 
 **What it is:** A public, no-auth link to a read-only view of an account analysis.
 
@@ -341,17 +459,15 @@ The brief prompt adapts based on roadmap status:
 - Each account is assigned a `shareToken` (UUID) at creation time
 - Share link format: `/concept/shared/[token]`
 - Anyone with the link can view the full analysis report (no login required)
-- The shared view includes all analysis sections, the changes-since banner, and a Nectic CTA
+- The shared view includes all analysis sections and the changes-since banner
 - The shared view does NOT include the PM agent chat or brief generator (these require auth)
 - Deleting an account also removes the `sharedAccounts` record, making the link 404
 
-**Storage:** `sharedAccounts/{token}` Firestore collection (top-level, not under user). Stores `{ uid, accountId, accountName, createdAt }`.
-
 ---
 
-### 4.11 Analysis quality transparency
+### 5.14 Analysis quality transparency
 
-**What it is:** A collapsible banner at the top of the account detail page (and shared view) that surfaces Nectic's own uncertainty about the analysis.
+**What it is:** A collapsible banner surfacing Nectic's own uncertainty about the analysis.
 
 **Confidence levels:**
 
@@ -361,36 +477,36 @@ The brief prompt adapts based on roadmap status:
 | Medium | Neutral grey | 20–49 messages, or ambiguous signals, or uncertain roles |
 | Low | Amber | Under 20 messages, mostly vendor voice, or very short date range |
 
-**Sections shown when expanded:**
-- **What Nectic is uncertain about** — Specific caveats generated by Claude (e.g. "Conversation went quiet after Mar 15 — issues may have moved to another channel")
-- **What would improve accuracy** — Data gaps Claude identified (e.g. "Contract value unknown — cannot score renewal risk accurately")
+**Sections when expanded:**
+- **Things to be aware of** — Specific caveats generated by Claude
+- **Missing context** — Data gaps Claude identified + free-text field for supplemental context
 
-**Effect on chat:** When confidence is `low`, the chat system prompt includes an explicit warning instructing the agent to surface uncertainty in its responses rather than presenting thin data as confident analysis.
+**Effect on chat:** When confidence is `low`, the chat system prompt includes an explicit warning instructing the agent to surface uncertainty rather than presenting thin data as confident analysis.
 
 ---
 
-### 4.12 Cross-account signal clustering
+### 5.15 Cross-account signal clustering
 
-**What it is:** Aggregation logic that groups product signals across all connected accounts by their underlying problem.
+**What it is:** Aggregation logic grouping product signals across all accounts by their underlying problem.
 
 **How it works:**
-- Each product signal has a `problemStatement` field — the underlying customer job or problem, not the surface feature request (e.g. "customers cannot export data in their preferred format" rather than "needs Excel export")
+- Each product signal has a `problemStatement` field — the underlying customer job, not the surface feature request
 - `aggregateSignals()` groups signals by `problemStatement` (case-insensitive, normalised)
-- If `problemStatement` is absent (legacy data), falls back to `title`
 - Signals appearing in multiple accounts are surfaced as cross-account patterns
 - Sort order: account count descending, then priority
 
-**Purpose:** Answers the question "Is this a one-account problem or a market problem?" without requiring a manual cross-reference across all accounts.
+**Purpose:** "Is this a one-account problem or a market problem?" without manual cross-referencing.
 
 ---
 
-## 5. Data model
+## 6. Data model
 
 ### Firestore collections
 
 ```
 users/{uid}/
   accounts/{accountId}          — StoredAccount document
+  (workspace stored on users/{uid} document directly)
 
 sharedAccounts/{shareToken}     — Share lookup (top-level, no auth)
 earlyAccess/{docId}             — Early access submissions (public write)
@@ -407,216 +523,145 @@ interface StoredAccount {
   result: AnalysisResult              // Full Claude analysis output
   participantRoles: ParticipantRoles  // Record<name, "vendor"|"customer"|"partner"|"other">
   context: AccountContext             // { industry?, contractTier?, renewalMonth? }
+  supplementalContext?: string        // Free-text PM-added context
+  signalActions?: Record<string, SignalAction>  // Per-signal status and notes
   shareToken: string                  // UUID for /concept/shared/[token]
   _createdAt: Timestamp               // Firestore server timestamp
   _updatedAt?: Timestamp              // Set on every updateAccount call
 }
 ```
 
-### AnalysisResult
+### SignalAction
 
 ```typescript
-interface AnalysisResult {
-  accountName: string
-  healthScore: number                 // 1–10
-  riskLevel: "low" | "medium" | "high" | "critical"
-  summary: string
-  sentimentTrend: "improving" | "stable" | "declining"
-  riskSignals: {
-    quote: string
-    explanation: string
-    severity: "low" | "medium" | "high"
-    date: string
-  }[]
-  productSignals: {
-    type: "complaint" | "feature_request" | "praise" | "confusion"
-    title: string
-    problemStatement?: string         // JTBD-framed underlying problem
-    quote: string
-    priority: "low" | "medium" | "high"
-    pmAction: string
-  }[]
-  relationshipSignals: {
-    observation: string
-    implication: string
-  }[]
-  competitorMentions: string[]
-  recommendedAction: {
-    what: string
-    owner: "CS" | "PM" | "Sales" | "Engineering"
-    urgency: "immediate" | "this_week" | "this_month"
-  }
-  stats: {
-    messageCount: number
-    participantCount: number
-    dateRange: string
-    languages: string[]
-  }
-  analysisQuality?: {
-    confidence: "high" | "medium" | "low"
-    caveats: string[]
-    dataGaps: string[]
-  }
-  changesSince?: {
-    summary: string
-    newRiskSignals: number
-    resolvedSignals: number
-    healthDelta: number               // positive = improved, negative = declined
-  }
+interface SignalAction {
+  status: "open" | "in_progress" | "done" | "dismissed"
+  note?: string
+  updatedAt: string  // ISO 8601
 }
 ```
 
-### sharedAccounts document
+Signal keys use the pattern: `{type}-{explanation.toLowerCase().slice(0, 80).replace(/[^a-z0-9]+/g, '-')}`.
+
+### WorkspaceContext (on users/{uid})
 
 ```typescript
-{
-  uid: string        // Owner's Firebase user ID
-  accountId: string  // Account document ID under users/{uid}/accounts
-  accountName: string
-  createdAt: Timestamp
+interface WorkspaceContext {
+  productDescription?: string  // What your product does
+  featureAreas?: string        // Comma-separated core modules
+  roadmapFocus?: string        // Active Q roadmap items
+  knownIssues?: string         // Known bugs/limitations
+  updatedAt?: string           // ISO 8601
 }
 ```
 
 ---
 
-## 6. AI pipeline
+## 7. AI pipeline
 
 ### Model allocation
 
 | Route | Model | Rationale |
 |---|---|---|
-| `/api/concept/analyze` | `anthropic/claude-sonnet-4.6` | Best structured JSON extraction (97.3% validation rate), strong multilingual Bahasa Indonesia / English handling |
-| `/api/concept/reanalyze` | `anthropic/claude-sonnet-4.6` | Same requirements as analyze; comparative reasoning benefits from the larger model |
+| `/api/concept/analyze` | `anthropic/claude-haiku-4.5` | Fast, multilingual, strong structured JSON at low latency |
+| `/api/concept/reanalyze` | `anthropic/claude-haiku-4.5` | Same; comparative reasoning works well at this model level |
 | `/api/concept/brief` | `anthropic/claude-sonnet-4.6` | JTBD framing, assumption decomposition, and PM writing quality warrant the larger model |
 | `/api/concept/chat` | `anthropic/claude-haiku-4.5` | Streaming latency is user-visible; Haiku 4.5 is near-frontier quality at significantly lower latency |
+| `/api/concept/classify-participants` | `anthropic/claude-haiku-4.5` | Lightweight classification task |
 
 All models accessed via **OpenRouter** (`openrouter.ai/api/v1/chat/completions`).
 
-### Analysis pipeline detail
+### Workspace context injection
+
+Every AI call receives a `WORKSPACE CONTEXT` block if the user has configured their workspace:
 
 ```
-User uploads file (browser)
-  → parseWhatsAppFile() [client-side]
-    → JSZip (if .zip) → extract _chat.txt
-    → parseWhatsAppExport() — strips Unicode artifacts, filters system messages, deduplicates
-    → WaParsed { messages[], participants[], dateRange, totalMessages, truncated }
-  → User labels participants + sets context
-  → POST /api/concept/analyze
-    → buildParticipantBlock() — formats roles for Claude
-    → Claude Sonnet 4.6 — returns AnalysisResult JSON
-    → Strip markdown fences if present
-    → Parse + validate JSON
-  → saveAccount() [Firestore]
-    → users/{uid}/accounts/{id}
-    → sharedAccounts/{shareToken}
+WORKSPACE CONTEXT:
+Product: [productDescription]
+Feature areas: [featureAreas]
+Roadmap this quarter: [roadmapFocus]
+Known issues: [knownIssues]
 ```
+
+This block is prepended before participant roles and conversation content. It grounds all signal extraction, chat responses, and brief generation in the company's actual product context.
 
 ### Prompt design principles
 
-- **Participant block first** — Claude sees who is vendor, customer, partner before the conversation, preventing misattribution
-- **Temperature 0.2** — Low temperature for consistent, structured JSON output in analysis and brief routes
-- **Temperature 0.3** — Slightly higher for chat to allow natural conversational variation
+- **Workspace context first** — Claude sees company/product context before the conversation, preventing misaligned signal extraction
+- **Participant block second** — Claude sees who is vendor, customer, partner before the conversation, preventing misattribution
 - **Explicit JSON schema in prompt** — Full schema with field descriptions and valid enum values reduces hallucination on structure
-- **Confidence rules in prompt** — Explicitly tells Claude the criteria for each confidence level; without this, Claude defaults to `high`
+- **Confidence rules in prompt** — Explicitly defines criteria for each confidence level; without this, Claude defaults to `high`
 - **JTBD framing instruction** — The `problemStatement` field is explicitly described as "the underlying customer problem, not the feature request itself" to force JTBD reasoning at extraction time
+- **Signal actions block in re-analysis** — Re-analysis prompt includes a block describing what the PM has already actioned, so Claude doesn't re-surface resolved issues as new
 
 ---
 
-## 7. API reference
+## 8. API reference
 
 ### POST /api/concept/analyze
-
-Analyse a WhatsApp conversation and return a structured account analysis.
 
 **Request body**
 ```json
 {
-  "conversation": "string (formatted message log)",
-  "messageCount": "number (optional, used to override stats)",
+  "conversation": "string",
+  "messageCount": "number (optional)",
   "participants": "number (optional)",
-  "participantRoles": {
-    "Name": "vendor | customer | partner | other"
-  },
-  "context": {
-    "industry": "string (optional)",
-    "contractTier": "starter | growth | enterprise (optional)",
-    "renewalMonth": "YYYY-MM (optional)"
-  }
+  "participantRoles": { "Name": "vendor | customer | partner | other" },
+  "context": { "industry": "string", "contractTier": "string", "renewalMonth": "YYYY-MM" },
+  "workspace": { "productDescription": "string", "featureAreas": "string", "roadmapFocus": "string", "knownIssues": "string" }
 }
 ```
 
-**Response**
-```json
-{ "result": AnalysisResult }
-```
+**Response:** `{ "result": AnalysisResult }`
 
 ---
 
 ### POST /api/concept/reanalyze
 
-Update an existing analysis with new conversation data.
-
 **Request body**
 ```json
 {
   "priorAnalysis": "AnalysisResult",
-  "conversation": "string",
-  "messageCount": "number (optional)",
-  "participantRoles": "ParticipantRoles"
+  "conversation": "string (optional, new messages)",
+  "participantRoles": "ParticipantRoles",
+  "supplementalContext": "string (optional)",
+  "signalActions": "Record<string, SignalAction> (optional)",
+  "workspace": "WorkspaceContext (optional)"
 }
 ```
 
-**Response**
-```json
-{ "result": AnalysisResult }
-```
-The result includes a `changesSince` field with a delta summary.
+**Response:** `{ "result": AnalysisResult }` — includes `changesSince` field.
 
 ---
 
 ### POST /api/concept/chat
 
-Stream an AI response from the PM agent.
-
 **Request body**
 ```json
 {
   "analysis": "AnalysisResult",
-  "messages": "[{ role, content }] (conversation history)",
-  "question": "string (current user message)",
-  "accountMeta": {
-    "industry": "string (optional)",
-    "contractTier": "string (optional)",
-    "renewalMonth": "string (optional)",
-    "vendorTeam": "string[]",
-    "customerTeam": "string[]"
-  }
+  "messages": "[{ role, content }]",
+  "question": "string",
+  "accountMeta": { "industry": "string", "contractTier": "string", "renewalMonth": "string", "vendorTeam": "string[]", "customerTeam": "string[]" },
+  "workspace": "WorkspaceContext (optional)"
 }
 ```
 
-**Response:** `text/plain` SSE stream. Tokens are forwarded directly from Claude to the client.
+**Response:** `text/plain` SSE stream.
 
 ---
 
 ### POST /api/concept/brief
 
-Stream a PM feature brief for a specific product signal.
-
 **Request body**
 ```json
 {
-  "signal": {
-    "type": "complaint | feature_request | praise | confusion",
-    "title": "string",
-    "problemStatement": "string (optional)",
-    "quote": "string",
-    "priority": "low | medium | high",
-    "pmAction": "string"
-  },
+  "signal": { "type": "string", "title": "string", "problemStatement": "string", "quote": "string", "priority": "string", "pmAction": "string" },
   "accountName": "string",
   "accountSummary": "string",
   "roadmapStatus": "new | planned | partial | unknown",
-  "additionalContext": "string (optional)"
+  "additionalContext": "string (optional)",
+  "workspace": "WorkspaceContext (optional)"
 }
 ```
 
@@ -624,7 +669,92 @@ Stream a PM feature brief for a specific product signal.
 
 ---
 
-## 8. Infrastructure and security
+### POST /api/concept/classify-participants
+
+**Request body**
+```json
+{
+  "participants": [{ "name": "string", "sampleMessages": "string[]" }]
+}
+```
+
+**Response:** `{ "roles": { "Name": "vendor | customer | partner | other" } }`
+
+---
+
+## 9. Business model
+
+### Target pricing (to validate)
+
+| Tier | Price | Limits | Rationale |
+|---|---|---|---|
+| Free | $0/mo | 3 accounts, no brief generator | Acquisition, let PMs prove value before asking for budget |
+| Solo | $49/mo | 20 accounts, all features | Individual PM or CS lead at an early-stage startup |
+| Team | $149/mo | Unlimited accounts, up to 5 seats | Small product + CS team at a Series A company |
+| Growth | $349/mo | Unlimited accounts, unlimited seats, priority support | Scaling teams, multiple product lines |
+
+**Annual discount:** 20% (standard SaaS; improves cash flow and retention)
+
+### Revenue model rationale
+
+- **Usage-based** (per analysis or per account) was considered but rejected: it creates friction at the point of most value (connecting a new account). Flat-rate subscription removes this friction.
+- **Per-seat** was considered but rejected as primary metric: Nectic's value is per-account, not per-user. A PM with 50 accounts generates more value than one with 5, regardless of how many colleagues use it.
+- **Hybrid:** Plan limits by account count, team tier enables collaboration.
+
+### GTM strategy
+
+**Phase 1 — Direct outreach (now):**
+- Target PMs and founders at Indonesian B2B SaaS companies (HR Tech, Fintech, Logistics)
+- Use personal networks and Antler/YC alumni networks
+- Offer 3-month free access to first 10 companies in exchange for weekly feedback calls
+- Goal: 5 companies using Nectic weekly within 60 days
+
+**Phase 2 — Product-led growth (after product-market fit):**
+- Shared analysis links drive organic acquisition (recipient sees value, wants access)
+- Team accounts enable viral within-company spread (PM invites CS manager)
+- Weekly email digests keep the product top-of-mind without requiring daily logins
+
+**Phase 3 — Channel partnership:**
+- Partner with Indonesian SaaS investor networks, accelerators, and B2B SaaS consultants
+- Target Antler, Sequoia India, East Ventures portfolio companies
+
+### What needs to be built before charging
+
+1. Stripe billing integration with plan limits enforcement
+2. Team accounts (seat management)
+3. Email digests (proactive value delivery without login)
+4. Account rename (table stakes for production use)
+5. Chat history persistence (core retention mechanism)
+
+---
+
+## 10. Competitive landscape
+
+### Direct competitors
+
+None confirmed as of March 2026 operating specifically in the WhatsApp-native SEA B2B SaaS segment.
+
+### Adjacent competitors
+
+| Tool | What they do | Why Nectic is different |
+|---|---|---|
+| Gong / Chorus | Conversation intelligence for sales calls (Zoom, Teams) | Requires recorded calls. Doesn't work with WhatsApp. Priced for enterprise. |
+| ClosedLoop | B2B customer intelligence | Enterprise pricing, English-first, CRM-integrated. Not WhatsApp-native. |
+| Productboard / Coda | Feedback aggregation and roadmap management | Requires a structured feedback pipeline that most SEA B2B SaaS companies don't have. |
+| Intercom / Zendesk | Support ticketing and customer messaging | Web-first. WhatsApp integration exists but is basic. No AI signal extraction. |
+| UserVoice / Pendo | Product analytics and user feedback | Requires SDK instrumentation. Doesn't capture relationship dynamics or churn risk from unstructured conversation. |
+
+### Nectic's defensible moat (in order of defensibility)
+
+1. **WhatsApp Business API integration** (not yet built) — the hardest to copy because it requires WhatsApp approval and technical partnership. Once built, this becomes the primary acquisition and retention mechanism.
+2. **Workspace context + signal history** — the longer a team uses Nectic, the more context it accumulates about their product, their customers, and their decisions. A new entrant starts at zero.
+3. **Signal action feedback loop** — actions taken by the PM feed back into re-analysis. Nectic improves with use. This creates a learning curve that benefits long-term customers.
+4. **Bahasa Indonesia + English multilingual quality** — Claude Sonnet 4.6 has stronger Bahasa handling than competing models; combined with SEA-specific market context in prompts, output quality is meaningfully better than generic LLM wrappers.
+5. **File-parsing privacy model** — WhatsApp exports never leave the browser. This is a trust advantage that enterprise customers will pay for.
+
+---
+
+## 11. Infrastructure and security
 
 ### Stack
 
@@ -648,9 +778,7 @@ Stream a PM feature brief for a specific product signal.
 
 **API keys:** OpenRouter API key is server-side only (`OPENROUTER_API_KEY`). Never exposed to the client.
 
-**Early access submissions:** Firestore allows unauthenticated `create` on `earlyAccess/{docId}`. Reads require auth.
-
-### Firestore security rules summary
+### Firestore security rules
 
 ```
 users/{uid}                    read/write: auth.uid == uid
@@ -658,6 +786,14 @@ users/{uid}/accounts/{id}      read/write: auth.uid == uid
 sharedAccounts/{token}         read: public; create/delete: auth required
 earlyAccess/{docId}            create: public; read: auth required
 ```
+
+### Known security gaps (to address)
+
+1. **No rate limiting** on API routes. A user could trigger hundreds of Claude calls. Fix: middleware-level rate limiting by IP and UID.
+2. **No Content Security Policy headers.** Fix: configure `next.config.js` security headers.
+3. **No audit logging.** Shared link access is not tracked. For enterprise customers, this matters.
+4. **Broad `users/{uid}` document write permission** allows overwriting workspace context without field-level constraints. Acceptable at current scale; tighten before enterprise.
+5. **No input sanitisation** beyond TypeScript type checking on API route inputs.
 
 ### Environment variables
 
@@ -673,60 +809,174 @@ earlyAccess/{docId}            create: public; read: auth required
 
 ---
 
-## 9. Known limitations
+## 12. Legal and compliance
+
+### Indonesia UU PDP (Personal Data Protection Law)
+
+UU PDP (UU No. 27/2022) came into effect October 2024. Key obligations for Nectic:
+
+**What is personal data in Nectic's context:**
+- WhatsApp participant names and phone numbers (visible in exports)
+- Message content that identifies individuals
+- Account names and company names if they identify natural persons
+
+**Current compliance measures:**
+- Explicit consent checkbox before file upload and analysis
+- Privacy policy page at `/privacy` covering data usage, third-party processors (Anthropic via OpenRouter), storage (Firebase/Google), and user rights
+- Data isolation: all customer data scoped to authenticated user's Firestore namespace
+- Client-side parsing: raw exports never stored on Nectic servers
+
+**Gaps to address:**
+1. **Right to erasure UI** — Users cannot delete their own account or all data via the product. There is a delete-account button per stored account, but no "delete all my data" mechanism. Required by UU PDP and GDPR.
+2. **Data retention policy** — No defined retention period. Analyses are stored indefinitely. Define and document (suggested: 2 years, or until user deletes).
+3. **Third-party data subject consent** — Participants in WhatsApp groups whose data is analysed have not consented to that analysis. This is a grey area requiring legal counsel. Current mitigation: consent checkbox informs the uploader of their responsibility for lawful processing.
+4. **Data Processing Agreement (DPA)** — When Nectic is used by B2B customers, Nectic acts as a data processor. A formal DPA template is required before enterprise sales.
+
+### WhatsApp Terms of Service
+
+WhatsApp's Terms of Service prohibit automated collection of data and the use of WhatsApp for commercial purposes without WhatsApp Business API. Key considerations:
+
+- Nectic's current model (manual export, user-initiated) is in a grey area. The user is exporting their own conversations for their own purposes. This is analogous to a user exporting their own email for analysis.
+- **Risk:** WhatsApp could change ToS or enforce against this use pattern.
+- **Mitigation:** WhatsApp Business API integration (planned) removes this risk entirely and is the correct long-term architecture.
+- **Current status:** No cease-and-desist risk identified for the manual-export MVP. Monitor WhatsApp Business ToS closely.
+
+### GDPR (Singapore + international customers)
+
+Singapore's PDPA (Personal Data Protection Act) is GDPR-adjacent. For customers in Singapore or EU:
+- The privacy policy covers the key obligations
+- A formal DPA template will be required for B2B customers
+- Cross-border data transfer (to US-based OpenRouter/Anthropic) should be documented
+
+### Required actions before enterprise sales
+
+- [ ] Add "Delete all my data" account closure flow
+- [ ] Define and publish data retention policy (suggest 2 years)
+- [ ] Create Data Processing Agreement template
+- [ ] Legal counsel review of WhatsApp ToS analysis use case
+- [ ] Security headers (CSP, HSTS, X-Frame-Options) in next.config.js
+
+---
+
+## 13. Known limitations and technical debt
 
 ### Data
 
-| Limitation | Impact | Mitigation |
+| Limitation | Impact | Mitigation plan |
 |---|---|---|
-| Analysis based on a single export snapshot | Signals may be stale if the group is active daily | Re-analysis flow. Signal dates are shown on all risk signals. |
-| Maximum 500 messages per analysis | Long-running groups may lose early context | Truncation warning shown. Most recent messages prioritised. |
-| Parser may misparse unusual export formats | Some messages may be dropped or garbled | Parser handles 3 timestamp formats and common Unicode artefacts. Warn-and-continue model. |
-| Conversation context may be absent | Claude infers account name from context — may be wrong or generic | User can rename via re-analysis or will be able to rename directly (planned) |
+| 250-message cap per analysis | Active accounts lose early context | Increase Vercel timeout limit (Pro plan) and raise cap to 500+; or implement chunked streaming analysis |
+| Analysis based on a single export snapshot | Signals may be stale | Re-analysis flow. Signal dates shown. WhatsApp API integration (removes this entirely). |
+| Parser may misparse unusual export formats | Some messages dropped or garbled | Handles 3 timestamp formats and common Unicode artefacts. Warn-and-continue model. |
+| Account name inferred by Claude | May be wrong or generic | Account rename feature (near-term roadmap) |
 
 ### AI
 
-| Limitation | Impact | Mitigation |
+| Limitation | Impact | Mitigation plan |
 |---|---|---|
-| Claude may misattribute signals when all participants are labelled `other` | Risk signals assigned to vendor rather than customer | Confidence degraded to `medium` or `low`. Caveats surface this explicitly. |
-| JSON extraction may fail on very long or unusual conversations | Analysis errors | Markdown fence stripping on response. Error returned to UI with message. |
-| Bahasa Indonesia code-switching detection is best-effort | Signal nuance may be lost in translation | Claude Sonnet 4.6 has the strongest multilingual Bahasa performance of tested models. |
-| Brief quality depends on signal quality | Weak signals produce weak briefs | Brief is only available on `complaint` and `feature_request` signals with `medium`/`high` priority. |
+| No signal feedback loop | Analysis quality cannot improve with use | "Mark as incorrect" signal feedback → fine-tuning data pipeline (medium-term) |
+| JSON extraction may fail on unusual conversations | Analysis errors | Regex-based JSON extraction with fallback. Error returned to UI. |
+| Bahasa Indonesia code-switching | Signal nuance may be lost | Claude Sonnet 4.6 has strongest multilingual Bahasa performance of tested models |
+| Brief quality depends on signal quality | Weak signals produce weak briefs | Brief only available on complaint/feature_request with medium/high priority |
 
 ### Product
 
-| Limitation | Impact | Mitigation |
+| Limitation | Impact | Mitigation plan |
 |---|---|---|
-| No direct WhatsApp Business API integration | User must manually export and upload | Guided upload flow with step-by-step instructions for iOS and Android. |
-| No multi-device sync for chat history | Chat history is in-memory, lost on page reload | Planned: persist chat to Firestore. |
-| No notification/alert system | PM must check the dashboard manually | Planned: proactive risk alerts. |
+| No direct WhatsApp Business API integration | Manual export required; highest friction point | WhatsApp Business API integration (medium-term; requires WhatsApp approval) |
+| Chat history lost on page reload | Breaks agentic continuity | Persist to Firestore per-account (near-term) |
+| No proactive alerts | PM must remember to log in | Email digest + risk alert on health decline (near-term) |
+| No team accounts | Blocks B2B collaboration and viral growth | Multi-user workspace with role-based access (medium-term) |
+| No billing or plan limits | Cannot generate revenue | Stripe integration with per-plan account limits (next sprint) |
+| No error monitoring | Bugs invisible until user-reported | Sentry integration (next sprint) |
+| No product analytics | Flying blind on usage | PostHog or equivalent (next sprint) |
 
 ---
 
-## 10. Roadmap
+## 14. Roadmap and priorities
 
-### Near-term (validated with early customers)
+### Immediate (next 2 weeks) — "Make it a real product"
 
-- [ ] Account rename (user-editable account name to override Claude inference)
-- [ ] Chat history persistence (Firestore, per account)
-- [ ] Email digest — weekly brief to PM's inbox without login
-- [ ] Proactive risk alert — notification when re-analysis reveals health delta < -2
+These are blocking revenue and VC conversations.
 
-### Medium-term
+- [ ] **Stripe billing integration** — Pricing page, checkout, plan limits enforcement in API middleware
+- [ ] **Account rename** — User-editable account name override
+- [ ] **Chat history persistence** — Firestore per-account, keyed by uid + accountId
+- [ ] **Error monitoring** — Sentry integration
+- [ ] **Product analytics** — PostHog event tracking (analysis runs, chat messages, brief generations, signal actions)
+- [ ] **Security headers** — CSP, HSTS, X-Frame-Options in next.config.js
+- [ ] **Rate limiting** — API middleware per-UID and per-IP for AI routes
 
-- [ ] WhatsApp Business API direct integration (no manual export)
-- [ ] Multiple export ingestion — upload several exports at once to enrich a single account
-- [ ] Signal marking — PM can mark a signal as "actioned", "already shipped", or "won't fix"
-- [ ] Signal feedback — PM can mark a signal as wrong, improving future analysis quality
-- [ ] Team accounts — multiple users on one Nectic workspace
+### Near-term (next 4 weeks) — "Make it sticky"
 
-### Longer-term
+These drive retention and proactive value.
 
-- [ ] Zoom call transcript ingestion (extend beyond WhatsApp)
-- [ ] CRM sync (push signals to HubSpot or Salesforce as notes)
-- [ ] Jira integration — publish generated briefs directly as Jira tickets
-- [ ] Cohort view — segment accounts by industry, tier, or risk level
+- [ ] **Email digest** — Weekly brief to PM's inbox: health scores, open signals, cross-account patterns. No login required to read value.
+- [ ] **Risk alert** — Email notification when re-analysis reveals health delta ≤ -2 or new critical signal
+- [ ] **Workspace onboarding nudge** — Guided setup during first login: "Set up your workspace to get 3x better analysis"
+- [ ] **Signal feedback** — "Was this signal accurate?" thumbs up/down on each signal. Stored for fine-tuning data pipeline.
+- [ ] **Increase message cap** — Move to Vercel Pro for 5-minute timeout; raise cap to 500 (or 750 with chunked processing)
+- [ ] **"Delete all my data"** — Full account closure flow for UU PDP compliance
+
+### Medium-term (2–3 months) — "Build the moat"
+
+These create defensibility and enterprise readiness.
+
+- [ ] **Team accounts** — Multiple users on one workspace. PM invites CS manager. Role-based access (admin/member/viewer).
+- [ ] **WhatsApp Business API integration** — Direct account group connection without manual export. Biggest friction removal and moat builder.
+- [ ] **Signal feedback → model improvement** — Aggregate signal feedback to improve prompts and, eventually, fine-tune a domain-specific model
+- [ ] **Jira / Linear integration** — Publish generated briefs directly as tickets
+- [ ] **CRM sync** — Push signals to HubSpot or Salesforce as contact notes or activities
+- [ ] **Data Processing Agreement template** — Required for B2B enterprise sales
+
+### Longer-term — "Expand the surface"
+
+- [ ] Zoom / Google Meet transcript ingestion
+- [ ] Cohort view — segment accounts by industry, tier, or risk level for portfolio-level analysis
+- [ ] Forecast model — predict churn probability 30/60/90 days out based on signal trajectory
+- [ ] Slack / Teams integration — post risk alerts and weekly digests to a channel
+- [ ] Mobile app — iOS/Android for CS managers doing account reviews in the field
 
 ---
 
-*This document is the source of truth for Nectic's product state. Update it when a feature changes, not after.*
+## 15. Success metrics
+
+### North Star
+
+**Weekly analysed accounts per active user** — measures whether Nectic is actually embedded in the PM's weekly workflow, not just used once.
+
+### Activation
+
+| Metric | Target (month 1) | Notes |
+|---|---|---|
+| Accounts connected per new user in first session | ≥ 2 | One account = curiosity; two = habit formation begins |
+| Workspace configured within 7 days of signup | ≥ 60% | Workspace quality strongly correlates with analysis usefulness |
+| Chat messages sent per account detail view | ≥ 1.5 | Agent is being used, not just the static report |
+
+### Retention
+
+| Metric | Target | Notes |
+|---|---|---|
+| Day-7 retention | ≥ 40% | PM came back to update or review at least one account |
+| Week-4 retention | ≥ 25% | Product is in their weekly workflow |
+| Re-analyses per account per month | ≥ 1.5 | Account is being maintained, not just created |
+| Signal actions taken per session | ≥ 3 | PM is using Nectic to manage their response queue |
+
+### Revenue
+
+| Metric | Target (month 3) | Notes |
+|---|---|---|
+| Paying customers | ≥ 5 | Proof of willingness to pay |
+| MRR | ≥ $500 | Early commercial validation |
+| NPS | ≥ 40 | Signal on product-market fit |
+
+### Quality
+
+| Metric | Target | Notes |
+|---|---|---|
+| Signal accuracy (user-rated) | ≥ 80% thumbs up | Once signal feedback is live |
+| Brief generation satisfaction | ≥ 4/5 | Post-generation survey |
+| Analysis completion rate | ≥ 90% | Analyses that return a valid result vs. timeout or error |
+
+---
+
+*This document is the source of truth for Nectic's product state. Update it when a feature ships, a decision changes, or a gap is discovered — not after a review cycle.*
