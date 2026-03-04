@@ -543,7 +543,7 @@ function ConnectModal({
               <div className="py-8 text-center">
                 <div className="w-12 h-12 border-2 border-neutral-200 border-t-neutral-900 rounded-full animate-spin mx-auto mb-4" />
                 <p className="text-sm font-semibold text-neutral-900">Analysing {parsed?.totalMessages} messages</p>
-                <p className="mt-1 text-xs text-neutral-400">Claude 3.5 Sonnet · ~20 seconds</p>
+                <p className="mt-1 text-xs text-neutral-400">Claude Sonnet 4.6 · ~20 seconds</p>
                 <div className="mt-5 space-y-2 text-left">
                   {["Identifying customer voice…", "Extracting risk signals…", "Clustering product signals…", "Scoring account health…"].map((s, i) => (
                     <div key={i} className="flex items-center gap-2">
