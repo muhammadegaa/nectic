@@ -15,7 +15,7 @@ import {
 } from "@/lib/concept-firestore"
 import type { AnalysisResult } from "@/app/api/concept/analyze/route"
 
-type UploadStage = "idle" | "parsed" | "analyzing" | "error"
+type ConnectStage = "instructions" | "upload" | "parsed" | "analyzing" | "error"
 
 const riskConfig = {
   low: { label: "Low", bg: "bg-green-50", text: "text-green-700", border: "border-green-200", dot: "bg-green-500" },
@@ -41,14 +41,26 @@ function timeAgo(iso: string): string {
   return `${Math.floor(h / 24)}d ago`
 }
 
+// ─── WhatsApp icon ─────────────────────────────────────────────────────────────
+
+function WhatsAppIcon({ size = 16, className = "" }: { size?: number; className?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+    </svg>
+  )
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export default function ConceptPage() {
   const { user, loading: authLoading, signOut } = useAuth()
   const router = useRouter()
 
   const [accounts, setAccounts] = useState<StoredAccount[]>([])
   const [loadingAccounts, setLoadingAccounts] = useState(true)
-  const [showUpload, setShowUpload] = useState(false)
-  const [uploadStage, setUploadStage] = useState<UploadStage>("idle")
+  const [showConnect, setShowConnect] = useState(false)
+  const [connectStage, setConnectStage] = useState<ConnectStage>("instructions")
   const [parsed, setParsed] = useState<WaParsed | null>(null)
   const [fileName, setFileName] = useState("")
   const [uploadError, setUploadError] = useState("")
@@ -56,14 +68,10 @@ export default function ConceptPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Auth guard
   useEffect(() => {
-    if (!authLoading && !user) {
-      router.replace("/concept/login")
-    }
+    if (!authLoading && !user) router.replace("/concept/login")
   }, [user, authLoading, router])
 
-  // Load accounts from Firestore
   useEffect(() => {
     if (!user) return
     setLoadingAccounts(true)
@@ -79,10 +87,29 @@ export default function ConceptPage() {
     setAccounts(updated)
   }
 
+  const openConnect = () => {
+    setConnectStage("instructions")
+    setParsed(null)
+    setFileName("")
+    setUploadError("")
+    setShowConnect(true)
+  }
+
+  const closeConnect = () => {
+    setShowConnect(false)
+    setTimeout(() => {
+      setConnectStage("instructions")
+      setParsed(null)
+      setFileName("")
+      setUploadError("")
+      if (inputRef.current) inputRef.current.value = ""
+    }, 200)
+  }
+
   const handleFile = useCallback((file: File) => {
     if (!file.name.endsWith(".txt") && file.type !== "text/plain") {
       setUploadError("Please upload a .txt file exported from WhatsApp.")
-      setUploadStage("error")
+      setConnectStage("error")
       return
     }
     setFileName(file.name)
@@ -92,11 +119,11 @@ export default function ConceptPage() {
       const p = parseWhatsAppExport(raw)
       if (p.messages.length < 5) {
         setUploadError("Couldn't parse this file. Make sure it's a WhatsApp chat export (.txt).")
-        setUploadStage("error")
+        setConnectStage("error")
         return
       }
       setParsed(p)
-      setUploadStage("parsed")
+      setConnectStage("parsed")
     }
     reader.readAsText(file, "utf-8")
   }, [])
@@ -110,7 +137,7 @@ export default function ConceptPage() {
 
   const analyze = async () => {
     if (!parsed || !user) return
-    setUploadStage("analyzing")
+    setConnectStage("analyzing")
     setUploadError("")
 
     try {
@@ -135,21 +162,12 @@ export default function ConceptPage() {
       })
 
       await refreshAccounts()
-      resetUpload()
-      setShowUpload(false)
+      closeConnect()
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Something went wrong"
       setUploadError(message)
-      setUploadStage("error")
+      setConnectStage("error")
     }
-  }
-
-  const resetUpload = () => {
-    setUploadStage("idle")
-    setParsed(null)
-    setFileName("")
-    setUploadError("")
-    if (inputRef.current) inputRef.current.value = ""
   }
 
   const handleDelete = async (id: string) => {
@@ -185,47 +203,21 @@ export default function ConceptPage() {
           </span>
           {accounts.length > 0 && !loadingAccounts && (
             <button
-              onClick={() => { setShowUpload(!showUpload); resetUpload() }}
-              className="text-xs bg-neutral-900 text-white px-3 py-1.5 rounded-lg hover:bg-neutral-700 transition-colors font-medium"
+              onClick={openConnect}
+              className="flex items-center gap-1.5 text-xs bg-neutral-900 text-white px-3 py-1.5 rounded-lg hover:bg-neutral-700 transition-colors font-medium"
             >
-              + Add account
+              <WhatsAppIcon size={12} />
+              Connect account
             </button>
           )}
           <div className="flex items-center gap-2 pl-2 border-l border-neutral-200">
             <span className="text-xs text-neutral-500 hidden sm:block">{user.displayName ?? user.email}</span>
-            <button
-              onClick={() => signOut()}
-              className="text-xs text-neutral-400 hover:text-neutral-700 transition-colors"
-            >
+            <button onClick={() => signOut()} className="text-xs text-neutral-400 hover:text-neutral-700 transition-colors">
               Sign out
             </button>
           </div>
         </div>
       </nav>
-
-      {/* Inline upload panel */}
-      {showUpload && (
-        <div className="bg-white border-b border-neutral-200 px-4 sm:px-6 py-6">
-          <div className="max-w-2xl mx-auto">
-            <UploadPanel
-              stage={uploadStage}
-              parsed={parsed}
-              fileName={fileName}
-              error={uploadError}
-              dragging={dragging}
-              inputRef={inputRef}
-              onDrop={onDrop}
-              onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
-              onDragLeave={() => setDragging(false)}
-              onFileSelect={() => inputRef.current?.click()}
-              onInputChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f) }}
-              onAnalyze={analyze}
-              onReset={resetUpload}
-              onCancel={() => { setShowUpload(false); resetUpload() }}
-            />
-          </div>
-        </div>
-      )}
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
         {loadingAccounts ? (
@@ -234,17 +226,16 @@ export default function ConceptPage() {
           </div>
         ) : (
           <>
-            {accounts.length === 0 && !showUpload && (
-              <EmptyState onUpload={() => setShowUpload(true)} userName={user.displayName?.split(" ")[0] ?? null} />
+            {accounts.length === 0 && (
+              <EmptyState onConnect={openConnect} userName={user.displayName?.split(" ")[0] ?? null} />
             )}
 
             {accounts.length > 0 && (
               <>
-                {/* Stats bar */}
                 <div className="grid grid-cols-3 gap-4 mb-8">
                   <div className="bg-white border border-neutral-200 rounded-lg p-5">
                     <p className="text-3xl font-light text-neutral-900">{accounts.length}</p>
-                    <p className="text-xs text-neutral-500 mt-1">accounts tracked</p>
+                    <p className="text-xs text-neutral-500 mt-1">accounts connected</p>
                   </div>
                   <div className={`border rounded-lg p-5 ${atRisk > 0 ? "bg-red-50 border-red-200" : "bg-white border-neutral-200"}`}>
                     <p className={`text-3xl font-light ${atRisk > 0 ? "text-red-600" : "text-neutral-900"}`}>{atRisk}</p>
@@ -253,14 +244,14 @@ export default function ConceptPage() {
                   <div className={`border rounded-lg p-5 ${sharedSignals > 0 ? "bg-blue-50 border-blue-200" : "bg-white border-neutral-200"}`}>
                     <p className={`text-3xl font-light ${sharedSignals > 0 ? "text-blue-600" : "text-neutral-900"}`}>{sharedSignals}</p>
                     <p className={`text-xs mt-1 ${sharedSignals > 0 ? "text-blue-600" : "text-neutral-500"}`}>
-                      {sharedSignals > 0 ? "signals across multiple accounts" : "shared signals (add more accounts)"}
+                      {sharedSignals > 0 ? "signals across accounts" : "shared signals (add more)"}
                     </p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
                   <div className="lg:col-span-3 space-y-3">
-                    <h2 className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-4">Accounts</h2>
+                    <h2 className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-4">Connected accounts</h2>
                     {accounts.map((account) => (
                       <AccountCard
                         key={account.id}
@@ -272,7 +263,6 @@ export default function ConceptPage() {
                       />
                     ))}
                   </div>
-
                   <div className="lg:col-span-2">
                     <h2 className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-4">Product signals</h2>
                     <CrossAccountSignals signals={aggregated} accountCount={accounts.length} />
@@ -283,6 +273,239 @@ export default function ConceptPage() {
           </>
         )}
       </main>
+
+      {/* Connect modal */}
+      {showConnect && (
+        <ConnectModal
+          stage={connectStage}
+          parsed={parsed}
+          fileName={fileName}
+          error={uploadError}
+          dragging={dragging}
+          inputRef={inputRef}
+          onClose={closeConnect}
+          onContinueToUpload={() => setConnectStage("upload")}
+          onBackToInstructions={() => setConnectStage("instructions")}
+          onDrop={onDrop}
+          onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
+          onDragLeave={() => setDragging(false)}
+          onFileSelect={() => inputRef.current?.click()}
+          onInputChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f) }}
+          onAnalyze={analyze}
+          onRetry={() => { setConnectStage("upload"); setUploadError(""); if (inputRef.current) inputRef.current.value = "" }}
+        />
+      )}
+    </div>
+  )
+}
+
+// ─── Connect modal ─────────────────────────────────────────────────────────────
+
+function ConnectModal({
+  stage,
+  parsed,
+  fileName,
+  error,
+  dragging,
+  inputRef,
+  onClose,
+  onContinueToUpload,
+  onBackToInstructions,
+  onDrop,
+  onDragOver,
+  onDragLeave,
+  onFileSelect,
+  onInputChange,
+  onAnalyze,
+  onRetry,
+}: {
+  stage: ConnectStage
+  parsed: WaParsed | null
+  fileName: string
+  error: string
+  dragging: boolean
+  inputRef: React.RefObject<HTMLInputElement>
+  onClose: () => void
+  onContinueToUpload: () => void
+  onBackToInstructions: () => void
+  onDrop: (e: React.DragEvent) => void
+  onDragOver: (e: React.DragEvent) => void
+  onDragLeave: () => void
+  onFileSelect: () => void
+  onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void
+  onAnalyze: () => void
+  onRetry: () => void
+}) {
+  return (
+    <>
+      <div className="fixed inset-0 bg-black/30 z-40 backdrop-blur-sm" onClick={stage === "analyzing" ? undefined : onClose} />
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="bg-white w-full max-w-md rounded-xl shadow-2xl overflow-hidden">
+
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-[#25D366] rounded-lg flex items-center justify-center">
+                <WhatsAppIcon size={16} className="text-white" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-neutral-900">Connect WhatsApp account</p>
+                <p className="text-xs text-neutral-400">Export a group chat to get started</p>
+              </div>
+            </div>
+            {stage !== "analyzing" && (
+              <button onClick={onClose} className="text-neutral-400 hover:text-neutral-700 transition-colors text-xl leading-none">×</button>
+            )}
+          </div>
+
+          {/* Body */}
+          <div className="px-6 py-5">
+
+            {/* Step: Instructions */}
+            {stage === "instructions" && (
+              <div>
+                <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-4">How to export</p>
+                <div className="space-y-4">
+                  <Step number={1} title="Open the WhatsApp group" description="The group chat between your team and the customer account you want to analyse." />
+                  <Step number={2} title='Tap ⋮ → "More" → "Export chat"' description='On iOS: tap the group name → "Export Chat". On Android: tap ⋮ → "More" → "Export chat".' />
+                  <Step number={3} title='"Without media" only' description="Select without media — Nectic only needs the text. This keeps the file small and fast to process." />
+                  <Step number={4} title="Save the .txt file and upload" description="AirDrop, email, or save to Files — then drop it here." />
+                </div>
+                <button
+                  onClick={onContinueToUpload}
+                  className="mt-6 w-full bg-neutral-900 text-white text-sm font-semibold py-3 rounded-lg hover:bg-neutral-700 transition-colors"
+                >
+                  I have the file →
+                </button>
+                <p className="mt-3 text-center text-xs text-neutral-400">
+                  Files are processed in memory and never stored on our servers
+                </p>
+              </div>
+            )}
+
+            {/* Step: Upload */}
+            {stage === "upload" && (
+              <div>
+                <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-4">Upload export file</p>
+                <div
+                  className={`border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-all ${
+                    dragging
+                      ? "border-[#25D366] bg-green-50"
+                      : "border-neutral-200 bg-neutral-50 hover:border-neutral-400 hover:bg-neutral-100"
+                  }`}
+                  onDragOver={onDragOver}
+                  onDragLeave={onDragLeave}
+                  onDrop={onDrop}
+                  onClick={onFileSelect}
+                >
+                  <input ref={inputRef} type="file" accept=".txt,text/plain" className="hidden" onChange={onInputChange} />
+                  <div className="w-10 h-10 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <WhatsAppIcon size={20} className="text-neutral-400" />
+                  </div>
+                  <p className="text-sm font-medium text-neutral-700">Drop your .txt export here</p>
+                  <p className="mt-1 text-xs text-neutral-400">or click to browse</p>
+                </div>
+                <button
+                  onClick={onBackToInstructions}
+                  className="mt-3 text-xs text-neutral-400 hover:text-neutral-600 transition-colors"
+                >
+                  ← Back to instructions
+                </button>
+              </div>
+            )}
+
+            {/* Step: Parsed preview */}
+            {stage === "parsed" && parsed && (
+              <div>
+                <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-4">Ready to analyse</p>
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-5">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-6 h-6 bg-[#25D366] rounded flex items-center justify-center flex-shrink-0">
+                      <WhatsAppIcon size={13} className="text-white" />
+                    </div>
+                    <p className="text-sm font-semibold text-neutral-900 truncate">{fileName}</p>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3 text-center">
+                    <div className="bg-white rounded-lg py-2.5 px-1 border border-green-100">
+                      <p className="text-lg font-light text-neutral-900">{parsed.totalMessages}</p>
+                      <p className="text-xs text-neutral-400 mt-0.5">messages</p>
+                    </div>
+                    <div className="bg-white rounded-lg py-2.5 px-1 border border-green-100">
+                      <p className="text-lg font-light text-neutral-900">{parsed.participants.length}</p>
+                      <p className="text-xs text-neutral-400 mt-0.5">participants</p>
+                    </div>
+                    <div className="bg-white rounded-lg py-2.5 px-1 border border-green-100">
+                      <p className="text-xs font-medium text-neutral-900 mt-1">{parsed.dateRange.from.split(" ")[0]}</p>
+                      <p className="text-xs text-neutral-400 mt-0.5">from</p>
+                    </div>
+                  </div>
+                  {parsed.truncated && (
+                    <p className="mt-3 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-1.5">
+                      Large file — analysing the most recent {parsed.messages.length} messages.
+                    </p>
+                  )}
+                </div>
+                <button
+                  onClick={onAnalyze}
+                  className="w-full bg-neutral-900 text-white text-sm font-semibold py-3 rounded-lg hover:bg-neutral-700 transition-colors"
+                >
+                  Run analysis →
+                </button>
+                <button onClick={onRetry} className="mt-2 w-full text-xs text-neutral-400 hover:text-neutral-600 transition-colors py-1">
+                  Use a different file
+                </button>
+              </div>
+            )}
+
+            {/* Step: Analysing */}
+            {stage === "analyzing" && (
+              <div className="py-8 text-center">
+                <div className="w-12 h-12 border-2 border-neutral-200 border-t-neutral-900 rounded-full animate-spin mx-auto mb-4" />
+                <p className="text-sm font-semibold text-neutral-900">Analysing {parsed?.totalMessages} messages</p>
+                <p className="mt-1 text-xs text-neutral-400">GPT-4o is reading the conversation · ~15 seconds</p>
+                <div className="mt-5 space-y-2 text-left">
+                  {["Identifying participants and account name…", "Extracting risk signals…", "Clustering product signals…", "Scoring account health…"].map((s, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-neutral-300 animate-pulse" style={{ animationDelay: `${i * 300}ms` }} />
+                      <p className="text-xs text-neutral-500">{s}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Step: Error */}
+            {stage === "error" && (
+              <div className="py-4 text-center">
+                <p className="text-sm font-semibold text-neutral-900 mb-2">Something went wrong</p>
+                <p className="text-xs text-red-600 mb-5">{error}</p>
+                <button
+                  onClick={onRetry}
+                  className="w-full bg-neutral-900 text-white text-sm font-semibold py-3 rounded-lg hover:bg-neutral-700 transition-colors"
+                >
+                  Try again
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ─── Step component ────────────────────────────────────────────────────────────
+
+function Step({ number, title, description }: { number: number; title: string; description: string }) {
+  return (
+    <div className="flex gap-4">
+      <div className="w-6 h-6 rounded-full bg-neutral-900 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
+        {number}
+      </div>
+      <div>
+        <p className="text-sm font-semibold text-neutral-800">{title}</p>
+        <p className="text-xs text-neutral-500 mt-0.5 leading-relaxed">{description}</p>
+      </div>
     </div>
   )
 }
@@ -311,7 +534,10 @@ function AccountCard({
       <Link href={`/concept/account/${account.id}`} className="block p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-2 mb-1.5">
+              <div className="w-5 h-5 bg-[#25D366] rounded flex items-center justify-center flex-shrink-0">
+                <WhatsAppIcon size={11} className="text-white" />
+              </div>
               <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded-full border ${risk.bg} ${risk.text} ${risk.border}`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${risk.dot}`} />
                 {risk.label} risk
@@ -349,7 +575,10 @@ function AccountCard({
         </div>
       ) : (
         <div className="px-5 py-2 bg-neutral-50 border-t border-neutral-100 flex items-center justify-between">
-          <span className="text-xs text-neutral-400">{account.fileName}</span>
+          <div className="flex items-center gap-1.5 text-xs text-neutral-400">
+            <WhatsAppIcon size={10} className="text-neutral-300" />
+            <span>{account.fileName}</span>
+          </div>
           <button onClick={(e) => { e.preventDefault(); onDelete() }} className="text-xs text-neutral-300 hover:text-red-500 transition-colors">Remove</button>
         </div>
       )}
@@ -373,7 +602,7 @@ function CrossAccountSignals({ signals, accountCount }: { signals: ReturnType<ty
       {accountCount < 2 && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mb-4">
           <p className="text-xs text-blue-700 leading-relaxed">
-            Add more accounts to see which signals appear across your entire customer base.
+            Connect more accounts to see which signals appear across your entire customer base.
           </p>
         </div>
       )}
@@ -407,9 +636,12 @@ function CrossAccountSignals({ signals, accountCount }: { signals: ReturnType<ty
 
 // ─── Empty state ───────────────────────────────────────────────────────────────
 
-function EmptyState({ onUpload, userName }: { onUpload: () => void; userName: string | null }) {
+function EmptyState({ onConnect, userName }: { onConnect: () => void; userName: string | null }) {
   return (
-    <div className="max-w-lg mx-auto pt-16 text-center">
+    <div className="max-w-md mx-auto pt-16 text-center">
+      <div className="w-14 h-14 bg-[#25D366] rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-green-200">
+        <WhatsAppIcon size={28} className="text-white" />
+      </div>
       <p className="text-xs font-medium text-neutral-400 uppercase tracking-widest mb-3">
         {userName ? `Welcome, ${userName}` : "Account Intelligence"}
       </p>
@@ -417,110 +649,19 @@ function EmptyState({ onUpload, userName }: { onUpload: () => void; userName: st
         What are your customers<br />
         <span className="text-neutral-400">actually telling you?</span>
       </h1>
-      <p className="mt-4 text-sm text-neutral-500 leading-relaxed">
-        Upload WhatsApp group chat exports from your key accounts. Nectic surfaces churn signals, product pain points, and cross-account patterns your team would never catch manually.
+      <p className="mt-4 text-sm text-neutral-500 leading-relaxed max-w-sm mx-auto">
+        Connect a WhatsApp account group to extract churn signals, product pain points, and patterns your team would never catch manually.
       </p>
       <button
-        onClick={onUpload}
-        className="mt-8 bg-neutral-900 text-white text-sm font-semibold px-6 py-3 rounded-lg hover:bg-neutral-700 transition-colors"
+        onClick={onConnect}
+        className="mt-8 flex items-center gap-2 bg-neutral-900 text-white text-sm font-semibold px-6 py-3 rounded-lg hover:bg-neutral-700 transition-colors mx-auto"
       >
-        Upload first account →
+        <WhatsAppIcon size={14} className="text-white" />
+        Connect first account
       </button>
       <p className="mt-4 text-xs text-neutral-400">
-        Works with WhatsApp .txt exports · Bahasa Indonesia + English · Files never stored
+        Works with WhatsApp .txt exports · Bahasa Indonesia + English · Processed in memory only
       </p>
-    </div>
-  )
-}
-
-// ─── Upload panel ──────────────────────────────────────────────────────────────
-
-function UploadPanel({
-  stage,
-  parsed,
-  fileName,
-  error,
-  dragging,
-  inputRef,
-  onDrop,
-  onDragOver,
-  onDragLeave,
-  onFileSelect,
-  onInputChange,
-  onAnalyze,
-  onReset,
-  onCancel,
-}: {
-  stage: UploadStage
-  parsed: WaParsed | null
-  fileName: string
-  error: string
-  dragging: boolean
-  inputRef: React.RefObject<HTMLInputElement>
-  onDrop: (e: React.DragEvent) => void
-  onDragOver: (e: React.DragEvent) => void
-  onDragLeave: () => void
-  onFileSelect: () => void
-  onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void
-  onAnalyze: () => void
-  onReset: () => void
-  onCancel: () => void
-}) {
-  if (stage === "analyzing") {
-    return (
-      <div className="text-center py-8">
-        <div className="inline-flex items-center gap-3">
-          <div className="w-4 h-4 border-2 border-neutral-300 border-t-neutral-900 rounded-full animate-spin" />
-          <span className="text-sm text-neutral-700">Analyzing {parsed?.totalMessages} messages…</span>
-        </div>
-        <p className="mt-2 text-xs text-neutral-400">~15 seconds · GPT-4o</p>
-      </div>
-    )
-  }
-
-  if (stage === "parsed" && parsed) {
-    return (
-      <div className="flex items-start gap-6">
-        <div className="flex-1">
-          <p className="text-sm font-semibold text-neutral-900 mb-1">{fileName}</p>
-          <div className="flex gap-4 text-xs text-neutral-500">
-            <span>{parsed.totalMessages} messages</span>
-            <span>{parsed.participants.length} participants</span>
-            <span>from {parsed.dateRange.from.split(" ")[0]}</span>
-          </div>
-          {parsed.truncated && (
-            <p className="mt-2 text-xs text-amber-600">Large file — analyzing most recent {parsed.messages.length} messages.</p>
-          )}
-        </div>
-        <div className="flex gap-2 flex-shrink-0">
-          <button onClick={onReset} className="text-xs text-neutral-400 hover:text-neutral-700 px-3 py-2 transition-colors">Change</button>
-          <button onClick={onAnalyze} className="text-xs bg-neutral-900 text-white font-semibold px-4 py-2 rounded-lg hover:bg-neutral-700 transition-colors">
-            Analyze →
-          </button>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div>
-      <div
-        className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
-          dragging ? "border-neutral-400 bg-neutral-100" : "border-neutral-200 bg-neutral-50 hover:border-neutral-400"
-        }`}
-        onDragOver={onDragOver}
-        onDragLeave={onDragLeave}
-        onDrop={onDrop}
-        onClick={onFileSelect}
-      >
-        <input ref={inputRef} type="file" accept=".txt,text/plain" className="hidden" onChange={onInputChange} />
-        <p className="text-sm font-medium text-neutral-700">Drop WhatsApp export here</p>
-        <p className="mt-1 text-xs text-neutral-400">or click to select · .txt file</p>
-        {error && <p className="mt-3 text-xs text-red-600">{error}</p>}
-      </div>
-      <div className="mt-3 flex justify-end">
-        <button onClick={onCancel} className="text-xs text-neutral-400 hover:text-neutral-700 transition-colors">Cancel</button>
-      </div>
     </div>
   )
 }

@@ -1,42 +1,180 @@
-[01/02/2026, 09:14:32] Rina Kusuma (CS): Selamat pagi Pak Budi, Pak Denny! Mau follow up soal renewal kontrak yang jatuh tempo bulan April. Ada waktu untuk brief call minggu ini?
-[01/02/2026, 09:47:15] Budi Santoso: Pagi Rin. Boleh, tapi saya mau bahas beberapa hal dulu sebelum kita bicara renewal
-[01/02/2026, 09:48:02] Budi Santoso: Tim saya masih ngeluh soal fitur bulk import. Sudah berapa bulan ini ya?
-[01/02/2026, 09:51:30] Denny Prasetyo: Iya betul. Setiap minggu harus manual upload satu-satu, sangat buang waktu
-[01/02/2026, 10:02:45] Rina Kusuma (CS): Noted Pak. Untuk bulk import memang sedang dalam roadmap, saya akan cek update dari tim product
-[01/02/2026, 10:03:11] Budi Santoso: Saya dengar ini sudah di roadmap sejak Q3 tahun lalu Rin 😅
-[01/02/2026, 10:05:33] Denny Prasetyo: Competitor kita pakai Salesforce dan mereka sudah punya fitur ini. Jujur saja beberapa orang di tim mulai tanya kenapa kita tidak pindah
-[01/02/2026, 10:12:00] Rina Kusuma (CS): Saya mengerti frustrasinya Pak Denny. Biar saya eskalasi langsung ke Product Manager kita ya
-[01/02/2026, 10:13:45] Budi Santoso: Tolong ya. Dan satu lagi — dashboard reporting kita sering loading lama, kadang sampai 30 detik. Tim finance sudah komplain ke saya
-[01/02/2026, 10:15:22] Denny Prasetyo: Iya performance issue ini sudah kita laporkan sejak Desember. Tiketnya ada tapi belum ada update
-[01/02/2026, 10:18:00] Rina Kusuma (CS): Wah maaf sekali Pak, saya cek tiketnya sekarang
-[03/02/2026, 14:30:00] Rina Kusuma (CS): Halo Pak Budi, Pak Denny. Sudah dapat update dari Engineering — performance issue akan di-fix dalam sprint ini (estimasi 2 minggu). Untuk bulk import, masuk prioritas Q1
-[03/02/2026, 15:45:12] Budi Santoso: Ok noted. Kita tunggu dulu ya. Kalau sampai akhir Februari belum ada progress, kita perlu reconsider
-[03/02/2026, 16:00:01] Denny Prasetyo: Setuju sama Pak Budi. We need to see real progress, bukan cuma janji
-[05/02/2026, 11:22:33] Rina Kusuma (CS): Selamat pagi semua! Update: dashboard performance sudah dipatch kemarin. Bisa dicoba?
-[05/02/2026, 13:14:55] Denny Prasetyo: Sudah coba, ada improvement. Tapi masih sekitar 15 detik, belum ideal
-[05/02/2026, 13:20:00] Budi Santoso: Better tapi belum solved ya. Ekspektasi kita under 5 detik seperti yang dijanjikan waktu onboarding
-[05/02/2026, 13:35:44] Rina Kusuma (CS): Understood, saya feedback ke Engineering. Target mereka memang under 5 detik
-[10/02/2026, 09:05:17] Denny Prasetyo: Rina, ada yang mau saya tanyakan soal pricing untuk renewal. Kalau kita nambah 10 seats, gimana struktur harganya?
-[10/02/2026, 10:30:00] Rina Kusuma (CS): Halo Pak Denny! Untuk expansion ke 10 seats tambahan, harganya Rp 8 juta/bulan untuk paket Growth. Saya kirim proposal formalnya ya
-[10/02/2026, 10:45:22] Denny Prasetyo: Hmm agak mahal ya. Kita juga dapat offer dari vendor lain lebih murah 20%
-[10/02/2026, 10:50:01] Budi Santoso: Denny betul. Kita perlu justifikasi yang kuat ke CFO kita untuk perpanjang, apalagi dengan isu-isu yang masih ada
-[10/02/2026, 11:02:44] Rina Kusuma (CS): Saya sangat mengerti Pak Budi. Bisa kita set up call dengan Account Executive kita untuk diskusi lebih lanjut soal value dan pricing?
-[10/02/2026, 11:15:00] Budi Santoso: Bisa, tapi pastikan yang join dari pihak kalian bisa ambil keputusan ya, bukan cuma dengerin
-[12/02/2026, 16:00:00] Denny Prasetyo: Update: kita baru saja selesai demo dengan Zoho CRM. Fitur mereka cukup lengkap dan harga lebih kompetitif
-[12/02/2026, 16:30:11] Rina Kusuma (CS): Terima kasih info-nya Pak Denny. Saya akan koordinasi dengan tim untuk ada penawaran yang lebih kompetitif
-[12/02/2026, 17:02:33] Budi Santoso: Rina, jujur ya — tim saya sudah agak lelah dengan issue yang berulang. Kita butuh keputusan cepat, April tidak lama lagi
-[14/02/2026, 10:15:00] Rina Kusuma (CS): Selamat pagi Pak Budi! Saya ada kabar baik — bulk import feature sudah masuk sprint yang mulai minggu depan. Target release 28 Feb
-[14/02/2026, 11:00:22] Budi Santoso: Ok good. Kita tunggu sampai end of Feb ya, kalau benar release dan performancenya bagus, kita siap lanjut diskusi renewal
-[14/02/2026, 11:05:44] Denny Prasetyo: Betul. Dan tolong juga ada dedicated support contact untuk kita ya, tired of going through the general ticket queue
-[14/02/2026, 11:10:00] Rina Kusuma (CS): Absolutely Pak Denny. Untuk akun seperti kalian seharusnya memang ada dedicated CSM. Saya urus minggu ini
-[17/02/2026, 09:30:00] Budi Santoso: Rina, satu lagi — apakah ada fitur untuk custom report? Finance team kita butuh export dalam format tertentu yang belum supported
-[17/02/2026, 10:00:15] Rina Kusuma (CS): Untuk custom report saat ini belum ada, tapi ada workaround via API. Saya bisa connect Pak Budi dengan technical team kita
-[17/02/2026, 10:15:33] Budi Santoso: API workaround artinya butuh developer kita sendiri. Itu resource yang tidak gratis Rin
-[17/02/2026, 10:22:00] Denny Prasetyo: Exactly. Kita bayar SaaS bukan buat DIY semuanya sendiri
-[17/02/2026, 10:30:44] Rina Kusuma (CS): Noted, feedback ini sangat valuable. Saya akan masukkan sebagai product feedback formal
-[20/02/2026, 15:00:00] Budi Santoso: Rina update dong, bulk import gimana? Masih on track 28 Feb?
-[20/02/2026, 16:45:22] Rina Kusuma (CS): Halo Pak Budi, maaf baru balas. Saya sedang konfirmasi ke Product team
-[20/02/2026, 17:30:00] Rina Kusuma (CS): Ada sedikit delay Pak, estimasi sekarang jadi 7 Maret. Tapi performance fix sudah 100% resolved ya, sudah di bawah 5 detik
-[20/02/2026, 17:45:11] Budi Santoso: Delay lagi? Ini pattern yang sama terus Rin. Kita seriously reconsider nih
-[20/02/2026, 17:50:33] Denny Prasetyo: Pak Budi, saya suggest kita set deadline untuk keputusan. Kalau 28 Feb tidak ada perubahan signifikan, kita move forward dengan evaluasi vendor lain secara serius
-[20/02/2026, 18:05:00] Budi Santoso: Setuju. Rina, tolong sampaikan ke management kalian — we're serious about this. Bukan gertakan
+WhatsApp Chat with PT Trimitra Logistik - SyncOps Group
+Messages and calls are end-to-end encrypted. No one outside of this chat, not even WhatsApp, can read or listen to them.
+
+[15/09/2025, 09:12:44] Dewi Anggraini (SyncOps): Selamat pagi Pak Hendri! Dewi dari SyncOps ya. Senang bisa connect setelah kemarin kita ketemu di event Echelon. Ini saya share deck overview produk kita 🙏
+[15/09/2025, 09:13:01] Dewi Anggraini (SyncOps): <Media omitted>
+[15/09/2025, 09:45:22] Hendri Kurniawan: Pagi Mbak Dewi. Sudah saya lihat, menarik. Tapi saya perlu involve Bu Sari dulu, dia Operations Director kita, semua keputusan tool operasional lewat dia
+[15/09/2025, 09:50:11] Dewi Anggraini (SyncOps): Tentu Pak Hendri, sangat masuk akal. Kalau berkenan saya bisa added Bu Sari ke group ini?
+[15/09/2025, 10:02:33] Hendri Kurniawan: Boleh, sebentar saya add
+[15/09/2025, 10:03:17] Hendri Kurniawan added Sari Wulandari
+[15/09/2025, 10:04:55] Sari Wulandari: Halo Mbak Dewi 😊 Pak Hendri sudah cerita sedikit soal SyncOps. Boleh tau lebih detail use case untuk logistics company seperti kita?
+[15/09/2025, 10:12:30] Dewi Anggraini (SyncOps): Halo Bu Sari! Dengan senang hati. SyncOps paling banyak dipakai untuk fleet dispatch management, driver assignment, real-time order tracking, dan laporan operasional harian. Untuk perusahaan logistics dengan 100+ karyawan itu sangat relevan
+[15/09/2025, 10:15:44] Sari Wulandari: Menarik. Masalah utama kita sekarang tuh di visibility — kita masih pakai Excel dan WhatsApp group berbeda untuk tiap depot. Susah banget konsolidasinya
+[15/09/2025, 10:17:22] Dewi Anggraini (SyncOps): Wah ini exactly pain point yang SyncOps solve Bu Sari. Boleh kita set up demo 30 menit minggu depan?
+[15/09/2025, 10:20:01] Sari Wulandari: Boleh. Rabu jam 2 siang gimana?
+[15/09/2025, 10:20:45] Dewi Anggraini (SyncOps): Perfect, saya send calendar invite sekarang ya 🙏
+
+[17/09/2025, 08:30:00] Hendri Kurniawan: Mbak Dewi, sebelum demo Rabu — bisa share dulu technical spec? IT kita perlu lihat dulu soal integrasi sama sistem ERP kita (SAP B1)
+[17/09/2025, 09:15:22] Dewi Anggraini (SyncOps): Sudah saya forward ke technical team kita Pak Hendri, mereka akan prepare integration doc untuk SAP B1. Kita juga ada existing connector-nya 👍
+[17/09/2025, 09:18:00] Hendri Kurniawan: Good. Karena kalau tidak bisa integrate sama SAP kita, project ini tidak bisa jalan
+
+[22/09/2025, 14:00:00] Dewi Anggraini (SyncOps): Bu Sari, Pak Hendri — demo sudah selesai tadi. Terima kasih banyak waktunya! Ada pertanyaan lanjutan?
+[22/09/2025, 14:45:33] Sari Wulandari: Saya impressed sama real-time dashboard-nya Mbak Dewi. Tapi saya mau tanya — untuk driver mobile app-nya, bisa offline mode? Driver kita sering di area blank spot
+[22/09/2025, 14:50:11] Dewi Anggraini (SyncOps): Good question Bu Sari! Driver app kita support offline mode, sync otomatis kalau sudah ada koneksi lagi. Ini memang feature yang banyak diminta customer logistics kita
+[22/09/2025, 14:52:44] Hendri Kurniawan: Soal SAP integration, tadi sekilas kita lihat demo-nya. Apakah real-time sync atau batch?
+[22/09/2025, 15:00:22] Dewi Anggraini (SyncOps): Untuk SAP B1 kita support keduanya Pak Hendri — real-time via webhook untuk data kritis, batch setiap 15 menit untuk data operasional. Detail technicalnya saya kirim via dokumen ya
+[22/09/2025, 15:01:00] Dewi Anggraini (SyncOps): <Media omitted>
+[22/09/2025, 16:30:00] Sari Wulandari: Pak Bagas nanti saya add juga ya, dia yang handle procurement dan budget approval
+
+[23/09/2025, 09:05:17] Sari Wulandari added Bagas Nugroho
+[23/09/2025, 09:10:44] Bagas Nugroho: Pagi semua. Sudah baca chat sebelumnya. Mbak Dewi, bisa share pricing proposal formal? Dan satu pertanyaan — ada tidak case study dari logistics company di Indonesia?
+[23/09/2025, 09:25:33] Dewi Anggraini (SyncOps): Selamat pagi Pak Bagas! Proposal sudah saya kirim ke email Pak Hendri. Untuk case study — kita ada dari PT Ekspres Nusantara (e-commerce logistics, Surabaya) dan PT Kargo Prima (cold chain, Jakarta). Saya attach ya
+[23/09/2025, 09:26:01] Dewi Anggraini (SyncOps): <Media omitted>
+[23/09/2025, 11:00:00] Bagas Nugroho: Oke sudah saya baca proposalnya. Untuk 150 seats paket Enterprise itu Rp 45 juta per bulan ya? Ini agak di atas budget yang kita alokasikan
+[23/09/2025, 11:15:22] Dewi Anggraini (SyncOps): Pak Bagas, saya mengerti. Untuk komitmen annual, kita bisa berikan discount 20% plus free onboarding (biasanya Rp 15 juta). Efektifnya Rp 36 juta/bulan. Saya minta approval dulu dari manager saya ya
+[23/09/2025, 11:30:00] Bagas Nugroho: Itu masih sedikit di atas, tapi kita pertimbangkan. Kompetitor kita ada yang pakai Odoo, mereka bilang jauh lebih murah
+[23/09/2025, 11:35:11] Sari Wulandari: Pak Bagas, Odoo itu implementation-nya berat banget. Kita pernah lihat perusahaan lain stuck 6 bulan hanya untuk implementation
+[23/09/2025, 11:38:44] Bagas Nugroho: Betul juga sih. Tapi kita tetap perlu justifikasi ke direksi Bu Sari
+
+[30/09/2025, 16:00:00] Dewi Anggraini (SyncOps): Halo semua! Update — saya sudah dapat approval special pricing: Rp 34 juta/bulan untuk annual commitment, include onboarding dan dedicated CSM. Berlaku sampai 5 Oktober ya karena end of quarter 🙏
+[30/09/2025, 16:45:22] Sari Wulandari: Pak Bagas, gimana? Ini sudah reasonable menurut saya
+[30/09/2025, 17:00:01] Bagas Nugroho: Saya bawa ke CFO kita dulu Bu Sari. Besok ada jawaban
+[01/10/2025, 09:30:00] Bagas Nugroho: Mbak Dewi, CFO approve. Kita lanjut. Bisa kirim contract formal-nya?
+[01/10/2025, 09:35:44] Dewi Anggraini (SyncOps): Alhamdulillah! Selamat bergabung dengan SyncOps family 🎉 Contract saya kirim via email hari ini, onboarding kita jadwalkan minggu depan ya. Saya akan introduce CSM kita, Mas Aji, yang akan handle kalian ke depannya
+
+[08/10/2025, 10:00:00] Aji Firmansyah (CSM): Selamat pagi semua! Perkenalkan saya Aji, CSM yang akan mendampingi PT Trimitra Logistik. Saya excited banget work bareng tim kalian 🙏 Dewi sudah cerita banyak tentang kebutuhan kalian
+[08/10/2025, 10:15:33] Sari Wulandari: Halo Mas Aji! Kami juga excited. Kapan kita mulai onboarding?
+[08/10/2025, 10:20:00] Aji Firmansyah (CSM): Saya propose kita mulai Kamis ini dengan kickoff call — saya akan walk through timeline, data migration, dan training schedule. Pak Hendri, saya perlu akses ke SAP B1 untuk integration setup ya
+[08/10/2025, 10:25:44] Hendri Kurniawan: Oke Mas Aji. Kamis bisa. Untuk SAP access saya siapkan credentials dulu, ada security approval dulu dari atasan
+[08/10/2025, 10:30:00] Aji Firmansyah (CSM): Tentu Pak Hendri, tidak ada rush. Sambil nunggu kita bisa mulai setup user accounts dan basic configuration dulu
+
+[13/10/2025, 15:30:00] Hendri Kurniawan: Mas Aji, saya sudah coba login tapi ada error "Session timeout after 5 minutes". Tim saya complain ini terlalu cepat, mereka kerja di lapangan sering ninggal layar
+[13/10/2025, 15:45:22] Aji Firmansyah (CSM): Halo Pak Hendri! Itu bisa di-adjust dari Admin Settings > Security > Session Timeout. Bisa set sampai 8 jam. Saya bantu walk through sekarang?
+[13/10/2025, 16:00:01] Hendri Kurniawan: Oh ada setting-nya, oke. Saya coba dulu
+[13/10/2025, 16:30:00] Hendri Kurniawan: Solved, terima kasih Mas Aji 👍
+[13/10/2025, 16:32:11] Aji Firmansyah (CSM): Siap! Kalau ada issue lain langsung ping di sini ya
+
+[20/10/2025, 09:00:00] Aji Firmansyah (CSM): Selamat pagi! Seminggu sudah berjalan — bagaimana user adoption-nya sejauh ini?
+[20/10/2025, 09:30:44] Sari Wulandari: Mas Aji, overall oke. Tapi ada feedback dari supervisor lapangan — mereka bilang mobile app-nya berat, HP Android yang mereka pakai (entry level) sering lag
+[20/10/2025, 09:35:00] Hendri Kurniawan: Iya ini concern saya juga dari awal. Driver kita rata-rata pakai Samsung A series yang bukan high-end
+[20/10/2025, 09:45:22] Aji Firmansyah (CSM): Terima kasih feedback-nya Bu Sari, Pak Hendri. Ini saya escalate ke product team kita — mobile performance di low-end Android memang harusnya bisa lebih optimal. Saya create ticket dengan high priority
+[20/10/2025, 09:50:00] Sari Wulandari: Kalau tidak solved this month agak problematic Mas Aji, karena driver kita yang paling banyak users-nya
+[20/10/2025, 09:55:11] Aji Firmansyah (CSM): Fully understood Bu Sari. Target saya ada update dalam 2 minggu
+
+[25/10/2025, 14:00:00] Hendri Kurniawan: Mas Aji, SAP integration sudah dapat approval dari IT kita. Bisa mulai kapan?
+[25/10/2025, 14:15:33] Aji Firmansyah (CSM): Bagus sekali Pak Hendri! Saya introduce Mas Rizky dari tim technical kita ya, dia yang akan handle SAP integration
+[25/10/2025, 14:16:00] Aji Firmansyah (CSM) added Rizky Pratama (Tech)
+[25/10/2025, 14:20:44] Rizky Pratama (Tech): Halo Pak Hendri, saya Rizky. Untuk start SAP B1 integration kita perlu: 1) Service Layer endpoint, 2) dedicated API user credentials, 3) list of objects yang mau disync. Bisa share detailnya?
+[25/10/2025, 15:00:00] Hendri Kurniawan: Oke Mas Rizky, besok saya siapkan semua dokumentasinya
+[27/10/2025, 11:30:00] Rizky Pratama (Tech): Pak Hendri, sudah saya test connection ke SAP environment staging kalian. Ada satu issue — SAP versi yang kalian pakai (9.3) ada compatibility issue dengan connector kita yang support dari versi 10.0. Ini butuh workaround
+[27/10/2025, 11:45:22] Hendri Kurniawan: Serius Mas Rizky? Ini kenapa tidak ketahuan dari awal waktu presales?
+[27/10/2025, 11:50:00] Aji Firmansyah (CSM): Pak Hendri, saya minta maaf atas ketidakjelasan ini. Ini seharusnya teridentifikasi lebih awal. Saya koordinasi dengan engineering untuk workaround secepatnya
+[27/10/2025, 11:55:33] Sari Wulandari: Mas Aji ini cukup serius ya — SAP integration salah satu alasan utama kita pilih SyncOps
+[27/10/2025, 12:00:00] Hendri Kurwiawan: Kalau ini tidak bisa resolved dengan baik kita perlu re-evaluate keputusan ini
+[27/10/2025, 13:30:44] Rizky Pratama (Tech): Pak Hendri, saya sudah dapat solusi — kita bisa pakai custom middleware approach. Butuh waktu 2 minggu development tapi tidak ada additional cost untuk kalian. Saya kirim technical proposal-nya
+[27/10/2025, 13:31:00] Rizky Pratama (Tech): <Media omitted>
+[27/10/2025, 14:00:00] Hendri Kurniawan: Oke saya baca dulu. Kalau memang no cost dan timeline reasonable, kita bisa terima solusi ini
+
+[05/11/2025, 10:00:00] Sari Wulandari: Mas Aji, update mobile performance-nya gimana? Sudah masuk 2 minggu dari janji
+[05/11/2025, 10:30:22] Aji Firmansyah (CSM): Halo Bu Sari, maaf baru balas. Saya sedang cek sama product team. Update dalam 1 jam ya
+[05/11/2025, 11:45:00] Aji Firmansyah (CSM): Bu Sari, team engineering bilang mereka sudah identify bottleneck-nya — ada memory leak di rendering engine. Fix-nya masuk sprint yang akan release 14 November
+[05/11/2025, 12:00:33] Sari Wulandari: Oke noted. Supervisor lapangan sudah tanya saya berkali-kali soal ini, saya bilang tunggu mid-November ya
+[05/11/2025, 12:05:00] Hendri Kurniawan: Mas Aji satu hal lagi — kita butuh fitur geofencing untuk track kalau driver keluar dari route yang sudah ditentukan. Ini ada di roadmap?
+[05/11/2025, 12:15:44] Aji Firmansyah (CSM): Pak Hendri, geofencing alert memang sudah banyak diminta. Ada di roadmap untuk Q1 2026. Belum bisa commit exact date tapi ini high priority
+[05/11/2025, 12:20:00] Sari Wulandari: Kalau bisa dipercepat would be great. Kita ada masalah compliance terkait driver behavior yang geofencing ini bisa solve
+
+[14/11/2025, 16:00:00] Rizky Pratama (Tech): Pak Hendri, good news! Custom middleware untuk SAP integration sudah selesai dan live di production. Bisa dicoba sekarang
+[14/11/2025, 16:30:22] Hendri Kurniawan: Wow cepat! Saya coba sekarang
+[14/11/2025, 17:00:00] Hendri Kurniawan: Mas Rizky, data dari SAP sudah masuk ke SyncOps real-time. Well done 👍
+[14/11/2025, 17:05:11] Rizky Pratama (Tech): Mantap Pak Hendri! Kalau ada discrepancy data mohon langsung kabari ya, kita monitor terus 2 minggu pertama
+[14/11/2025, 17:10:00] Sari Wulandari: Bagus! Ini berita yang kita tunggu-tunggu 😊
+
+[15/11/2025, 09:00:00] Aji Firmansyah (CSM): Selamat pagi! Release kemarin juga include mobile performance fix. Pak Hendri, Bu Sari — bisa minta driver team untuk update app dan test?
+[15/11/2025, 14:30:33] Sari Wulandari: Sudah dicoba sama 5 driver, hasilnya jauh lebih baik Mas Aji! Tidak ada lag seperti sebelumnya
+[15/11/2025, 14:35:00] Hendri Kurniawan: Confirm, sudah lebih smooth. Good job tim engineering-nya
+[15/11/2025, 14:40:22] Aji Firmansyah (CSM): Senang sekali dengarnya! Ini feedback sangat berarti buat kita 🙏
+
+[28/11/2025, 11:00:00] Bagas Nugroho: Mas Aji, mau tanya soal invoice bulan Desember. Kok ada line item "implementation fee" Rp 8 juta? Kita kan sudah agreed ini free
+[28/11/2025, 11:30:44] Aji Firmansyah (CSM): Pak Bagas wah maaf sekali, ini pasti billing error. Saya eskalasi ke finance team kita sekarang dan pastikan di-credit sebelum due date
+[28/11/2025, 11:35:00] Bagas Nugroho: Tolong ya Mas Aji, ini kalau tidak di-credit akan jadi masalah di accounting kita
+[28/11/2025, 13:00:22] Aji Firmansyah (CSM): Sudah saya konfirmasi dengan tim finance — credit note akan dikirim hari ini dan invoice revisi besok pagi. Maaf sekali atas inconvenience-nya Pak Bagas
+[28/11/2025, 13:15:00] Bagas Nugroho: Ok terima kasih ya. Tapi ini harus tidak terjadi lagi, mengganggu proses pembayaran kita
+
+[05/12/2025, 09:30:00] Sari Wulandari: Mas Aji, kita baru dapat permintaan dari direksi untuk laporan KPI operasional bulanan dalam format yang bisa langsung dipresentasikan ke board. Format yang ada di SyncOps belum cukup formal
+[05/12/2025, 09:45:22] Aji Firmansyah (CSM): Halo Bu Sari! Untuk board reporting format, saat ini memang belum ada template khusus. Sebagai workaround bisa export ke Excel dan format manual. Untuk solusi permanent ini saya masukkan sebagai product feedback ya
+[05/12/2025, 09:50:00] Sari Wulandari: Workaround manual setiap bulan itu tidak efisien Mas Aji. Ini harusnya basic feature untuk B2B tool
+[05/12/2025, 09:55:11] Hendri Kurniawan: Setuju sama Bu Sari. Kita bayar enterprise pricing tapi masih banyak yang harus dikerjain manual
+[05/12/2025, 10:00:00] Aji Firmansyah (CSM): Feedback ini sangat valid dan saya sampaikan dengan urgency ke product team. Akan saya follow up minggu depan dengan timeline
+
+[12/12/2025, 14:00:00] Sari Wulandari: Mas Aji ada yang ingin saya share. Kita baru dapat demo dari Logisly — mereka punya fitur automated reporting yang langsung bisa export ke format presentasi. Kita mulai bandingkan
+[12/12/2025, 14:30:33] Aji Firmansyah (CSM): Terima kasih sudah terbuka Bu Sari. Saya take note ini. Boleh saya tahu apa lagi yang membuat Logisly menarik buat kalian?
+[12/12/2025, 14:45:00] Sari Wulandari: Jujur ya Mas Aji — mereka juga punya fitur geofencing yang kita butuhkan, dan harganya lebih murah 15%. Plus reporting yang kita bahas tadi
+[12/12/2025, 14:50:22] Hendri Kurniawan: Dan mereka native support SAP dari awal, tidak perlu custom middleware
+[12/12/2025, 15:00:00] Aji Firmansyah (CSM): Saya sangat appreciate kejujurannya Bu Sari, Pak Hendri. Saya akan bawa ini langsung ke VP saya hari ini untuk diskusi lebih lanjut. Ini serius buat kita
+[12/12/2025, 15:05:11] Bagas Nugroho: Kontrak kita habis April kan? Kita perlu keputusan sebelum Februari untuk proses internal
+
+[19/12/2025, 10:00:00] Aji Firmansyah (CSM): Halo semua, saya ada update dari leadership kita. Tapi sebelumnya — selamat menyambut akhir tahun ya 🙏 Semoga 2025 sudah menjadi tahun yang baik buat PT Trimitra
+[19/12/2025, 10:30:44] Sari Wulandari: Terima kasih Mas Aji, selamat juga. Mudah-mudahan 2026 lebih baik lagi
+[19/12/2025, 10:35:00] Aji Firmansyah (CSM): Aamiin 🤲 Jadi update-nya: geofencing feature dipercepat — akan masuk release Januari. Dan untuk reporting, VP Product kita mau langsung call dengan Bu Sari untuk understand kebutuhan spesifiknya dan commit timeline
+[19/12/2025, 10:45:22] Sari Wulandari: Wah ini berbeda ya Mas Aji, biasanya hanya janji tanpa nama orang yang accountable
+[19/12/2025, 10:50:00] Aji Firmansyah (CSM): Bu Sari kami memang serius ingin mempertahankan Trimitra sebagai customer kami. Kalian adalah salah satu customer terbaik kami dalam hal feedback quality
+
+[24/12/2025, 09:00:00] Hendri Kurniawan: Quick question Mas Aji — ada tidak cara untuk bulk update driver assignments? Setiap pagi supervisor kita harus manual assign satu per satu, untuk 40+ driver sangat tidak efisien
+[24/12/2025, 09:30:22] Aji Firmansyah (CSM): Pak Hendri, ini ada di next quarter roadmap sebenarnya. Tapi saya lihat apakah ada cara workaround via API untuk sementara. Mas Rizky bisa bantu mungkin?
+[24/12/2025, 09:35:00] Rizky Pratama (Tech): Pak Hendri bisa pakai bulk assignment via CSV import, caranya: Settings > Driver Management > Import. Belum ada di dokumentasi tapi feature-nya ada. Saya kirim panduan ya
+[24/12/2025, 09:36:00] Rizky Pratama (Tech): <Media omitted>
+[24/12/2025, 10:00:44] Hendri Kurniawan: Mas Rizky ini kenapa tidak ada di dokumentasi? Kita sudah manual berbulan-bulan padahal ada fiturnya
+[24/12/2025, 10:05:00] Rizky Pratama (Tech): Maaf Pak Hendri, ini memang gap di dokumentasi kita. Saya report ke team untuk update docs
+[24/12/2025, 10:10:22] Sari Wulandari: Ini bukan pertama kali kita temukan fitur yang tidak terdokumentasi. Product kalian sepertinya sangat powerful tapi user experience-nya kurang polished
+
+[06/01/2026, 08:30:00] Aji Firmansyah (CSM): Selamat Tahun Baru 2026 semua! 🎊 Semoga Trimitra makin sukses tahun ini
+[06/01/2026, 09:00:22] Sari Wulandari: Selamat Tahun Baru Mas Aji dan tim SyncOps 😊
+[06/01/2026, 09:05:00] Bagas Nugroho: Happy New Year! Mas Aji, kita perlu set meeting soal renewal di minggu ke-2 Januari ya. Q1 ini penting buat kita
+[06/01/2026, 09:10:11] Aji Firmansyah (CSM): Siap Pak Bagas! Tanggal 13 atau 14 gimana?
+
+[13/01/2026, 10:00:00] Aji Firmansyah (CSM): Update geofencing — masuk release 20 Januari sesuai janji. Bu Sari, VP Product kita juga konfirmasi mau join call 15 Jan untuk bahas reporting feature
+[13/01/2026, 10:15:33] Sari Wulandari: Bagus! Ini progress yang nyata. Kita lihat call tanggal 15 nanti
+[13/01/2026, 10:20:00] Hendri Kurniawan: Mas Aji satu isu baru — sejak 3 hari lalu ada notifikasi yang tidak masuk ke supervisor. Kita baru tahu karena ada order yang missed
+[13/01/2026, 10:25:44] Aji Firmansyah (CSM): Pak Hendri ini urgent! Saya eskalasi ke engineering sekarang. Ada order yang berdampak ke customer kalian?
+[13/01/2026, 10:30:00] Hendri Kurniawan: Ada 2 order delayed karena ini. Sudah kita handle manual tapi ini tidak acceptable
+[13/01/2026, 10:35:22] Aji Firmansyah (CSM): Saya sangat minta maaf Pak Hendri. Mas Rizky bisa check sekarang?
+[13/01/2026, 10:40:00] Rizky Pratama (Tech): Sudah saya cek — ada bug di push notification service setelah deployment kemarin. Fix sudah deploy 10 menit lalu. Mohon test sekarang Pak Hendri
+[13/01/2026, 11:00:44] Hendri Kurniawan: Notifikasi sudah masuk lagi. Tapi Mas Aji, ini harus ada post-mortem ya — kenapa bisa lolos ke production?
+[13/01/2026, 11:05:00] Aji Firmansyah (CSM): Absolutely Pak Hendri, saya commit ada post-mortem dan kita share hasilnya ke kalian. Ini tidak boleh terulang
+
+[15/01/2026, 15:30:00] Sari Wulandari: Mas Aji, habis call dengan VP Product kalian. Cukup productive. Mereka commit custom reporting template untuk logistics KPI akan selesai Q1 — spesifiknya mereka akan build sesuai kebutuhan board report kita
+[15/01/2026, 15:40:22] Aji Firmansyah (CSM): Sangat senang mendengar ini Bu Sari! Ini akan significantly meningkatkan value SyncOps untuk Trimitra
+[15/01/2026, 15:45:00] Bagas Nugroho: Ini good news. Tapi Mas Aji, kita juga perlu bicara soal pricing renewal. Budget kita untuk tahun ini lebih tight, ada pressure dari atas untuk efisiensi
+[15/01/2026, 15:50:11] Aji Firmansyah (CSM): Pak Bagas saya sangat mengerti konteks ini. Mari kita diskusikan di renewal meeting minggu ini ya, saya ingin pastikan ada solution yang works untuk kedua belah pihak
+
+[20/01/2026, 11:00:00] Aji Firmansyah (CSM): Geofencing alert sudah live! Bu Sari, Pak Hendri — bisa dicoba di dashboard. Ini include zone configuration, deviation alert, dan history log
+[20/01/2026, 11:30:33] Sari Wulandari: Sudah saya coba — ini yang kita butuhkan! Tim compliance sangat senang 😊
+[20/01/2026, 11:35:00] Hendri Kurniawan: Good feature. Dokumentasinya juga sudah ada kan?
+[20/01/2026, 11:38:22] Aji Firmansyah (CSM): Yes Pak Hendri, kali ini dokumentasi lengkap ada di help center kita 😄 Pelajaran dari sebelumnya
+[20/01/2026, 11:40:00] Sari Wulandari: Haha appreciate it Mas Aji 😄
+
+[27/01/2026, 14:00:00] Bagas Nugroho: Mas Aji, sudah saya review proposal renewal. Harga Rp 34 juta/bulan untuk tahun kedua — kita harap ada loyalty discount mengingat kita sudah 1 tahun dan banyak feedback yang kita contribute
+[27/01/2026, 14:30:44] Aji Firmansyah (CSM): Pak Bagas saya appreciate ini dan sudah saya bawa ke management. Saya sedang proses approvalnya
+[27/01/2026, 14:35:00] Sari Wulandari: Mas Aji jujur ya — kita masih evaluate Logisly juga. Mereka aggressive dengan pricing dan sudah improve fitur-fiturnya. Ini bukan gertakan, ini genuinely competitive evaluation
+[27/01/2026, 14:45:22] Aji Firmansyah (CSM): Saya sangat appreciate kejujuran Bu Sari. Satu hal yang ingin saya highlight — switching cost ke Logisly itu real: re-training 150 users, re-integration SAP (yang kita sudah bangun custom), re-setup semua geofencing zone yang baru kalian konfigurasi. Tapi saya mengerti kalau value case harus compelling
+[27/01/2026, 14:50:00] Hendri Kurniawan: Mas Aji betul soal switching cost. Tapi kalau harganya jauh lebih murah dan feature parity sudah tercapai, direksi kita akan hitung ROI-nya
+[27/01/2026, 15:00:11] Bagas Nugroho: Exactly. Kita butuh jawaban sebelum 10 Februari ya Mas Aji, karena ada board meeting kita tanggal 12
+
+[03/02/2026, 09:00:00] Aji Firmansyah (CSM): Selamat pagi semua. Saya punya update renewal dari management
+[03/02/2026, 09:01:00] Aji Firmansyah (CSM): 1. Loyalty discount 12% untuk year 2 → efektif Rp 29.9 juta/bulan
+[03/02/2026, 09:01:44] Aji Firmansyah (CSM): 2. Custom reporting template gratis (biasanya Rp 20 juta)
+[03/02/2026, 09:02:11] Aji Firmansyah (CSM): 3. Dedicated Slack channel dengan direct engineering access
+[03/02/2026, 09:02:33] Aji Firmansyah (CSM): 4. Quarterly roadmap review dengan product team
+[03/02/2026, 09:05:00] Sari Wulandari: Wah ini significant improvement Mas Aji
+[03/02/2026, 09:10:22] Bagas Nugroho: Rp 29.9 juta sudah dalam range kita. Pak Hendri, Bu Sari — ini layak dipertimbangkan serius
+[03/02/2026, 09:15:00] Hendri Kurniawan: Dari sisi technical, SAP integration kita sekarang sudah smooth. Pindah itu risky. Saya prefer lanjut asal harganya masuk
+[03/02/2026, 09:20:44] Sari Wulandari: Mas Aji, kita need to discuss internally dulu. Berikan kita waktu sampai 7 Feb ya. Tapi ini sudah sangat positif
+[03/02/2026, 09:25:00] Aji Firmansyah (CSM): Tentu Bu Sari. Saya stand by untuk pertanyaan apapun 🙏
+
+[07/02/2026, 16:30:00] Sari Wulandari: Mas Aji, kita sudah diskusi internal. Kita lanjut dengan SyncOps untuk year 2 dengan paket yang ditawarkan tadi
+[07/02/2026, 16:35:22] Aji Firmansyah (CSM): Alhamdulillah! Terima kasih banyak kepercayaannya Bu Sari, Pak Hendri, Pak Bagas 🙏🙏🙏
+[07/02/2026, 16:40:00] Bagas Nugroho: Tolong contract-nya sebelum 10 Feb ya Mas Aji, supaya bisa masuk board meeting kita
+[07/02/2026, 16:42:11] Aji Firmansyah (CSM): Siap Pak Bagas! Saya proses hari ini juga. Dan terima kasih sudah sangat terbuka dan jujur sepanjang perjalanan ini — feedback kalian benar-benar membuat produk kita lebih baik
+[07/02/2026, 16:50:00] Sari Wulandari: Semoga SyncOps makin berkembang Mas Aji. Kita juga senang bahwa feedback kita didengar dan ada action nyata 😊
+[07/02/2026, 16:55:33] Hendri Kurniawan: Setuju. Tunggu contract-nya ya. Dan untuk Q1 kita expect geofencing reporting bisa diintegrasikan ke board report ya
+[07/02/2026, 17:00:00] Aji Firmansyah (CSM): Noted Pak Hendri! Itu akan jadi priority saya untuk Q1 🙏
