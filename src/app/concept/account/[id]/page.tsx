@@ -184,6 +184,7 @@ export default function AccountPage() {
   const [briefSignal, setBriefSignal] = useState<ProductSignal | null>(null)
   const [copied, setCopied] = useState(false)
   const [showReanalyze, setShowReanalyze] = useState(false)
+  const [mobileTab, setMobileTab] = useState<"report" | "chat">("report")
   const [reanalyzeParsed, setReanalyzeParsed] = useState<WaParsed | null>(null)
   const [reanalyzeRoles, setReanalyzeRoles] = useState<ParticipantRoles>({})
   const [reanalyzeFile, setReanalyzeFile] = useState<File | null>(null)
@@ -452,10 +453,26 @@ export default function AccountPage() {
         </>
       )}
 
+      {/* Mobile tab switcher — sticky, sits just below the nav */}
+      <div className="xl:hidden sticky top-12 z-10 bg-white border-b border-neutral-200 flex">
+        <button
+          onClick={() => setMobileTab("report")}
+          className={`flex-1 py-3 text-xs font-medium transition-colors ${mobileTab === "report" ? "border-b-2 border-neutral-900 text-neutral-900" : "text-neutral-400"}`}
+        >
+          Report
+        </button>
+        <button
+          onClick={() => setMobileTab("chat")}
+          className={`flex-1 py-3 text-xs font-medium transition-colors ${mobileTab === "chat" ? "border-b-2 border-neutral-900 text-neutral-900" : "text-neutral-400"}`}
+        >
+          Ask Nectic
+        </button>
+      </div>
+
       {/* Report + Chat co-pilot layout */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 xl:grid xl:grid-cols-5 xl:gap-8 xl:items-start">
-        {/* Report — left column */}
-        <div className="xl:col-span-3">
+      <div className={`max-w-6xl mx-auto xl:px-6 xl:py-8 xl:grid xl:grid-cols-5 xl:gap-8 xl:items-start ${mobileTab === "report" ? "px-4 sm:px-6 py-8" : ""}`}>
+        {/* Report — left column, hidden on mobile when chat tab active */}
+        <div className={`xl:col-span-3 ${mobileTab === "chat" ? "hidden xl:block" : ""}`}>
           <AnalysisReport
             result={account.result}
             fileName={account.fileName}
@@ -504,8 +521,8 @@ export default function AccountPage() {
           />
         </div>
 
-        {/* Chat co-pilot — sticky right column */}
-        <div className="xl:col-span-2 mt-8 xl:mt-0 xl:sticky xl:top-20">
+        {/* Chat co-pilot — sticky right column, hidden on mobile when report tab active */}
+        <div className={`xl:col-span-2 mt-8 xl:mt-0 xl:sticky xl:top-20 ${mobileTab === "report" ? "hidden xl:block" : ""}`}>
           <ChatPanel account={account} workspace={workspace} />
         </div>
       </div>
@@ -1074,7 +1091,7 @@ function ChatPanel({ account, workspace }: { account: StoredAccount; workspace: 
   }
 
   return (
-    <div className="bg-white border border-neutral-200 rounded-xl flex flex-col overflow-hidden shadow-sm h-[420px] xl:h-[calc(100vh-7rem)] xl:max-h-[760px] xl:min-h-[480px]">
+    <div className="bg-white border-0 xl:border xl:border-neutral-200 xl:rounded-xl flex flex-col overflow-hidden xl:shadow-sm h-[calc(100vh-92px)] xl:h-[calc(100vh-7rem)] xl:max-h-[760px] xl:min-h-[480px]">
 
       {/* Header */}
       <div className="px-4 h-12 flex items-center gap-2.5 border-b border-neutral-100 flex-shrink-0">

@@ -148,13 +148,13 @@ export default function BoardPage() {
   return (
     <div className="min-h-screen bg-neutral-50">
       <nav className="bg-white border-b border-neutral-200 px-4 sm:px-6 h-12 flex items-center justify-between sticky top-0 z-10">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 sm:gap-4">
           <Link href="/" className="flex items-center gap-2 hover:opacity-70 transition-opacity">
             <LogoIcon size={20} />
             <span className="text-sm font-semibold text-neutral-900">Nectic</span>
           </Link>
-          <span className="text-neutral-200">·</span>
-          <div className="flex items-center gap-3 text-xs">
+          <span className="text-neutral-200 hidden sm:inline">·</span>
+          <div className="hidden sm:flex items-center gap-3 text-xs">
             <Link href="/concept" className="text-neutral-400 hover:text-neutral-700 transition-colors">Accounts</Link>
             <span className="text-neutral-900 font-semibold border-b-2 border-neutral-900 pb-0.5">Signal board</span>
             <Link href="/concept/workspace" className="text-neutral-400 hover:text-neutral-700 transition-colors">Workspace</Link>
