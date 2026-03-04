@@ -4,7 +4,8 @@ import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import LogoIcon from "@/components/logo-icon"
-import { getAccount, deleteAccount, type StoredAccount } from "@/lib/concept-store"
+import { useAuth } from "@/contexts/auth-context"
+import { getAccount, deleteAccount, type StoredAccount } from "@/lib/concept-firestore"
 import type { AnalysisResult } from "@/app/api/concept/analyze/route"
 
 const riskConfig = {
@@ -30,22 +31,40 @@ const urgencyConfig = {
 export default function AccountPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
+  const { user, loading: authLoading } = useAuth()
   const [account, setAccount] = useState<StoredAccount | null>(null)
-  const [hydrated, setHydrated] = useState(false)
+  const [loadingAccount, setLoadingAccount] = useState(true)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
-    const a = getAccount(id)
-    setAccount(a)
-    setHydrated(true)
-  }, [id])
+    if (!authLoading && !user) {
+      router.replace("/concept/login")
+    }
+  }, [user, authLoading, router])
 
-  const handleDelete = () => {
-    deleteAccount(id)
+  useEffect(() => {
+    if (!user) return
+    getAccount(user.uid, id)
+      .then(setAccount)
+      .catch(console.error)
+      .finally(() => setLoadingAccount(false))
+  }, [user, id])
+
+  const handleDelete = async () => {
+    if (!user) return
+    setDeleting(true)
+    await deleteAccount(user.uid, id)
     router.push("/concept")
   }
 
-  if (!hydrated) return null
+  if (authLoading || !user || loadingAccount) {
+    return (
+      <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
+        <div className="w-5 h-5 border-2 border-neutral-300 border-t-neutral-900 rounded-full animate-spin" />
+      </div>
+    )
+  }
 
   if (!account) {
     return (
@@ -78,7 +97,13 @@ export default function AccountPage() {
             <div className="flex items-center gap-2">
               <span className="text-xs text-neutral-500">Remove this account?</span>
               <button onClick={() => setConfirmDelete(false)} className="text-xs text-neutral-400 hover:text-neutral-700 px-2 py-1 transition-colors">Cancel</button>
-              <button onClick={handleDelete} className="text-xs text-white bg-red-600 hover:bg-red-700 px-3 py-1.5 rounded transition-colors">Remove</button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="text-xs text-white bg-red-600 hover:bg-red-700 px-3 py-1.5 rounded transition-colors disabled:opacity-50"
+              >
+                {deleting ? "Removing…" : "Remove"}
+              </button>
             </div>
           ) : (
             <button onClick={() => setConfirmDelete(true)} className="text-xs text-neutral-300 hover:text-red-500 transition-colors">Remove account</button>
@@ -112,7 +137,6 @@ function AnalysisReport({
 
   return (
     <div className="space-y-4">
-      {/* Score header */}
       <div className={`border rounded-lg p-6 ${risk.bg} ${risk.border}`}>
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -128,7 +152,6 @@ function AnalysisReport({
             </span>
           </div>
         </div>
-
         <div className="mt-5 flex items-center gap-4 flex-wrap pt-4 border-t border-black/5 text-xs">
           <div className="flex items-center gap-1.5">
             <span className={`font-medium ${sentiment.text}`}>{sentiment.icon} {sentiment.label}</span>
@@ -142,12 +165,9 @@ function AnalysisReport({
               <span key={l} className="text-neutral-500 bg-white/60 border border-black/10 px-2 py-0.5 rounded-full">{l}</span>
             ))}
           </div>
-          <span className="text-neutral-200">·</span>
-          <span className="text-neutral-400">{fileName}</span>
         </div>
       </div>
 
-      {/* Recommended action */}
       <div className="bg-neutral-900 rounded-lg p-5">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -165,7 +185,6 @@ function AnalysisReport({
         </div>
       </div>
 
-      {/* Risk signals */}
       {result.riskSignals?.length > 0 && (
         <div className="bg-white border border-neutral-200 rounded-lg overflow-hidden">
           <div className="px-5 py-3.5 border-b border-neutral-100 flex items-center justify-between">
@@ -189,7 +208,6 @@ function AnalysisReport({
         </div>
       )}
 
-      {/* Product signals */}
       {result.productSignals?.length > 0 && (
         <div className="bg-white border border-neutral-200 rounded-lg overflow-hidden">
           <div className="px-5 py-3.5 border-b border-neutral-100 flex items-center justify-between">
@@ -226,7 +244,6 @@ function AnalysisReport({
         </div>
       )}
 
-      {/* Relationship signals */}
       {result.relationshipSignals?.length > 0 && (
         <div className="bg-white border border-neutral-200 rounded-lg overflow-hidden">
           <div className="px-5 py-3.5 border-b border-neutral-100">
@@ -243,7 +260,6 @@ function AnalysisReport({
         </div>
       )}
 
-      {/* Competitor mentions */}
       {result.competitorMentions?.length > 0 && (
         <div className="bg-white border border-neutral-200 rounded-lg p-5">
           <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-3">Competitors mentioned</p>
@@ -255,7 +271,6 @@ function AnalysisReport({
         </div>
       )}
 
-      {/* Footer actions */}
       <div className="flex gap-3 pt-2 pb-8">
         <Link
           href="/concept"
@@ -263,16 +278,10 @@ function AnalysisReport({
         >
           ← Back to dashboard
         </Link>
-        <Link
-          href="/#early-access"
-          className="flex-1 bg-neutral-900 text-white text-sm font-semibold py-3 rounded-lg hover:bg-neutral-700 transition-colors text-center"
-        >
-          Get early access →
-        </Link>
       </div>
 
       <p className="text-xs text-neutral-400 text-center pb-4">
-        Analyzed {new Date(analyzedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })} · Processed in-memory, never stored server-side.
+        Analyzed {new Date(analyzedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })} · {fileName}
       </p>
     </div>
   )

@@ -1,10 +1,18 @@
 "use client"
 
 import { useState, useRef, useCallback, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import LogoIcon from "@/components/logo-icon"
+import { useAuth } from "@/contexts/auth-context"
 import { parseWhatsAppExport, formatForPrompt, type WaParsed } from "@/lib/whatsapp-parser"
-import { getAccounts, saveAccount, deleteAccount, aggregateSignals, type StoredAccount } from "@/lib/concept-store"
+import {
+  getAccounts,
+  saveAccount,
+  deleteAccount,
+  aggregateSignals,
+  type StoredAccount,
+} from "@/lib/concept-firestore"
 import type { AnalysisResult } from "@/app/api/concept/analyze/route"
 
 type UploadStage = "idle" | "parsed" | "analyzing" | "error"
@@ -34,8 +42,11 @@ function timeAgo(iso: string): string {
 }
 
 export default function ConceptPage() {
+  const { user, loading: authLoading, signOut } = useAuth()
+  const router = useRouter()
+
   const [accounts, setAccounts] = useState<StoredAccount[]>([])
-  const [hydrated, setHydrated] = useState(false)
+  const [loadingAccounts, setLoadingAccounts] = useState(true)
   const [showUpload, setShowUpload] = useState(false)
   const [uploadStage, setUploadStage] = useState<UploadStage>("idle")
   const [parsed, setParsed] = useState<WaParsed | null>(null)
@@ -45,12 +56,28 @@ export default function ConceptPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
+  // Auth guard
   useEffect(() => {
-    setAccounts(getAccounts())
-    setHydrated(true)
-  }, [])
+    if (!authLoading && !user) {
+      router.replace("/concept/login")
+    }
+  }, [user, authLoading, router])
 
-  const refreshAccounts = () => setAccounts(getAccounts())
+  // Load accounts from Firestore
+  useEffect(() => {
+    if (!user) return
+    setLoadingAccounts(true)
+    getAccounts(user.uid)
+      .then(setAccounts)
+      .catch(console.error)
+      .finally(() => setLoadingAccounts(false))
+  }, [user])
+
+  const refreshAccounts = async () => {
+    if (!user) return
+    const updated = await getAccounts(user.uid)
+    setAccounts(updated)
+  }
 
   const handleFile = useCallback((file: File) => {
     if (!file.name.endsWith(".txt") && file.type !== "text/plain") {
@@ -82,7 +109,7 @@ export default function ConceptPage() {
   }, [handleFile])
 
   const analyze = async () => {
-    if (!parsed) return
+    if (!parsed || !user) return
     setUploadStage("analyzing")
     setUploadError("")
 
@@ -101,13 +128,13 @@ export default function ConceptPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "Analysis failed")
 
-      saveAccount({
+      await saveAccount(user.uid, {
         fileName,
         analyzedAt: new Date().toISOString(),
         result: data.result as AnalysisResult,
       })
 
-      refreshAccounts()
+      await refreshAccounts()
       resetUpload()
       setShowUpload(false)
     } catch (err: unknown) {
@@ -125,13 +152,20 @@ export default function ConceptPage() {
     if (inputRef.current) inputRef.current.value = ""
   }
 
-  const handleDelete = (id: string) => {
-    deleteAccount(id)
+  const handleDelete = async (id: string) => {
+    if (!user) return
+    await deleteAccount(user.uid, id)
     setDeletingId(null)
-    refreshAccounts()
+    await refreshAccounts()
   }
 
-  if (!hydrated) return null
+  if (authLoading || !user) {
+    return (
+      <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
+        <div className="w-5 h-5 border-2 border-neutral-300 border-t-neutral-900 rounded-full animate-spin" />
+      </div>
+    )
+  }
 
   const aggregated = aggregateSignals(accounts)
   const atRisk = accounts.filter((a) => a.result.riskLevel === "high" || a.result.riskLevel === "critical").length
@@ -147,9 +181,9 @@ export default function ConceptPage() {
         </Link>
         <div className="flex items-center gap-3">
           <span className="text-xs bg-amber-50 border border-amber-200 text-amber-700 px-3 py-1 rounded-full font-medium">
-            Concept MVP
+            Early access
           </span>
-          {accounts.length > 0 && (
+          {accounts.length > 0 && !loadingAccounts && (
             <button
               onClick={() => { setShowUpload(!showUpload); resetUpload() }}
               className="text-xs bg-neutral-900 text-white px-3 py-1.5 rounded-lg hover:bg-neutral-700 transition-colors font-medium"
@@ -157,6 +191,15 @@ export default function ConceptPage() {
               + Add account
             </button>
           )}
+          <div className="flex items-center gap-2 pl-2 border-l border-neutral-200">
+            <span className="text-xs text-neutral-500 hidden sm:block">{user.displayName ?? user.email}</span>
+            <button
+              onClick={() => signOut()}
+              className="text-xs text-neutral-400 hover:text-neutral-700 transition-colors"
+            >
+              Sign out
+            </button>
+          </div>
         </div>
       </nav>
 
@@ -185,56 +228,58 @@ export default function ConceptPage() {
       )}
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
-        {/* Empty state */}
-        {accounts.length === 0 && !showUpload && (
-          <EmptyState onUpload={() => setShowUpload(true)} />
-        )}
-
-        {accounts.length === 0 && showUpload && null}
-
-        {/* Dashboard */}
-        {accounts.length > 0 && (
+        {loadingAccounts ? (
+          <div className="flex items-center justify-center py-24">
+            <div className="w-5 h-5 border-2 border-neutral-300 border-t-neutral-900 rounded-full animate-spin" />
+          </div>
+        ) : (
           <>
-            {/* Stats bar */}
-            <div className="grid grid-cols-3 gap-4 mb-8">
-              <div className="bg-white border border-neutral-200 rounded-lg p-5">
-                <p className="text-3xl font-light text-neutral-900">{accounts.length}</p>
-                <p className="text-xs text-neutral-500 mt-1">accounts tracked</p>
-              </div>
-              <div className={`border rounded-lg p-5 ${atRisk > 0 ? "bg-red-50 border-red-200" : "bg-white border-neutral-200"}`}>
-                <p className={`text-3xl font-light ${atRisk > 0 ? "text-red-600" : "text-neutral-900"}`}>{atRisk}</p>
-                <p className={`text-xs mt-1 ${atRisk > 0 ? "text-red-500" : "text-neutral-500"}`}>at high / critical risk</p>
-              </div>
-              <div className={`border rounded-lg p-5 ${sharedSignals > 0 ? "bg-blue-50 border-blue-200" : "bg-white border-neutral-200"}`}>
-                <p className={`text-3xl font-light ${sharedSignals > 0 ? "text-blue-600" : "text-neutral-900"}`}>{sharedSignals}</p>
-                <p className={`text-xs mt-1 ${sharedSignals > 0 ? "text-blue-600" : "text-neutral-500"}`}>
-                  {sharedSignals > 0 ? "signals across multiple accounts" : "shared signals (add more accounts)"}
-                </p>
-              </div>
-            </div>
+            {accounts.length === 0 && !showUpload && (
+              <EmptyState onUpload={() => setShowUpload(true)} userName={user.displayName?.split(" ")[0] ?? null} />
+            )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-              {/* Accounts list — 3/5 */}
-              <div className="lg:col-span-3 space-y-3">
-                <h2 className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-4">Accounts</h2>
-                {accounts.map((account) => (
-                  <AccountCard
-                    key={account.id}
-                    account={account}
-                    onDelete={() => setDeletingId(account.id)}
-                    confirmingDelete={deletingId === account.id}
-                    onConfirmDelete={() => handleDelete(account.id)}
-                    onCancelDelete={() => setDeletingId(null)}
-                  />
-                ))}
-              </div>
+            {accounts.length > 0 && (
+              <>
+                {/* Stats bar */}
+                <div className="grid grid-cols-3 gap-4 mb-8">
+                  <div className="bg-white border border-neutral-200 rounded-lg p-5">
+                    <p className="text-3xl font-light text-neutral-900">{accounts.length}</p>
+                    <p className="text-xs text-neutral-500 mt-1">accounts tracked</p>
+                  </div>
+                  <div className={`border rounded-lg p-5 ${atRisk > 0 ? "bg-red-50 border-red-200" : "bg-white border-neutral-200"}`}>
+                    <p className={`text-3xl font-light ${atRisk > 0 ? "text-red-600" : "text-neutral-900"}`}>{atRisk}</p>
+                    <p className={`text-xs mt-1 ${atRisk > 0 ? "text-red-500" : "text-neutral-500"}`}>at high / critical risk</p>
+                  </div>
+                  <div className={`border rounded-lg p-5 ${sharedSignals > 0 ? "bg-blue-50 border-blue-200" : "bg-white border-neutral-200"}`}>
+                    <p className={`text-3xl font-light ${sharedSignals > 0 ? "text-blue-600" : "text-neutral-900"}`}>{sharedSignals}</p>
+                    <p className={`text-xs mt-1 ${sharedSignals > 0 ? "text-blue-600" : "text-neutral-500"}`}>
+                      {sharedSignals > 0 ? "signals across multiple accounts" : "shared signals (add more accounts)"}
+                    </p>
+                  </div>
+                </div>
 
-              {/* Cross-account signals — 2/5 */}
-              <div className="lg:col-span-2">
-                <h2 className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-4">Product signals</h2>
-                <CrossAccountSignals signals={aggregated} accountCount={accounts.length} />
-              </div>
-            </div>
+                <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                  <div className="lg:col-span-3 space-y-3">
+                    <h2 className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-4">Accounts</h2>
+                    {accounts.map((account) => (
+                      <AccountCard
+                        key={account.id}
+                        account={account}
+                        onDelete={() => setDeletingId(account.id)}
+                        confirmingDelete={deletingId === account.id}
+                        onConfirmDelete={() => handleDelete(account.id)}
+                        onCancelDelete={() => setDeletingId(null)}
+                      />
+                    ))}
+                  </div>
+
+                  <div className="lg:col-span-2">
+                    <h2 className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-4">Product signals</h2>
+                    <CrossAccountSignals signals={aggregated} accountCount={accounts.length} />
+                  </div>
+                </div>
+              </>
+            )}
           </>
         )}
       </main>
@@ -242,7 +287,7 @@ export default function ConceptPage() {
   )
 }
 
-// ─── Account card ────────────────────────────────────────────────────────────
+// ─── Account card ─────────────────────────────────────────────────────────────
 
 function AccountCard({
   account,
@@ -285,7 +330,6 @@ function AccountCard({
             <p className="text-xs text-neutral-400">/ 10</p>
           </div>
         </div>
-
         <div className="mt-3 flex items-center gap-3 text-xs text-neutral-400 border-t border-neutral-100 pt-3">
           <span>{account.result.stats?.messageCount ?? "?"} messages</span>
           <span>·</span>
@@ -313,7 +357,7 @@ function AccountCard({
   )
 }
 
-// ─── Cross-account signals ───────────────────────────────────────────────────
+// ─── Cross-account signals ─────────────────────────────────────────────────────
 
 function CrossAccountSignals({ signals, accountCount }: { signals: ReturnType<typeof aggregateSignals>; accountCount: number }) {
   if (signals.length === 0) {
@@ -329,19 +373,15 @@ function CrossAccountSignals({ signals, accountCount }: { signals: ReturnType<ty
       {accountCount < 2 && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mb-4">
           <p className="text-xs text-blue-700 leading-relaxed">
-            Add more accounts to see which product signals appear across your entire customer base.
+            Add more accounts to see which signals appear across your entire customer base.
           </p>
         </div>
       )}
       {signals.map((sig, i) => {
         const typeCfg = signalTypeConfig[sig.type] ?? signalTypeConfig.complaint
         const isShared = sig.accountCount > 1
-
         return (
-          <div
-            key={i}
-            className={`bg-white border rounded-lg p-4 ${isShared ? "border-blue-200 bg-blue-50/30" : "border-neutral-200"}`}
-          >
+          <div key={i} className={`bg-white border rounded-lg p-4 ${isShared ? "border-blue-200 bg-blue-50/30" : "border-neutral-200"}`}>
             <div className="flex items-start justify-between gap-2 mb-2">
               <p className="text-xs font-semibold text-neutral-800 leading-snug">{sig.title}</p>
               {isShared && (
@@ -365,12 +405,14 @@ function CrossAccountSignals({ signals, accountCount }: { signals: ReturnType<ty
   )
 }
 
-// ─── Empty state ─────────────────────────────────────────────────────────────
+// ─── Empty state ───────────────────────────────────────────────────────────────
 
-function EmptyState({ onUpload }: { onUpload: () => void }) {
+function EmptyState({ onUpload, userName }: { onUpload: () => void; userName: string | null }) {
   return (
     <div className="max-w-lg mx-auto pt-16 text-center">
-      <p className="text-xs font-medium text-neutral-400 uppercase tracking-widest mb-3">Account Intelligence</p>
+      <p className="text-xs font-medium text-neutral-400 uppercase tracking-widest mb-3">
+        {userName ? `Welcome, ${userName}` : "Account Intelligence"}
+      </p>
       <h1 className="text-3xl font-light text-neutral-900 tracking-tight">
         What are your customers<br />
         <span className="text-neutral-400">actually telling you?</span>
@@ -391,7 +433,7 @@ function EmptyState({ onUpload }: { onUpload: () => void }) {
   )
 }
 
-// ─── Upload panel ─────────────────────────────────────────────────────────────
+// ─── Upload panel ──────────────────────────────────────────────────────────────
 
 function UploadPanel({
   stage,
