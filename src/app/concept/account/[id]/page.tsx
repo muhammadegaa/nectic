@@ -1,12 +1,14 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import LogoIcon from "@/components/logo-icon"
 import { useAuth } from "@/contexts/auth-context"
 import { getAccount, deleteAccount, type StoredAccount } from "@/lib/concept-firestore"
 import type { AnalysisResult } from "@/app/api/concept/analyze/route"
+
+// ─── Config ──────────────────────────────────────────────────────────────────
 
 const riskConfig = {
   low: { label: "Low risk", bg: "bg-green-50", text: "text-green-700", border: "border-green-200", score: "text-green-600" },
@@ -28,6 +30,29 @@ const urgencyConfig = {
   this_month: { label: "This month", color: "text-neutral-600 bg-neutral-100 border-neutral-200" },
 }
 
+const STARTER_PROMPTS = [
+  "What should I say in the next CS call?",
+  "Is renewal realistically at risk?",
+  "What's the #1 thing the PM should fix this week?",
+]
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface ChatMessage {
+  role: "user" | "assistant"
+  content: string
+}
+
+interface ProductSignal {
+  type: string
+  title: string
+  quote: string
+  priority: string
+  pmAction: string
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export default function AccountPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
@@ -36,11 +61,10 @@ export default function AccountPage() {
   const [loadingAccount, setLoadingAccount] = useState(true)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [briefSignal, setBriefSignal] = useState<ProductSignal | null>(null)
 
   useEffect(() => {
-    if (!authLoading && !user) {
-      router.replace("/concept/login")
-    }
+    if (!authLoading && !user) router.replace("/concept/login")
   }, [user, authLoading, router])
 
   useEffect(() => {
@@ -80,8 +104,9 @@ export default function AccountPage() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-50">
-      <nav className="bg-white border-b border-neutral-200 px-4 sm:px-6 h-12 flex items-center justify-between sticky top-0 z-10">
+    <div className="min-h-screen bg-neutral-50 pb-[340px]">
+      {/* Nav */}
+      <nav className="bg-white border-b border-neutral-200 px-4 sm:px-6 h-12 flex items-center justify-between sticky top-0 z-20">
         <div className="flex items-center gap-3">
           <Link href="/" className="flex items-center gap-2 hover:opacity-70 transition-opacity">
             <LogoIcon size={20} />
@@ -97,11 +122,7 @@ export default function AccountPage() {
             <div className="flex items-center gap-2">
               <span className="text-xs text-neutral-500">Remove this account?</span>
               <button onClick={() => setConfirmDelete(false)} className="text-xs text-neutral-400 hover:text-neutral-700 px-2 py-1 transition-colors">Cancel</button>
-              <button
-                onClick={handleDelete}
-                disabled={deleting}
-                className="text-xs text-white bg-red-600 hover:bg-red-700 px-3 py-1.5 rounded transition-colors disabled:opacity-50"
-              >
+              <button onClick={handleDelete} disabled={deleting} className="text-xs text-white bg-red-600 hover:bg-red-700 px-3 py-1.5 rounded transition-colors disabled:opacity-50">
                 {deleting ? "Removing…" : "Remove"}
               </button>
             </div>
@@ -111,21 +132,44 @@ export default function AccountPage() {
         </div>
       </nav>
 
+      {/* Report */}
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
-        <AnalysisReport result={account.result} fileName={account.fileName} analyzedAt={account.analyzedAt} />
+        <AnalysisReport
+          result={account.result}
+          fileName={account.fileName}
+          analyzedAt={account.analyzedAt}
+          onGenerateBrief={setBriefSignal}
+        />
       </main>
+
+      {/* Brief slide-over */}
+      {briefSignal && (
+        <BriefPanel
+          signal={briefSignal}
+          accountName={account.result.accountName}
+          accountSummary={account.result.summary}
+          onClose={() => setBriefSignal(null)}
+        />
+      )}
+
+      {/* Chat panel — sticky bottom */}
+      <ChatPanel analysis={account.result} />
     </div>
   )
 }
+
+// ─── Analysis report ──────────────────────────────────────────────────────────
 
 function AnalysisReport({
   result,
   fileName,
   analyzedAt,
+  onGenerateBrief,
 }: {
   result: AnalysisResult
   fileName: string
   analyzedAt: string
+  onGenerateBrief: (signal: ProductSignal) => void
 }) {
   const risk = riskConfig[result.riskLevel] ?? riskConfig.medium
   const urgency = urgencyConfig[result.recommendedAction.urgency as keyof typeof urgencyConfig] ?? urgencyConfig.this_month
@@ -137,6 +181,7 @@ function AnalysisReport({
 
   return (
     <div className="space-y-4">
+      {/* Health score */}
       <div className={`border rounded-lg p-6 ${risk.bg} ${risk.border}`}>
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -168,6 +213,7 @@ function AnalysisReport({
         </div>
       </div>
 
+      {/* Recommended action */}
       <div className="bg-neutral-900 rounded-lg p-5">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -175,16 +221,13 @@ function AnalysisReport({
             <p className="text-sm text-white leading-relaxed">{result.recommendedAction.what}</p>
           </div>
           <div className="flex-shrink-0 flex flex-col items-end gap-2">
-            <span className={`text-xs font-semibold px-3 py-1 rounded-full border ${urgency.color}`}>
-              {urgency.label}
-            </span>
-            <span className="text-xs text-neutral-400 border border-neutral-700 px-2 py-0.5 rounded">
-              Owner: {result.recommendedAction.owner}
-            </span>
+            <span className={`text-xs font-semibold px-3 py-1 rounded-full border ${urgency.color}`}>{urgency.label}</span>
+            <span className="text-xs text-neutral-400 border border-neutral-700 px-2 py-0.5 rounded">Owner: {result.recommendedAction.owner}</span>
           </div>
         </div>
       </div>
 
+      {/* Risk signals */}
       {result.riskSignals?.length > 0 && (
         <div className="bg-white border border-neutral-200 rounded-lg overflow-hidden">
           <div className="px-5 py-3.5 border-b border-neutral-100 flex items-center justify-between">
@@ -208,6 +251,7 @@ function AnalysisReport({
         </div>
       )}
 
+      {/* Product signals — with Generate brief button */}
       {result.productSignals?.length > 0 && (
         <div className="bg-white border border-neutral-200 rounded-lg overflow-hidden">
           <div className="px-5 py-3.5 border-b border-neutral-100 flex items-center justify-between">
@@ -221,15 +265,19 @@ function AnalysisReport({
               return (
                 <div key={i} className="p-5">
                   <div className="flex items-start justify-between gap-3 mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className={`text-xs font-semibold px-2 py-0.5 border rounded-full ${typeCfg.color}`}>
-                        {typeCfg.label}
-                      </span>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`text-xs font-semibold px-2 py-0.5 border rounded-full ${typeCfg.color}`}>{typeCfg.label}</span>
                       <p className="text-sm font-semibold text-neutral-800">{s.title}</p>
                     </div>
-                    <span className={`text-xs font-semibold flex-shrink-0 ${priColor}`}>
-                      {s.priority.charAt(0).toUpperCase() + s.priority.slice(1)} priority
-                    </span>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className={`text-xs font-semibold ${priColor}`}>{s.priority.charAt(0).toUpperCase() + s.priority.slice(1)}</span>
+                      <button
+                        onClick={() => onGenerateBrief(s)}
+                        className="text-xs text-neutral-500 border border-neutral-200 bg-white hover:bg-neutral-900 hover:text-white hover:border-neutral-900 px-2.5 py-1 rounded transition-colors font-medium"
+                      >
+                        Generate brief →
+                      </button>
+                    </div>
                   </div>
                   <div className="bg-neutral-50 rounded px-3 py-2 text-sm text-neutral-600 italic border border-neutral-100 mb-2">
                     &ldquo;{s.quote}&rdquo;
@@ -244,6 +292,7 @@ function AnalysisReport({
         </div>
       )}
 
+      {/* Relationship signals */}
       {result.relationshipSignals?.length > 0 && (
         <div className="bg-white border border-neutral-200 rounded-lg overflow-hidden">
           <div className="px-5 py-3.5 border-b border-neutral-100">
@@ -260,6 +309,7 @@ function AnalysisReport({
         </div>
       )}
 
+      {/* Competitor mentions */}
       {result.competitorMentions?.length > 0 && (
         <div className="bg-white border border-neutral-200 rounded-lg p-5">
           <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-3">Competitors mentioned</p>
@@ -271,18 +321,287 @@ function AnalysisReport({
         </div>
       )}
 
-      <div className="flex gap-3 pt-2 pb-8">
-        <Link
-          href="/concept"
-          className="flex-1 border border-neutral-200 bg-white text-neutral-700 text-sm font-semibold py-3 rounded-lg hover:border-neutral-400 transition-colors text-center"
-        >
+      <div className="pt-2 pb-4">
+        <Link href="/concept" className="inline-block border border-neutral-200 bg-white text-neutral-700 text-sm font-semibold px-5 py-2.5 rounded-lg hover:border-neutral-400 transition-colors">
           ← Back to dashboard
         </Link>
       </div>
-
-      <p className="text-xs text-neutral-400 text-center pb-4">
+      <p className="text-xs text-neutral-400 pb-4">
         Analyzed {new Date(analyzedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })} · {fileName}
       </p>
     </div>
+  )
+}
+
+// ─── Chat panel ───────────────────────────────────────────────────────────────
+
+function ChatPanel({ analysis }: { analysis: AnalysisResult }) {
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [input, setInput] = useState("")
+  const [streaming, setStreaming] = useState(false)
+  const [open, setOpen] = useState(true)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }, [messages])
+
+  const send = async (question: string) => {
+    if (!question.trim() || streaming) return
+    const q = question.trim()
+    setInput("")
+    const newMessages: ChatMessage[] = [...messages, { role: "user", content: q }]
+    setMessages(newMessages)
+    setStreaming(true)
+
+    // Append empty assistant message to stream into
+    setMessages((prev) => [...prev, { role: "assistant", content: "" }])
+
+    try {
+      const res = await fetch("/api/concept/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          analysis,
+          messages: messages, // previous history (not including current question)
+          question: q,
+        }),
+      })
+
+      if (!res.ok || !res.body) throw new Error("Chat request failed")
+
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        const token = decoder.decode(value, { stream: true })
+        setMessages((prev) => {
+          const updated = [...prev]
+          const last = updated[updated.length - 1]
+          if (last.role === "assistant") {
+            updated[updated.length - 1] = { ...last, content: last.content + token }
+          }
+          return updated
+        })
+      }
+    } catch {
+      setMessages((prev) => {
+        const updated = [...prev]
+        updated[updated.length - 1] = { role: "assistant", content: "Something went wrong. Please try again." }
+        return updated
+      })
+    } finally {
+      setStreaming(false)
+    }
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault()
+      send(input)
+    }
+  }
+
+  return (
+    <div className="fixed bottom-0 left-0 right-0 z-30 flex flex-col" style={{ maxHeight: open ? "340px" : "44px" }}>
+      {/* Header bar */}
+      <div
+        className="bg-neutral-900 border-t border-neutral-700 px-4 h-11 flex items-center justify-between cursor-pointer flex-shrink-0"
+        onClick={() => setOpen(!open)}
+      >
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-amber-400" />
+          <span className="text-xs font-semibold text-white">Ask Nectic about this account</span>
+          {streaming && <span className="text-xs text-neutral-400 animate-pulse">thinking…</span>}
+        </div>
+        <span className="text-neutral-400 text-xs">{open ? "▾" : "▴"}</span>
+      </div>
+
+      {open && (
+        <div className="bg-white border-t border-neutral-200 flex flex-col flex-1 overflow-hidden">
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 min-h-0">
+            {messages.length === 0 ? (
+              <div className="flex flex-wrap gap-2 pt-1">
+                {STARTER_PROMPTS.map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => send(p)}
+                    className="text-xs text-neutral-600 bg-neutral-100 border border-neutral-200 hover:bg-neutral-900 hover:text-white hover:border-neutral-900 px-3 py-1.5 rounded-full transition-colors"
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              messages.map((m, i) => (
+                <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                  <div className={`max-w-[80%] text-sm px-3 py-2 rounded-lg whitespace-pre-wrap leading-relaxed ${
+                    m.role === "user"
+                      ? "bg-neutral-900 text-white"
+                      : "bg-neutral-100 text-neutral-800"
+                  }`}>
+                    {m.content}
+                    {m.role === "assistant" && streaming && i === messages.length - 1 && m.content === "" && (
+                      <span className="inline-block w-1.5 h-3.5 bg-neutral-400 animate-pulse ml-0.5 align-middle" />
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Input */}
+          <div className="border-t border-neutral-100 px-3 py-2 flex items-end gap-2 flex-shrink-0">
+            <textarea
+              ref={textareaRef}
+              rows={1}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Ask anything about this account…"
+              disabled={streaming}
+              className="flex-1 resize-none text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none bg-transparent py-1 max-h-20 overflow-y-auto disabled:opacity-50"
+            />
+            <button
+              onClick={() => send(input)}
+              disabled={!input.trim() || streaming}
+              className="flex-shrink-0 bg-neutral-900 text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-neutral-700 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              {streaming ? "…" : "↑"}
+            </button>
+          </div>
+          <p className="px-3 pb-1.5 text-[10px] text-neutral-400">⌘ + Enter to send</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Brief slide-over panel ───────────────────────────────────────────────────
+
+function BriefPanel({
+  signal,
+  accountName,
+  accountSummary,
+  onClose,
+}: {
+  signal: ProductSignal
+  accountName: string
+  accountSummary: string
+  onClose: () => void
+}) {
+  const [content, setContent] = useState("")
+  const [generating, setGenerating] = useState(false)
+  const [done, setDone] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const startedRef = useRef(false)
+
+  useEffect(() => {
+    if (startedRef.current) return
+    startedRef.current = true
+    generate()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const generate = async () => {
+    setGenerating(true)
+    setContent("")
+    setDone(false)
+
+    try {
+      const res = await fetch("/api/concept/brief", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ signal, accountName, accountSummary }),
+      })
+
+      if (!res.ok || !res.body) throw new Error("Brief generation failed")
+
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+
+      while (true) {
+        const { done: rdone, value } = await reader.read()
+        if (rdone) break
+        const token = decoder.decode(value, { stream: true })
+        setContent((prev) => prev + token)
+      }
+      setDone(true)
+    } catch {
+      setContent("Brief generation failed. Please try again.")
+      setDone(true)
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  const copyToClipboard = async () => {
+    await navigator.clipboard.writeText(content)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div className="fixed inset-0 bg-black/20 z-40" onClick={onClose} />
+
+      {/* Panel */}
+      <div className="fixed right-0 top-0 bottom-0 w-full sm:w-[480px] bg-white border-l border-neutral-200 z-50 flex flex-col shadow-xl">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100 flex-shrink-0">
+          <div>
+            <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-0.5">Feature brief</p>
+            <p className="text-sm font-semibold text-neutral-900 truncate max-w-[300px]">{signal.title}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {done && (
+              <button
+                onClick={copyToClipboard}
+                className="text-xs text-neutral-600 border border-neutral-200 bg-white hover:bg-neutral-50 px-3 py-1.5 rounded transition-colors font-medium"
+              >
+                {copied ? "Copied!" : "Copy"}
+              </button>
+            )}
+            <button onClick={onClose} className="text-neutral-400 hover:text-neutral-700 transition-colors text-lg leading-none px-1">×</button>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto px-5 py-4">
+          {!content && generating && (
+            <div className="flex items-center gap-2 text-sm text-neutral-500 pt-4">
+              <div className="w-4 h-4 border-2 border-neutral-300 border-t-neutral-700 rounded-full animate-spin flex-shrink-0" />
+              <span>Writing brief…</span>
+            </div>
+          )}
+          {content && (
+            <div className="prose prose-sm max-w-none">
+              <pre className="whitespace-pre-wrap font-sans text-sm text-neutral-800 leading-relaxed">
+                {content}
+                {generating && <span className="inline-block w-1.5 h-4 bg-neutral-400 animate-pulse ml-0.5 align-middle" />}
+              </pre>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        {done && (
+          <div className="px-5 py-3 border-t border-neutral-100 flex-shrink-0">
+            <button
+              onClick={generate}
+              className="text-xs text-neutral-500 hover:text-neutral-700 transition-colors"
+            >
+              Regenerate →
+            </button>
+          </div>
+        )}
+      </div>
+    </>
   )
 }
