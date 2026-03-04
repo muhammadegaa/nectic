@@ -58,7 +58,7 @@ export async function saveSignalAction(
   action: SignalAction
 ): Promise<void> {
   const ref = doc(accountsRef(uid), accountId)
-  await updateDoc(ref, { [`signalActions.${key}`]: action })
+  await setDoc(ref, { signalActions: { [key]: action } }, { merge: true })
 }
 
 export interface AggregatedSignal {

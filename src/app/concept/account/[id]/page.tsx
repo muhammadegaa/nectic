@@ -298,7 +298,7 @@ export default function AccountPage() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-50 pb-[340px]">
+    <div className="min-h-screen bg-neutral-50">
       {/* Nav */}
       <nav className="bg-white border-b border-neutral-200 px-4 sm:px-6 h-12 flex items-center justify-between sticky top-0 z-20">
         <div className="flex items-center gap-3">
@@ -453,51 +453,63 @@ export default function AccountPage() {
         </>
       )}
 
-      {/* Report */}
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
-        <AnalysisReport
-          result={account.result}
-          fileName={account.fileName}
-          analyzedAt={account.analyzedAt}
-          onGenerateBrief={setBriefSignal}
-          account={account}
-          onSignalAction={async (key, action) => {
-            if (!user) return
-            await saveSignalAction(user.uid, account.id, key, action)
-            setAccount((prev) => prev ? { ...prev, signalActions: { ...prev.signalActions, [key]: action } } : prev)
-          }}
-          onSaveContext={async (ctx) => {
-            if (!user) return
-            await updateAccount(user.uid, id, { supplementalContext: ctx })
-            setAccount((prev) => prev ? { ...prev, supplementalContext: ctx } : prev)
-          }}
-          onReanalyzeWithContext={async (ctx) => {
-            if (!user) return
-            await updateAccount(user.uid, id, { supplementalContext: ctx })
-            setAccount((prev) => prev ? { ...prev, supplementalContext: ctx } : prev)
-            try {
-              const res = await fetch("/api/concept/reanalyze", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  priorAnalysis: account.result,
-                  participantRoles: account.participantRoles,
-                  supplementalContext: ctx,
-                  signalActions: account.signalActions ?? null,
-                  workspace,
-                }),
-              })
-              const data = await res.json()
-              if (!res.ok) throw new Error(data.error)
-              await updateAccount(user.uid, id, { result: data.result as AnalysisResult, updatedAt: new Date().toISOString() })
-              const updated = await getAccount(user.uid, id)
-              if (updated) setAccount(updated)
-            } catch (err) {
-              console.error("Context re-analysis failed:", err)
-            }
-          }}
-        />
-      </main>
+      {/* Report + Chat co-pilot layout */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 xl:grid xl:grid-cols-5 xl:gap-8 xl:items-start">
+        {/* Report — left column */}
+        <div className="xl:col-span-3">
+          <AnalysisReport
+            result={account.result}
+            fileName={account.fileName}
+            analyzedAt={account.analyzedAt}
+            onGenerateBrief={setBriefSignal}
+            account={account}
+            onSignalAction={async (key, action) => {
+              if (!user) return
+              try {
+                await saveSignalAction(user.uid, account.id, key, action)
+                setAccount((prev) => prev ? { ...prev, signalActions: { ...prev.signalActions, [key]: action } } : prev)
+              } catch (err) {
+                console.error("Failed to save signal action:", err)
+              }
+            }}
+            onSaveContext={async (ctx) => {
+              if (!user) return
+              await updateAccount(user.uid, id, { supplementalContext: ctx })
+              setAccount((prev) => prev ? { ...prev, supplementalContext: ctx } : prev)
+            }}
+            onReanalyzeWithContext={async (ctx) => {
+              if (!user) return
+              await updateAccount(user.uid, id, { supplementalContext: ctx })
+              setAccount((prev) => prev ? { ...prev, supplementalContext: ctx } : prev)
+              try {
+                const res = await fetch("/api/concept/reanalyze", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    priorAnalysis: account.result,
+                    participantRoles: account.participantRoles,
+                    supplementalContext: ctx,
+                    signalActions: account.signalActions ?? null,
+                    workspace,
+                  }),
+                })
+                const data = await res.json()
+                if (!res.ok) throw new Error(data.error)
+                await updateAccount(user.uid, id, { result: data.result as AnalysisResult, updatedAt: new Date().toISOString() })
+                const updated = await getAccount(user.uid, id)
+                if (updated) setAccount(updated)
+              } catch (err) {
+                console.error("Context re-analysis failed:", err)
+              }
+            }}
+          />
+        </div>
+
+        {/* Chat co-pilot — sticky right column */}
+        <div className="xl:col-span-2 mt-8 xl:mt-0 xl:sticky xl:top-20">
+          <ChatPanel account={account} workspace={workspace} />
+        </div>
+      </div>
 
       {/* Brief slide-over */}
       {briefSignal && (
@@ -508,9 +520,6 @@ export default function AccountPage() {
           onClose={() => setBriefSignal(null)}
         />
       )}
-
-      {/* Chat panel — sticky bottom */}
-      <ChatPanel account={account} workspace={workspace} />
     </div>
   )
 }
@@ -901,15 +910,23 @@ function SignalActionControl({
   const handleStatusChange = async (next: SignalActionStatus) => {
     setStatus(next)
     setSaving(true)
-    await onUpdate(key, { status: next, note: note || undefined, updatedAt: new Date().toISOString() })
-    setSaving(false)
-    if (next !== "open") setExpanded(true)
+    try {
+      await onUpdate(key, { status: next, note: note || undefined, updatedAt: new Date().toISOString() })
+      if (next !== "open") setExpanded(true)
+    } catch {
+      setStatus(status)
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handleNoteSave = async () => {
     setSaving(true)
-    await onUpdate(key, { status, note: note || undefined, updatedAt: new Date().toISOString() })
-    setSaving(false)
+    try {
+      await onUpdate(key, { status, note: note || undefined, updatedAt: new Date().toISOString() })
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -964,7 +981,6 @@ function ChatPanel({ account, workspace }: { account: StoredAccount; workspace: 
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState("")
   const [streaming, setStreaming] = useState(false)
-  const [open, setOpen] = useState(true)
   const [followUps, setFollowUps] = useState<string[]>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -974,6 +990,10 @@ function ChatPanel({ account, workspace }: { account: StoredAccount; workspace: 
   }, [messages])
 
   const dynamicPrompts = getDynamicPrompts(account)
+
+  const riskCount = analysis.riskSignals?.length ?? 0
+  const productCount = analysis.productSignals?.length ?? 0
+  const healthScore = analysis.healthScore
 
   const buildAccountMeta = () => {
     const roles = account.participantRoles ?? {}
@@ -1029,7 +1049,6 @@ function ChatPanel({ account, workspace }: { account: StoredAccount; workspace: 
           return updated
         })
       }
-      // Generate follow-up suggestions after streaming completes
       setMessages((prev) => {
         const last = prev[prev.length - 1]
         if (last?.role === "assistant" && last.content) {
@@ -1056,102 +1075,128 @@ function ChatPanel({ account, workspace }: { account: StoredAccount; workspace: 
   }
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-30 flex flex-col" style={{ maxHeight: open ? "340px" : "44px" }}>
-      {/* Header bar */}
-      <div
-        className="bg-neutral-900 border-t border-neutral-700 px-4 h-11 flex items-center justify-between cursor-pointer flex-shrink-0"
-        onClick={() => setOpen(!open)}
-      >
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-amber-400" />
-          <span className="text-xs font-semibold text-white">Ask Nectic about this account</span>
-          {streaming && <span className="text-xs text-neutral-400 animate-pulse">thinking…</span>}
+    <div className="bg-white border border-neutral-200 rounded-xl flex flex-col overflow-hidden shadow-sm"
+      style={{ height: "calc(100vh - 7rem)", maxHeight: "760px", minHeight: "480px" }}>
+
+      {/* Header */}
+      <div className="px-4 h-12 flex items-center gap-2.5 border-b border-neutral-100 flex-shrink-0">
+        <div className="w-6 h-6 rounded-full bg-neutral-900 flex items-center justify-center flex-shrink-0">
+          <span className="text-[10px] font-bold text-white">N</span>
         </div>
-        <span className="text-neutral-400 text-xs">{open ? "▾" : "▴"}</span>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold text-neutral-900 leading-none">Nectic</p>
+          <p className="text-[10px] text-neutral-400 leading-none mt-0.5 truncate">
+            {riskCount} risk · {productCount} product signals · health {healthScore}/10
+          </p>
+        </div>
+        {streaming && (
+          <span className="text-[10px] text-amber-500 font-medium animate-pulse flex-shrink-0">thinking…</span>
+        )}
       </div>
 
-      {open && (
-        <div className="bg-white border-t border-neutral-200 flex flex-col flex-1 overflow-hidden">
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 min-h-0">
-            {messages.length === 0 ? (
-              <div>
-                <p className="text-xs text-neutral-400 mb-2 mt-1">Suggested questions for this account</p>
-                <div className="flex flex-wrap gap-2">
-                  {dynamicPrompts.map((p) => (
-                    <button
-                      key={p}
-                      onClick={() => send(p)}
-                      className="text-xs text-neutral-600 bg-neutral-100 border border-neutral-200 hover:bg-neutral-900 hover:text-white hover:border-neutral-900 px-3 py-1.5 rounded-full transition-colors text-left"
-                    >
-                      {p}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <>
-                {messages.map((m, i) => (
-                  <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-                    {m.role === "user" ? (
-                      <div className="max-w-[80%] text-sm px-3 py-2 rounded-lg bg-neutral-900 text-white leading-relaxed">
-                        {m.content}
-                      </div>
-                    ) : (
-                      <div className="max-w-[80%] text-sm px-3 py-2 rounded-lg bg-neutral-100 text-neutral-800">
-                        {m.content === "" && streaming && i === messages.length - 1 ? (
-                          <span className="inline-block w-1.5 h-3.5 bg-neutral-400 animate-pulse ml-0.5 align-middle" />
-                        ) : (
-                          <ReactMarkdown remarkPlugins={[remarkGfm]} components={chatMarkdownComponents}>
-                            {m.content}
-                          </ReactMarkdown>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ))}
-                {/* Follow-up suggestions after last AI response */}
-                {!streaming && followUps.length > 0 && (
-                  <div className="flex flex-wrap gap-2 pl-1">
-                    {followUps.map((s) => (
-                      <button
-                        key={s}
-                        onClick={() => send(s)}
-                        className="text-xs text-neutral-500 border border-neutral-200 bg-white hover:bg-neutral-900 hover:text-white hover:border-neutral-900 px-3 py-1.5 rounded-full transition-colors"
-                      >
-                        {s} →
-                      </button>
-                    ))}
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 min-h-0">
+        {messages.length === 0 ? (
+          <div className="flex flex-col h-full">
+            {/* Context pill */}
+            <div className="bg-neutral-50 border border-neutral-100 rounded-lg px-3 py-2.5 mb-4">
+              <p className="text-xs text-neutral-500 leading-relaxed">
+                I&apos;ve read the full conversation for{" "}
+                <span className="font-medium text-neutral-700">{analysis.accountName}</span>.{" "}
+                {riskCount > 0 && (
+                  <span>
+                    {riskCount === 1 ? "1 risk signal" : `${riskCount} risk signals`} flagged
+                    {productCount > 0 ? ` and ${productCount} product requests captured.` : "."}
+                  </span>
+                )}
+              </p>
+            </div>
+            {/* Suggested prompts */}
+            <p className="text-[11px] font-medium text-neutral-400 uppercase tracking-wide mb-2">Start here</p>
+            <div className="flex flex-col gap-2">
+              {dynamicPrompts.map((p) => (
+                <button
+                  key={p}
+                  onClick={() => send(p)}
+                  className="text-xs text-neutral-700 bg-white border border-neutral-200 hover:border-neutral-900 hover:bg-neutral-900 hover:text-white px-3.5 py-2.5 rounded-lg transition-all text-left leading-snug"
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <>
+            {messages.map((m, i) => (
+              <div key={i} className={`flex gap-2 ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                {m.role === "assistant" && (
+                  <div className="w-5 h-5 rounded-full bg-neutral-900 flex items-center justify-center flex-shrink-0 mt-1">
+                    <span className="text-[8px] font-bold text-white">N</span>
                   </div>
                 )}
-              </>
+                {m.role === "user" ? (
+                  <div className="max-w-[85%] text-sm px-3.5 py-2.5 rounded-2xl rounded-br-sm bg-neutral-900 text-white leading-relaxed">
+                    {m.content}
+                  </div>
+                ) : (
+                  <div className="flex-1 text-sm py-1 text-neutral-800 leading-relaxed min-w-0">
+                    {m.content === "" && streaming && i === messages.length - 1 ? (
+                      <div className="flex gap-1 py-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-neutral-300 animate-bounce" style={{ animationDelay: "0ms" }} />
+                        <span className="w-1.5 h-1.5 rounded-full bg-neutral-300 animate-bounce" style={{ animationDelay: "150ms" }} />
+                        <span className="w-1.5 h-1.5 rounded-full bg-neutral-300 animate-bounce" style={{ animationDelay: "300ms" }} />
+                      </div>
+                    ) : (
+                      <ReactMarkdown remarkPlugins={[remarkGfm]} components={chatMarkdownComponents}>
+                        {m.content}
+                      </ReactMarkdown>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+            {/* Follow-up suggestions */}
+            {!streaming && followUps.length > 0 && (
+              <div className="flex flex-col gap-1.5 pl-7">
+                {followUps.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => send(s)}
+                    className="text-xs text-neutral-500 border border-neutral-200 bg-white hover:bg-neutral-900 hover:text-white hover:border-neutral-900 px-3 py-2 rounded-lg transition-all text-left"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
             )}
-            <div ref={messagesEndRef} />
-          </div>
+          </>
+        )}
+        <div ref={messagesEndRef} />
+      </div>
 
-          {/* Input */}
-          <div className="border-t border-neutral-100 px-3 py-2 flex items-end gap-2 flex-shrink-0">
-            <textarea
-              ref={textareaRef}
-              rows={1}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Ask anything about this account…"
-              disabled={streaming}
-              className="flex-1 resize-none text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none bg-transparent py-1 max-h-20 overflow-y-auto disabled:opacity-50"
-            />
-            <button
-              onClick={() => send(input)}
-              disabled={!input.trim() || streaming}
-              className="flex-shrink-0 bg-neutral-900 text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-neutral-700 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-            >
-              {streaming ? "…" : "↑"}
-            </button>
-          </div>
-          <p className="px-3 pb-1.5 text-[10px] text-neutral-400">⌘ + Enter to send</p>
+      {/* Input */}
+      <div className="border-t border-neutral-100 flex-shrink-0 p-3">
+        <div className="flex items-end gap-2 bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 focus-within:border-neutral-400 transition-colors">
+          <textarea
+            ref={textareaRef}
+            rows={1}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Ask about this account…"
+            disabled={streaming}
+            className="flex-1 resize-none text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none bg-transparent py-0.5 max-h-24 overflow-y-auto disabled:opacity-50 leading-relaxed"
+          />
+          <button
+            onClick={() => send(input)}
+            disabled={!input.trim() || streaming}
+            className="flex-shrink-0 w-7 h-7 bg-neutral-900 text-white rounded-lg hover:bg-neutral-700 transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center"
+          >
+            <span className="text-sm leading-none">{streaming ? "…" : "↑"}</span>
+          </button>
         </div>
-      )}
+        <p className="text-[10px] text-neutral-400 mt-1.5 px-0.5">⌘ + Enter to send</p>
+      </div>
     </div>
   )
 }
