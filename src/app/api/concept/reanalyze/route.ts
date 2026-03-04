@@ -9,16 +9,27 @@ You are updating an existing account analysis with new WhatsApp conversation dat
 
 Return ONLY valid JSON. No markdown wrapper, no explanation.`
 
+type ParticipantRole = "vendor" | "customer" | "partner" | "other"
+type ParticipantRoles = Record<string, ParticipantRole>
+
+function buildParticipantBlock(roles: ParticipantRoles): string {
+  const groups: Record<ParticipantRole, string[]> = { vendor: [], customer: [], partner: [], other: [] }
+  for (const [name, role] of Object.entries(roles)) groups[role].push(name)
+  const lines: string[] = []
+  if (groups.vendor.length) lines.push(`- Vendor team: ${groups.vendor.join(", ")}`)
+  if (groups.customer.length) lines.push(`- Customer team: ${groups.customer.join(", ")}`)
+  if (groups.partner.length) lines.push(`- Partner / reseller: ${groups.partner.join(", ")}`)
+  if (groups.other.length) lines.push(`- Other: ${groups.other.join(", ")}`)
+  return lines.length ? `PARTICIPANT ROLES:\n${lines.join("\n")}\n\n` : ""
+}
+
 const USER_PROMPT = (
   prior: AnalysisResult,
   newConversation: string,
-  vendorParticipants: string[],
-  customerParticipants: string[]
+  participantRoles: ParticipantRoles
 ) => {
-  const participantContext = vendorParticipants.length > 0 || customerParticipants.length > 0
-    ? `PARTICIPANT ROLES:
-- Vendor team: ${vendorParticipants.join(", ")}
-- Customer team: ${customerParticipants.join(", ")}\n\n`
+  const participantContext = Object.keys(participantRoles).length > 0
+    ? buildParticipantBlock(participantRoles)
     : ""
 
   return `${participantContext}PREVIOUS ANALYSIS (from ${prior.stats.dateRange}):
@@ -45,14 +56,12 @@ export async function POST(req: NextRequest) {
       priorAnalysis,
       conversation,
       messageCount,
-      vendorParticipants = [],
-      customerParticipants = [],
+      participantRoles = {},
     } = await req.json() as {
       priorAnalysis: AnalysisResult
       conversation: string
       messageCount?: number
-      vendorParticipants?: string[]
-      customerParticipants?: string[]
+      participantRoles?: Record<string, "vendor" | "customer" | "partner" | "other">
     }
 
     if (!priorAnalysis || !conversation) {
@@ -77,7 +86,7 @@ export async function POST(req: NextRequest) {
         temperature: 0.2,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: USER_PROMPT(priorAnalysis, conversation, vendorParticipants, customerParticipants) },
+          { role: "user", content: USER_PROMPT(priorAnalysis, conversation, participantRoles) },
         ],
       }),
     })

@@ -8,8 +8,8 @@ import remarkGfm from "remark-gfm"
 import type { Components } from "react-markdown"
 import LogoIcon from "@/components/logo-icon"
 import { useAuth } from "@/contexts/auth-context"
-import { getAccount, deleteAccount, updateAccount, type StoredAccount } from "@/lib/concept-firestore"
-import { parseWhatsAppFile, formatForPrompt } from "@/lib/whatsapp-parser"
+import { getAccount, deleteAccount, updateAccount, type StoredAccount, type ParticipantRole, type ParticipantRoles } from "@/lib/concept-firestore"
+import { parseWhatsAppFile, formatForPrompt, type WaParsed } from "@/lib/whatsapp-parser"
 import type { AnalysisResult } from "@/app/api/concept/analyze/route"
 
 // ─── Config ──────────────────────────────────────────────────────────────────
@@ -113,6 +113,10 @@ export default function AccountPage() {
   const [briefSignal, setBriefSignal] = useState<ProductSignal | null>(null)
   const [copied, setCopied] = useState(false)
   const [showReanalyze, setShowReanalyze] = useState(false)
+  const [reanalyzeParsed, setReanalyzeParsed] = useState<WaParsed | null>(null)
+  const [reanalyzeRoles, setReanalyzeRoles] = useState<ParticipantRoles>({})
+  const [reanalyzeFile, setReanalyzeFile] = useState<File | null>(null)
+  const [reanalyzeRunning, setReanalyzeRunning] = useState(false)
   const reanalyzeInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -142,35 +146,57 @@ export default function AccountPage() {
     setTimeout(() => setCopied(false), 2500)
   }
 
-  const handleReanalyze = async (file: File) => {
-    if (!user || !account) return
-    setShowReanalyze(false)
+  const handleReanalyzeFileSelect = async (file: File) => {
+    if (!account) return
     try {
       const parsed = await parseWhatsAppFile(file)
       if (parsed.messages.length < 5) return
-      const conversation = formatForPrompt(parsed)
+      const savedRoles = account.participantRoles ?? {}
+      // Pre-fill from saved roles; mark any new participant as "other"
+      const merged: ParticipantRoles = {}
+      for (const name of parsed.participants) {
+        merged[name] = savedRoles[name] ?? "other"
+      }
+      setReanalyzeFile(file)
+      setReanalyzeParsed(parsed)
+      setReanalyzeRoles(merged)
+    } catch (err) {
+      console.error("Parse failed:", err)
+    }
+  }
+
+  const runReanalysis = async () => {
+    if (!user || !account || !reanalyzeParsed || !reanalyzeFile) return
+    setReanalyzeRunning(true)
+    try {
+      const conversation = formatForPrompt(reanalyzeParsed)
       const res = await fetch("/api/concept/reanalyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           priorAnalysis: account.result,
           conversation,
-          messageCount: parsed.totalMessages,
-          vendorParticipants: account.vendorParticipants ?? [],
-          customerParticipants: account.customerParticipants ?? [],
+          messageCount: reanalyzeParsed.totalMessages,
+          participantRoles: reanalyzeRoles,
         }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       await updateAccount(user.uid, id, {
         result: data.result as AnalysisResult,
-        fileName: file.name,
+        fileName: reanalyzeFile.name,
+        participantRoles: reanalyzeRoles,
         updatedAt: new Date().toISOString(),
       })
       const updated = await getAccount(user.uid, id)
       if (updated) setAccount(updated)
+      setShowReanalyze(false)
+      setReanalyzeParsed(null)
+      setReanalyzeFile(null)
     } catch (err) {
       console.error("Re-analysis failed:", err)
+    } finally {
+      setReanalyzeRunning(false)
     }
   }
 
@@ -241,26 +267,104 @@ export default function AccountPage() {
         type="file"
         accept=".txt,.zip,text/plain,application/zip"
         className="hidden"
-        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleReanalyze(f) }}
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleReanalyzeFileSelect(f) }}
       />
 
       {/* Re-analysis modal */}
       {showReanalyze && (
         <>
-          <div className="fixed inset-0 bg-black/30 z-40 backdrop-blur-sm" onClick={() => setShowReanalyze(false)} />
+          <div className="fixed inset-0 bg-black/30 z-40 backdrop-blur-sm" onClick={reanalyzeRunning ? undefined : () => { setShowReanalyze(false); setReanalyzeParsed(null); setReanalyzeFile(null) }} />
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="bg-white w-full max-w-sm rounded-xl shadow-2xl p-6">
-              <p className="text-sm font-semibold text-neutral-900 mb-1">Update account analysis</p>
-              <p className="text-xs text-neutral-500 mb-5 leading-relaxed">
-                Upload a new WhatsApp export with recent messages. Nectic will compare against the previous analysis and surface what changed.
-              </p>
-              <button
-                onClick={() => reanalyzeInputRef.current?.click()}
-                className="w-full bg-neutral-900 text-white text-sm font-semibold py-3 rounded-lg hover:bg-neutral-700 transition-colors mb-2"
-              >
-                Choose file →
-              </button>
-              <button onClick={() => setShowReanalyze(false)} className="w-full text-xs text-neutral-400 hover:text-neutral-600 py-1 transition-colors">Cancel</button>
+            <div className="bg-white w-full max-w-md rounded-xl shadow-2xl overflow-hidden max-h-[85vh] flex flex-col">
+              <div className="px-6 py-4 border-b border-neutral-100 flex-shrink-0">
+                <p className="text-sm font-semibold text-neutral-900">Update account analysis</p>
+                <p className="text-xs text-neutral-400 mt-0.5">
+                  {!reanalyzeParsed ? "Upload a newer export to compare against previous analysis" : `${reanalyzeParsed.totalMessages} messages parsed · confirm roles below`}
+                </p>
+              </div>
+
+              <div className="overflow-y-auto flex-1 px-6 py-5">
+                {!reanalyzeParsed ? (
+                  <div>
+                    <p className="text-xs text-neutral-500 mb-5 leading-relaxed">
+                      Nectic will compare this against the previous analysis and surface what changed — new risks, resolved issues, health delta.
+                    </p>
+                    <button
+                      onClick={() => reanalyzeInputRef.current?.click()}
+                      className="w-full bg-neutral-900 text-white text-sm font-semibold py-3 rounded-lg hover:bg-neutral-700 transition-colors"
+                    >
+                      Choose file →
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Show labelling only if there are new/unknown participants */}
+                    {Object.values(reanalyzeRoles).some((r) => r === "other") ? (
+                      <div>
+                        <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-1">Confirm roles</p>
+                        <p className="text-xs text-neutral-500 mb-3">
+                          Known participants are pre-filled from the saved account. Label any new ones.
+                        </p>
+                        <div className="space-y-2">
+                          {Object.entries(reanalyzeRoles).map(([name, role]) => (
+                            <div key={name} className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 flex-1 min-w-0">
+                                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${
+                                  role === "vendor" ? "bg-neutral-900 text-white" :
+                                  role === "customer" ? "bg-blue-600 text-white" :
+                                  role === "partner" ? "bg-purple-600 text-white" :
+                                  "bg-neutral-100 text-neutral-400 border border-neutral-200"
+                                }`}>
+                                  {{ vendor: "My team", customer: "Customer", partner: "Partner", other: "?" }[role]}
+                                </span>
+                                <span className="text-xs text-neutral-700 truncate font-medium">{name}</span>
+                              </div>
+                              <select
+                                value={role}
+                                onChange={(e) => setReanalyzeRoles((prev) => ({ ...prev, [name]: e.target.value as ParticipantRole }))}
+                                className="text-xs border border-neutral-200 rounded-lg px-2 py-1 text-neutral-700 bg-white focus:outline-none focus:border-neutral-400 flex-shrink-0"
+                              >
+                                <option value="other">Unknown</option>
+                                <option value="vendor">My team</option>
+                                <option value="customer">Customer</option>
+                                <option value="partner">Partner / Reseller</option>
+                              </select>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3">
+                        <p className="text-xs text-green-700 font-medium">All {Object.keys(reanalyzeRoles).length} participants recognised from previous analysis.</p>
+                        <p className="text-xs text-green-600 mt-0.5">Roles pre-filled — ready to run.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {reanalyzeParsed && (
+                <div className="px-6 py-4 border-t border-neutral-100 flex-shrink-0 space-y-2">
+                  <button
+                    onClick={runReanalysis}
+                    disabled={reanalyzeRunning}
+                    className="w-full bg-neutral-900 text-white text-sm font-semibold py-3 rounded-lg hover:bg-neutral-700 transition-colors disabled:opacity-50"
+                  >
+                    {reanalyzeRunning ? "Analysing…" : "Run update →"}
+                  </button>
+                  {!reanalyzeRunning && (
+                    <button onClick={() => { setReanalyzeParsed(null); setReanalyzeFile(null) }} className="w-full text-xs text-neutral-400 hover:text-neutral-600 py-1 transition-colors">
+                      Use a different file
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {!reanalyzeParsed && (
+                <div className="px-6 py-3 border-t border-neutral-100 flex-shrink-0">
+                  <button onClick={() => setShowReanalyze(false)} className="w-full text-xs text-neutral-400 hover:text-neutral-600 py-1 transition-colors">Cancel</button>
+                </div>
+              )}
             </div>
           </div>
         </>

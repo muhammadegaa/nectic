@@ -13,6 +13,8 @@ import {
   aggregateSignals,
   type StoredAccount,
   type AccountContext,
+  type ParticipantRole,
+  type ParticipantRoles,
 } from "@/lib/concept-firestore"
 import type { AnalysisResult } from "@/app/api/concept/analyze/route"
 
@@ -72,10 +74,7 @@ export default function ConceptPage() {
   const [uploadError, setUploadError] = useState("")
   const [dragging, setDragging] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
-  // Participant labelling
-  const [vendorParticipants, setVendorParticipants] = useState<string[]>([])
-  const [customerParticipants, setCustomerParticipants] = useState<string[]>([])
-  // Account context
+  const [participantRoles, setParticipantRoles] = useState<ParticipantRoles>({})
   const [context, setContext] = useState<AccountContext>({})
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -103,8 +102,7 @@ export default function ConceptPage() {
     setParsed(null)
     setFileName("")
     setUploadError("")
-    setVendorParticipants([])
-    setCustomerParticipants([])
+    setParticipantRoles({})
     setContext({})
     setShowConnect(true)
   }
@@ -116,8 +114,7 @@ export default function ConceptPage() {
       setParsed(null)
       setFileName("")
       setUploadError("")
-      setVendorParticipants([])
-      setCustomerParticipants([])
+      setParticipantRoles({})
       setContext({})
       if (inputRef.current) inputRef.current.value = ""
     }, 200)
@@ -140,6 +137,10 @@ export default function ConceptPage() {
         return
       }
       setParsed(p)
+      // Default all participants to "other" (unlabelled)
+      const defaults: ParticipantRoles = {}
+      for (const name of p.participants) defaults[name] = "other"
+      setParticipantRoles(defaults)
       setConnectStage("ready")
     } catch (err: unknown) {
       setUploadError(err instanceof Error ? err.message : "Failed to read file.")
@@ -154,18 +155,8 @@ export default function ConceptPage() {
     if (file) handleFile(file)
   }, [handleFile])
 
-  const toggleParticipant = (name: string, side: "vendor" | "customer") => {
-    if (side === "vendor") {
-      setVendorParticipants((prev) =>
-        prev.includes(name) ? prev.filter((p) => p !== name) : [...prev, name]
-      )
-      setCustomerParticipants((prev) => prev.filter((p) => p !== name))
-    } else {
-      setCustomerParticipants((prev) =>
-        prev.includes(name) ? prev.filter((p) => p !== name) : [...prev, name]
-      )
-      setVendorParticipants((prev) => prev.filter((p) => p !== name))
-    }
+  const setRole = (name: string, role: ParticipantRole) => {
+    setParticipantRoles((prev) => ({ ...prev, [name]: role }))
   }
 
   const analyze = async () => {
@@ -182,8 +173,7 @@ export default function ConceptPage() {
           conversation,
           messageCount: parsed.totalMessages,
           participants: parsed.participants.length,
-          vendorParticipants,
-          customerParticipants,
+          participantRoles,
           context,
         }),
       })
@@ -196,8 +186,7 @@ export default function ConceptPage() {
         fileName,
         analyzedAt: new Date().toISOString(),
         result: data.result as AnalysisResult,
-        vendorParticipants,
-        customerParticipants,
+        participantRoles,
         context,
         shareToken,
       })
@@ -311,8 +300,7 @@ export default function ConceptPage() {
           error={uploadError}
           dragging={dragging}
           inputRef={inputRef}
-          vendorParticipants={vendorParticipants}
-          customerParticipants={customerParticipants}
+          participantRoles={participantRoles}
           context={context}
           onClose={closeConnect}
           onContinueToUpload={() => setConnectStage("upload")}
@@ -322,7 +310,7 @@ export default function ConceptPage() {
           onDragLeave={() => setDragging(false)}
           onFileSelect={() => inputRef.current?.click()}
           onInputChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f) }}
-          onToggleParticipant={toggleParticipant}
+          onSetRole={setRole}
           onContextChange={setContext}
           onAnalyze={analyze}
           onRetry={() => { setConnectStage("upload"); setUploadError(""); if (inputRef.current) inputRef.current.value = "" }}
@@ -334,12 +322,33 @@ export default function ConceptPage() {
 
 // ─── Connect modal ─────────────────────────────────────────────────────────────
 
+const ROLE_OPTIONS: { value: ParticipantRole; label: string; color: string }[] = [
+  { value: "other", label: "Unknown", color: "text-neutral-400" },
+  { value: "vendor", label: "My team", color: "text-neutral-700" },
+  { value: "customer", label: "Customer", color: "text-blue-700" },
+  { value: "partner", label: "Partner / Reseller", color: "text-purple-700" },
+]
+
+const ROLE_BADGE: Record<ParticipantRole, string> = {
+  vendor: "bg-neutral-900 text-white",
+  customer: "bg-blue-600 text-white",
+  partner: "bg-purple-600 text-white",
+  other: "bg-neutral-100 text-neutral-400 border border-neutral-200",
+}
+
+const ROLE_LABEL: Record<ParticipantRole, string> = {
+  vendor: "My team",
+  customer: "Customer",
+  partner: "Partner",
+  other: "?",
+}
+
 function ConnectModal({
   stage, parsed, fileName, error, dragging, inputRef,
-  vendorParticipants, customerParticipants, context,
+  participantRoles, context,
   onClose, onContinueToUpload, onBackToInstructions,
   onDrop, onDragOver, onDragLeave, onFileSelect, onInputChange,
-  onToggleParticipant, onContextChange, onAnalyze, onRetry,
+  onSetRole, onContextChange, onAnalyze, onRetry,
 }: {
   stage: ConnectStage
   parsed: WaParsed | null
@@ -347,8 +356,7 @@ function ConnectModal({
   error: string
   dragging: boolean
   inputRef: React.RefObject<HTMLInputElement>
-  vendorParticipants: string[]
-  customerParticipants: string[]
+  participantRoles: ParticipantRoles
   context: AccountContext
   onClose: () => void
   onContinueToUpload: () => void
@@ -358,7 +366,7 @@ function ConnectModal({
   onDragLeave: () => void
   onFileSelect: () => void
   onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void
-  onToggleParticipant: (name: string, side: "vendor" | "customer") => void
+  onSetRole: (name: string, role: ParticipantRole) => void
   onContextChange: (ctx: AccountContext) => void
   onAnalyze: () => void
   onRetry: () => void
@@ -464,30 +472,38 @@ function ConnectModal({
                 {/* Participant labelling */}
                 <div>
                   <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-1">Who&apos;s who</p>
-                  <p className="text-xs text-neutral-500 mb-3">Label each participant so Nectic knows whose voice is the customer&apos;s.</p>
+                  <p className="text-xs text-neutral-500 mb-3">
+                    Label every participant — Nectic analyses only the non-vendor voice. Supports multi-party chats.
+                  </p>
                   <div className="space-y-2">
                     {parsed.participants.map((name) => {
-                      const isVendor = vendorParticipants.includes(name)
-                      const isCustomer = customerParticipants.includes(name)
+                      const role = participantRoles[name] ?? "other"
                       return (
                         <div key={name} className="flex items-center gap-2">
-                          <span className="text-xs text-neutral-700 flex-1 min-w-0 truncate font-medium">{name}</span>
-                          <button
-                            onClick={() => onToggleParticipant(name, "vendor")}
-                            className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-colors ${isVendor ? "bg-neutral-900 text-white border-neutral-900" : "bg-white text-neutral-500 border-neutral-200 hover:border-neutral-400"}`}
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${ROLE_BADGE[role]}`}>
+                              {ROLE_LABEL[role]}
+                            </span>
+                            <span className="text-xs text-neutral-700 truncate font-medium">{name}</span>
+                          </div>
+                          <select
+                            value={role}
+                            onChange={(e) => onSetRole(name, e.target.value as ParticipantRole)}
+                            className="text-xs border border-neutral-200 rounded-lg px-2 py-1 text-neutral-700 bg-white focus:outline-none focus:border-neutral-400 flex-shrink-0"
                           >
-                            My team
-                          </button>
-                          <button
-                            onClick={() => onToggleParticipant(name, "customer")}
-                            className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-colors ${isCustomer ? "bg-blue-600 text-white border-blue-600" : "bg-white text-neutral-500 border-neutral-200 hover:border-neutral-400"}`}
-                          >
-                            Customer
-                          </button>
+                            {ROLE_OPTIONS.map((o) => (
+                              <option key={o.value} value={o.value}>{o.label}</option>
+                            ))}
+                          </select>
                         </div>
                       )
                     })}
                   </div>
+                  <p className="text-xs text-neutral-400 mt-2">
+                    {Object.values(participantRoles).filter((r) => r === "other").length > 0
+                      ? `${Object.values(participantRoles).filter((r) => r === "other").length} unlabelled — you can skip, but labelling improves accuracy.`
+                      : "All participants labelled."}
+                  </p>
                 </div>
 
                 {/* Account context */}

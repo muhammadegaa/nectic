@@ -17,6 +17,9 @@ import type { AnalysisResult } from "@/app/api/concept/analyze/route"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+export type ParticipantRole = "vendor" | "customer" | "partner" | "other"
+export type ParticipantRoles = Record<string, ParticipantRole>
+
 export interface AccountContext {
   industry?: string
   contractTier?: "starter" | "growth" | "enterprise"
@@ -29,8 +32,7 @@ export interface StoredAccount {
   analyzedAt: string
   updatedAt?: string
   result: AnalysisResult
-  vendorParticipants: string[]
-  customerParticipants: string[]
+  participantRoles: ParticipantRoles
   context: AccountContext
   shareToken: string
 }
@@ -109,6 +111,21 @@ export async function getSharedAccount(token: string): Promise<StoredAccount | n
 }
 
 // ─── Cross-account signal aggregation ─────────────────────────────────────────
+
+// ─── Participant helpers ───────────────────────────────────────────────────────
+
+export function buildParticipantContext(roles: ParticipantRoles): {
+  vendor: string[]
+  customer: string[]
+  partner: string[]
+  other: string[]
+} {
+  const groups: { vendor: string[]; customer: string[]; partner: string[]; other: string[] } = { vendor: [], customer: [], partner: [], other: [] }
+  for (const [name, role] of Object.entries(roles)) {
+    groups[role].push(name)
+  }
+  return groups
+}
 
 export function aggregateSignals(accounts: StoredAccount[]): AggregatedSignal[] {
   const map = new Map<string, AggregatedSignal>()

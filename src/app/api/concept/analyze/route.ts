@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server"
 
 export const maxDuration = 60
 
+type ParticipantRole = "vendor" | "customer" | "partner" | "other"
+type ParticipantRoles = Record<string, ParticipantRole>
+
 interface AccountContext {
   industry?: string
   contractTier?: string
@@ -16,18 +19,26 @@ Your job: surface what the customer actually thinks — churn signals, product p
 
 Return ONLY valid JSON. No markdown wrapper, no explanation, just the JSON object.`
 
+function buildParticipantBlock(roles: ParticipantRoles): string {
+  const groups: Record<ParticipantRole, string[]> = { vendor: [], customer: [], partner: [], other: [] }
+  for (const [name, role] of Object.entries(roles)) groups[role].push(name)
+  const lines: string[] = []
+  if (groups.vendor.length) lines.push(`- Vendor team (your company): ${groups.vendor.join(", ")}`)
+  if (groups.customer.length) lines.push(`- Customer team: ${groups.customer.join(", ")}`)
+  if (groups.partner.length) lines.push(`- Partner / reseller: ${groups.partner.join(", ")}`)
+  if (groups.other.length) lines.push(`- Other / unknown: ${groups.other.join(", ")}`)
+  return lines.length
+    ? `PARTICIPANT ROLES:\n${lines.join("\n")}\n\nRisk signals and product signals must come from the CUSTOMER voice (and secondarily PARTNER voice), not the vendor. Do not attribute signals to vendor team members.`
+    : ""
+}
+
 const USER_PROMPT = (
   conversation: string,
-  vendorParticipants: string[],
-  customerParticipants: string[],
+  participantRoles: ParticipantRoles,
   context: AccountContext
 ) => {
-  const participantContext = vendorParticipants.length > 0 || customerParticipants.length > 0
-    ? `PARTICIPANT ROLES:
-- Vendor team (your company): ${vendorParticipants.length ? vendorParticipants.join(", ") : "unknown"}
-- Customer team: ${customerParticipants.length ? customerParticipants.join(", ") : "unknown"}
-
-Analyse ONLY from the customer's perspective. Risk signals and product signals must come from the customer voice, not the vendor.`
+  const participantContext = Object.keys(participantRoles).length > 0
+    ? buildParticipantBlock(participantRoles)
     : ""
 
   const accountContext = [
@@ -107,10 +118,15 @@ export async function POST(req: NextRequest) {
       conversation,
       messageCount,
       participants: participantCount,
-      vendorParticipants = [],
-      customerParticipants = [],
+      participantRoles = {},
       context = {},
-    } = await req.json()
+    } = await req.json() as {
+      conversation: string
+      messageCount?: number
+      participants?: number
+      participantRoles?: ParticipantRoles
+      context?: AccountContext
+    }
 
     if (!conversation || typeof conversation !== "string") {
       return NextResponse.json({ error: "conversation is required" }, { status: 400 })
@@ -134,7 +150,7 @@ export async function POST(req: NextRequest) {
         temperature: 0.2,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: USER_PROMPT(conversation, vendorParticipants, customerParticipants, context) },
+          { role: "user", content: USER_PROMPT(conversation, participantRoles, context) },
         ],
       }),
     })
