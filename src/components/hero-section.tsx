@@ -52,10 +52,10 @@ export default function HeroSection() {
             Request early access
           </a>
           <a
-            href="#how-it-works"
-            className="inline-flex items-center justify-center text-sm text-neutral-500 px-6 py-3 hover:text-neutral-900 transition-colors"
+            href="/demo"
+            className="inline-flex items-center justify-center text-sm text-neutral-500 px-6 py-3 hover:text-neutral-900 border border-neutral-200 hover:border-neutral-300 transition-colors"
           >
-            See how it works →
+            See live demo →
           </a>
         </div>
 

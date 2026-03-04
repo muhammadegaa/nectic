@@ -1,0 +1,196 @@
+export const demoWeek = {
+  period: "Feb 17–21, 2026",
+  company: "Aksara HRtech",
+  stats: {
+    conversations: 47,
+    signals: 12,
+    critical: 3,
+    dealsAtRisk: 6,
+  },
+}
+
+export const demoSignals = [
+  {
+    id: "payroll-sync-gap",
+    title: "Payroll sync gap",
+    priority: "critical" as const,
+    mentions: 18,
+    trend: "+6 vs last week",
+    category: "Integration",
+    salesSummary: "They want better third-party integrations",
+    headline: "38% of blocked deals cite missing Gadjian/Talenta sync as a hard blocker — not a nice-to-have.",
+    quotes: [
+      {
+        id: "q1",
+        sender: "Prospect — PT Karya Maju (300 employees)",
+        date: "Feb 18",
+        raw: "Kami suka UI-nya tapi tim finance kami tidak mau input data dua kali ke dua sistem. Sampai ada integrasi dengan Gadjian, kami belum bisa pindah.",
+        translated: "We love your UI but our finance team refuses to double-enter data into two systems. Until you integrate with Gadjian, we can't switch.",
+      },
+      {
+        id: "q2",
+        sender: "Prospect — Teknologi Hijau (180 employees)",
+        date: "Feb 19",
+        raw: "Kalau ada konektor Talenta, saya tanda tangan hari ini.",
+        translated: "If you had a Talenta connector I'd sign today.",
+      },
+      {
+        id: "q3",
+        sender: "Prospect — Mitra Solusi (500 employees)",
+        date: "Feb 20",
+        raw: "Demo-nya bagus tapi kami perlu bicara dulu sama vendor payroll kami. Ini blocker buat kami.",
+        translated: "The demo was great but we need to talk to our payroll vendor first. This is a blocker for us.",
+      },
+      {
+        id: "q4",
+        sender: "Prospect — Cahaya Digital (220 employees)",
+        date: "Feb 21",
+        raw: "Tim payroll kami pakai Gadjian dan mereka tidak akan ganti. Jadi ini mandatory buat kami.",
+        translated: "Our payroll team uses Gadjian and they won't change. So this is mandatory for us.",
+      },
+    ],
+    competitors: ["AceHR", "Workday SEA", "Bamboo HR"],
+    suggestedTicket: {
+      title: "Build Gadjian API integration (READ: salary + headcount sync)",
+      priority: "P0",
+      estimate: "2 sprints",
+      description:
+        "Implement OAuth-based read-only sync with Gadjian and Talenta APIs. Minimum scope: employee headcount, salary grades, org structure. This unblocks 6 active deals totalling ~IDR 420M ARR.",
+      labels: ["integration", "P0", "revenue-critical"],
+    },
+  },
+  {
+    id: "mobile-approval-friction",
+    title: "Mobile approval friction",
+    priority: "critical" as const,
+    mentions: 14,
+    trend: "+4 vs last week",
+    category: "UX / Mobile",
+    salesSummary: "They want mobile improvements",
+    headline: "Managers are approving everything blindly on mobile just to clear the queue. Rubber-stamping is not the outcome.",
+    quotes: [
+      {
+        id: "q1",
+        sender: "Customer — PT Bangun Bersama (onboarded Jan 2026)",
+        date: "Feb 17",
+        raw: "Manajer ops saya approve dari HP tapi selalu komplain kelamaan. Akhirnya dia approve semua tanpa dibaca biar cepat selesai.",
+        translated: "My operations manager approves from his phone but always complains it takes too long. He ends up approving everything without reading just to clear it.",
+      },
+      {
+        id: "q2",
+        sender: "Customer — Logistik Nusantara (onboarded Dec 2025)",
+        date: "Feb 19",
+        raw: "Aplikasi mobile crash kalau ada lebih dari 5 permintaan pending. Ini memperlambat seluruh approval chain kami.",
+        translated: "The mobile app crashes when there are more than 5 pending requests. This slows our entire approval chain.",
+      },
+      {
+        id: "q3",
+        sender: "Prospect — Griya Properti (trial)",
+        date: "Feb 20",
+        raw: "Bisa tombol approve-nya diperbesar? Atasan saya sering salah tap di HP.",
+        translated: "Can you make the approve button bigger? My boss keeps missing the tap on mobile.",
+      },
+    ],
+    competitors: ["Keka HR", "Darwinbox"],
+    suggestedTicket: {
+      title: "Redesign mobile approval: 2-tap flow + fix crash on >5 pending items",
+      priority: "P0",
+      estimate: "1 sprint",
+      description:
+        "Reduce approval flow from 5 steps to 2 (swipe or single tap with confirmation). Fix crash triggered by >5 simultaneous pending items. Add haptic confirmation. Target: approval completion rate from 67% to >90%.",
+      labels: ["mobile", "UX", "bug", "P0"],
+    },
+  },
+  {
+    id: "bulk-import-docs",
+    title: "Bulk import documentation missing",
+    priority: "medium" as const,
+    mentions: 9,
+    trend: "new",
+    category: "Onboarding",
+    salesSummary: "Onboarding is complex",
+    headline: "New customers are calling CS to complete basic onboarding. Every assisted import costs ~2hrs CS time.",
+    quotes: [
+      {
+        id: "q1",
+        sender: "Customer — Sejahtera Group (onboarded Feb 2026)",
+        date: "Feb 18",
+        raw: "Kami coba upload 200 karyawan dari sistem lama tapi template Excel-nya tidak ada instruksi. Akhirnya kami telepon support.",
+        translated: "We tried uploading 200 employees from our old system but the Excel template has no instructions. We ended up calling support.",
+      },
+      {
+        id: "q2",
+        sender: "Customer — Optima Konsultan (onboarded Feb 2026)",
+        date: "Feb 20",
+        raw: "Template import ada kolom yang kami tidak mengerti dan tidak ada tooltip atau contoh file-nya.",
+        translated: "The import template has columns we don't recognize and there's no tooltip or example file.",
+      },
+    ],
+    competitors: [],
+    suggestedTicket: {
+      title: "Add bulk import guide: annotated template + step-by-step walkthrough",
+      priority: "P1",
+      estimate: "3 days",
+      description:
+        "Create annotated Excel template with example data, required vs optional columns clearly marked. Add in-app walkthrough triggered on first import attempt. Estimated CS savings: 18hrs/month.",
+      labels: ["onboarding", "docs", "P1"],
+    },
+  },
+  {
+    id: "report-date-range",
+    title: "Report export limited to 90 days",
+    priority: "low" as const,
+    mentions: 7,
+    trend: "stable",
+    category: "Reporting",
+    salesSummary: "They need better reporting",
+    headline: "Finance teams exporting data monthly for annual audits are manually stitching 4 separate exports.",
+    quotes: [
+      {
+        id: "q1",
+        sender: "Customer — Aman Logistik",
+        date: "Feb 19",
+        raw: "Saya harus export laporan 4 kali untuk dapat data satu tahun penuh. Bisa langsung pilih range tanggal sendiri?",
+        translated: "I have to export 4 separate reports to get a full year of data. Can I just pick a custom date range?",
+      },
+    ],
+    competitors: [],
+    suggestedTicket: {
+      title: "Extend report export to custom date range (up to 2 years)",
+      priority: "P2",
+      estimate: "1 day",
+      description: "Replace fixed 90-day window with custom date picker. Cap at 2 years to prevent timeout issues. Add async export + email delivery for large ranges.",
+      labels: ["reporting", "P2"],
+    },
+  },
+  {
+    id: "sso-request",
+    title: "SSO / SAML request",
+    priority: "low" as const,
+    mentions: 6,
+    trend: "+2 vs last week",
+    category: "Enterprise",
+    salesSummary: "Some bigger companies need enterprise features",
+    headline: "Every enterprise prospect > 1000 employees asks about SSO. IT departments won't approve onboarding without it.",
+    quotes: [
+      {
+        id: "q1",
+        sender: "Prospect — Konglomerat Maju (1200 employees)",
+        date: "Feb 21",
+        raw: "IT kami tidak akan izinkan onboarding tanpa SSO. Ini kebijakan perusahaan.",
+        translated: "Our IT team won't allow onboarding without SSO. It's company policy.",
+      },
+    ],
+    competitors: ["SAP SuccessFactors", "Workday"],
+    suggestedTicket: {
+      title: "Add Google Workspace SSO (Phase 1)",
+      priority: "P2",
+      estimate: "1 sprint",
+      description: "Implement SAML 2.0 with Google Workspace as first provider. Unlocks enterprise segment currently blocked at IT approval stage.",
+      labels: ["enterprise", "security", "P2"],
+    },
+  },
+]
+
+export type Signal = (typeof demoSignals)[0]
+export type SignalPriority = "critical" | "medium" | "low"

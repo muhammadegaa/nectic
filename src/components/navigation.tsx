@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { Menu, X } from "lucide-react"
 import Link from "next/link"
+import Image from "next/image"
 
 export default function Navigation() {
   const [isOpen, setIsOpen] = useState(false)
@@ -22,14 +23,18 @@ export default function Navigation() {
     >
       <div className="max-w-5xl mx-auto px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          <Link href="/" className="text-base font-medium text-neutral-900 tracking-tight hover:opacity-70 transition-opacity">
-            Nectic
+          <Link href="/" className="flex items-center gap-2 hover:opacity-70 transition-opacity">
+            <Image src="/logo-nectic-icon.png" alt="Nectic" width={24} height={24} className="rounded" />
+            <span className="text-base font-medium text-neutral-900 tracking-tight">Nectic</span>
           </Link>
 
           <div className="hidden lg:flex items-center gap-8">
             <a href="#how-it-works" className="text-sm text-neutral-500 hover:text-neutral-900 transition-colors">
               How it works
             </a>
+            <Link href="/demo" className="text-sm text-neutral-500 hover:text-neutral-900 transition-colors">
+              See demo
+            </Link>
             <a
               href="#early-access"
               className="text-sm font-medium text-neutral-900 border border-neutral-200 px-4 py-1.5 hover:bg-neutral-50 transition-colors"
@@ -52,6 +57,9 @@ export default function Navigation() {
             <a href="#how-it-works" onClick={() => setIsOpen(false)} className="block text-sm text-neutral-500 hover:text-neutral-900 transition-colors">
               How it works
             </a>
+            <Link href="/demo" onClick={() => setIsOpen(false)} className="block text-sm text-neutral-500 hover:text-neutral-900 transition-colors">
+              See demo
+            </Link>
             <a href="#early-access" onClick={() => setIsOpen(false)} className="block text-sm font-medium text-neutral-900">
               Request access
             </a>

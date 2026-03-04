@@ -12,21 +12,10 @@ export const metadata: Metadata = {
   generator: "v0.app",
   icons: {
     icon: [
-      {
-        url: "/logo-icon.svg",
-        type: "image/svg+xml",
-      },
-      {
-        url: "/logo-icon.svg",
-        media: "(prefers-color-scheme: light)",
-      },
-      {
-        url: "/logo-icon.svg",
-        media: "(prefers-color-scheme: dark)",
-      },
+      { url: "/logo-nectic-icon.png", type: "image/png" },
     ],
-    apple: "/logo-icon.svg",
-    shortcut: "/logo-icon.svg",
+    apple: "/logo-nectic-icon.png",
+    shortcut: "/logo-nectic-icon.png",
   },
 }
 
