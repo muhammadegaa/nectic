@@ -166,7 +166,23 @@ export default function BoardPage() {
         </div>
       </nav>
 
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+      {/* Mobile bottom nav */}
+      <nav className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 z-10 flex">
+        <Link href="/concept" className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-neutral-400">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          <span className="text-[10px] font-medium">Accounts</span>
+        </Link>
+        <Link href="/concept/board" className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-neutral-900">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>
+          <span className="text-[10px] font-semibold">Signals</span>
+        </Link>
+        <Link href="/concept/workspace" className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-neutral-400">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+          <span className="text-[10px] font-medium">Workspace</span>
+        </Link>
+      </nav>
+
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8 pb-24 sm:pb-8">
         <div className="flex items-end justify-between mb-6">
           <div>
             <h1 className="text-xl font-semibold text-neutral-900">Signal board</h1>
@@ -281,14 +297,14 @@ function BoardSignalRow({
   }
 
   return (
-    <div className={`px-5 py-4 ${status === "done" || status === "dismissed" ? "opacity-60" : ""}`}>
-      <div className="flex items-start gap-4">
+    <div className={`px-4 sm:px-5 py-4 ${status === "done" || status === "dismissed" ? "opacity-60" : ""}`}>
+      <div className="flex items-start gap-3">
         {/* Account risk dot */}
-        <div className="flex-shrink-0 mt-1">
+        <div className="flex-shrink-0 mt-1.5">
           <div className={`w-2 h-2 rounded-full ${riskColors[signal.riskLevel] ?? "bg-neutral-300"}`} title={signal.riskLevel} />
         </div>
 
-        {/* Signal content */}
+        {/* Signal content + actions stacked */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-1">
             <Link
@@ -308,16 +324,16 @@ function BoardSignalRow({
           <p className={`text-sm text-neutral-800 font-medium mb-1 ${status === "done" ? "line-through text-neutral-400" : ""}`}>
             {signal.title}
           </p>
-          <p className="text-xs text-neutral-400 italic truncate max-w-xl">&ldquo;{signal.quote}&rdquo;</p>
+          <p className="text-xs text-neutral-400 italic leading-relaxed line-clamp-2">&ldquo;{signal.quote}&rdquo;</p>
 
-          {/* Action note if exists */}
+          {/* Saved note display */}
           {signal.action?.note && !expanded && (
             <p className="text-xs text-neutral-500 mt-1.5 bg-neutral-50 border border-neutral-100 rounded px-2 py-1">
               {signal.action.note}
             </p>
           )}
 
-          {/* Expanded note edit */}
+          {/* Note input when expanded */}
           {expanded && (
             <div className="mt-2">
               <input
@@ -328,36 +344,37 @@ function BoardSignalRow({
                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleNoteSave(); setExpanded(false) } }}
                 placeholder="What was decided or done…"
                 autoFocus
-                className="w-full max-w-md text-xs border border-neutral-200 rounded-lg px-3 py-1.5 text-neutral-700 focus:outline-none focus:border-neutral-400 bg-white"
+                className="w-full text-xs border border-neutral-200 rounded-lg px-3 py-1.5 text-neutral-700 focus:outline-none focus:border-neutral-400 bg-white"
               />
             </div>
           )}
-        </div>
 
-        {/* Status + actions */}
-        <div className="flex-shrink-0 flex items-center gap-2">
-          <button
-            onClick={() => setExpanded(!expanded)}
-            className="text-xs text-neutral-300 hover:text-neutral-500 transition-colors"
-            title="Add note"
-          >
-            {note ? "✎" : "+"}
-          </button>
-          <div className="flex items-center gap-1 p-0.5 bg-neutral-100 rounded-lg border border-neutral-200">
-            {ACTION_OPTIONS.map((opt) => (
+          {/* Status controls — always below content, wraps naturally on mobile */}
+          <div className="mt-2.5 flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-0.5 p-0.5 bg-neutral-100 rounded-lg border border-neutral-200">
+              {ACTION_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => handleStatus(opt.value)}
+                  title={opt.label}
+                  className={`text-xs font-medium px-2 sm:px-2.5 py-1 rounded-md transition-all ${
+                    status === opt.value
+                      ? `${opt.bg} border shadow-sm ${opt.color}`
+                      : "text-neutral-400 hover:text-neutral-600 border border-transparent"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            {status !== "open" && (
               <button
-                key={opt.value}
-                onClick={() => handleStatus(opt.value)}
-                title={opt.label}
-                className={`text-xs font-medium px-2.5 py-1 rounded-md transition-all ${
-                  status === opt.value
-                    ? `${opt.bg} border shadow-sm ${opt.color}`
-                    : "text-neutral-400 hover:text-neutral-600 border border-transparent"
-                }`}
+                onClick={() => setExpanded(!expanded)}
+                className="text-xs text-neutral-400 hover:text-neutral-600 transition-colors"
               >
-                {opt.label}
+                {expanded ? "hide note" : note ? "edit note" : "+ add note"}
               </button>
-            ))}
+            )}
           </div>
         </div>
       </div>

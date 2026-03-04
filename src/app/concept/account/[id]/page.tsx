@@ -301,17 +301,16 @@ export default function AccountPage() {
     <div className="min-h-screen bg-neutral-50">
       {/* Nav */}
       <nav className="bg-white border-b border-neutral-200 px-4 sm:px-6 h-12 flex items-center justify-between sticky top-0 z-20">
-        <div className="flex items-center gap-3">
-          <Link href="/" className="flex items-center gap-2 hover:opacity-70 transition-opacity">
-            <LogoIcon size={20} />
-            <span className="text-sm font-semibold text-neutral-900">Nectic</span>
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <Link href="/concept" className="flex items-center gap-1.5 hover:opacity-70 transition-opacity flex-shrink-0">
+            <LogoIcon size={18} />
           </Link>
-          <span className="text-neutral-300">/</span>
-          <Link href="/concept" className="text-sm text-neutral-500 hover:text-neutral-700 transition-colors">Dashboard</Link>
-          <span className="text-neutral-300">/</span>
-          <span className="text-sm text-neutral-700 truncate max-w-32">{account.result.accountName}</span>
+          <span className="text-neutral-300 hidden sm:inline">/</span>
+          <Link href="/concept" className="text-sm text-neutral-500 hover:text-neutral-700 transition-colors hidden sm:inline">Dashboard</Link>
+          <span className="text-neutral-300 hidden sm:inline">/</span>
+          <span className="text-sm text-neutral-700 truncate max-w-[120px] sm:max-w-[200px]">{account.result.accountName}</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
           <Link
             href="/concept/workspace"
             className="text-xs text-neutral-400 hover:text-neutral-700 transition-colors hidden sm:block"
@@ -321,25 +320,25 @@ export default function AccountPage() {
           </Link>
           <button
             onClick={() => setShowReanalyze(true)}
-            className="text-xs text-neutral-500 border border-neutral-200 bg-white hover:bg-neutral-50 px-3 py-1.5 rounded-lg transition-colors font-medium"
+            className="text-xs text-neutral-500 border border-neutral-200 bg-white hover:bg-neutral-50 px-2.5 sm:px-3 py-1.5 rounded-lg transition-colors font-medium"
           >
             Update →
           </button>
           <button
             onClick={copyShareLink}
-            className="text-xs text-neutral-500 border border-neutral-200 bg-white hover:bg-neutral-50 px-3 py-1.5 rounded-lg transition-colors font-medium"
+            className="hidden sm:block text-xs text-neutral-500 border border-neutral-200 bg-white hover:bg-neutral-50 px-3 py-1.5 rounded-lg transition-colors font-medium"
           >
-            {copied ? "Link copied!" : "Share"}
+            {copied ? "Copied!" : "Share"}
           </button>
           {confirmDelete ? (
-            <div className="flex items-center gap-2">
+            <div className="hidden sm:flex items-center gap-2">
               <button onClick={() => setConfirmDelete(false)} className="text-xs text-neutral-400 hover:text-neutral-700 px-2 py-1 transition-colors">Cancel</button>
               <button onClick={handleDelete} disabled={deleting} className="text-xs text-white bg-red-600 hover:bg-red-700 px-3 py-1.5 rounded transition-colors disabled:opacity-50">
                 {deleting ? "Removing…" : "Remove"}
               </button>
             </div>
           ) : (
-            <button onClick={() => setConfirmDelete(true)} className="text-xs text-neutral-300 hover:text-red-500 transition-colors pl-1">Remove</button>
+            <button onClick={() => setConfirmDelete(true)} className="hidden sm:block text-xs text-neutral-300 hover:text-red-500 transition-colors pl-1">Remove</button>
           )}
         </div>
       </nav>
@@ -678,23 +677,23 @@ function AnalysisReport({
               const priColor = s.priority === "high" ? "text-red-600" : s.priority === "medium" ? "text-amber-600" : "text-neutral-400"
               const key = signalKey(s.type, s.title)
               return (
-                <div key={i} className="p-5">
-                  <div className="flex items-start justify-between gap-3 mb-2">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`text-xs font-semibold px-2 py-0.5 border rounded-full ${typeCfg.color}`}>{typeCfg.label}</span>
-                      <p className="text-sm font-semibold text-neutral-800">{s.title}</p>
+                <div key={i} className="p-4 sm:p-5">
+                  <div className="mb-2">
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <div className="flex items-center gap-2 flex-wrap min-w-0">
+                        <span className={`text-xs font-semibold px-2 py-0.5 border rounded-full flex-shrink-0 ${typeCfg.color}`}>{typeCfg.label}</span>
+                        <p className="text-sm font-semibold text-neutral-800">{s.title}</p>
+                      </div>
+                      <span className={`text-xs font-semibold flex-shrink-0 ${priColor}`}>{s.priority.charAt(0).toUpperCase() + s.priority.slice(1)}</span>
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className={`text-xs font-semibold ${priColor}`}>{s.priority.charAt(0).toUpperCase() + s.priority.slice(1)}</span>
-                      {canGenerateBrief(s) && (
-                        <button
-                          onClick={() => onGenerateBrief(s)}
-                          className="text-xs text-neutral-500 border border-neutral-200 bg-white hover:bg-neutral-900 hover:text-white hover:border-neutral-900 px-2.5 py-1 rounded transition-colors font-medium"
-                        >
-                          Generate brief →
-                        </button>
-                      )}
-                    </div>
+                    {canGenerateBrief(s) && (
+                      <button
+                        onClick={() => onGenerateBrief(s)}
+                        className="mt-1.5 text-xs text-neutral-500 border border-neutral-200 bg-white hover:bg-neutral-900 hover:text-white hover:border-neutral-900 px-2.5 py-1 rounded transition-colors font-medium"
+                      >
+                        Generate brief →
+                      </button>
+                    )}
                   </div>
                   <div className="bg-neutral-50 rounded px-3 py-2 text-sm text-neutral-600 italic border border-neutral-100 mb-2">
                     &ldquo;{s.quote}&rdquo;
@@ -1075,8 +1074,7 @@ function ChatPanel({ account, workspace }: { account: StoredAccount; workspace: 
   }
 
   return (
-    <div className="bg-white border border-neutral-200 rounded-xl flex flex-col overflow-hidden shadow-sm"
-      style={{ height: "calc(100vh - 7rem)", maxHeight: "760px", minHeight: "480px" }}>
+    <div className="bg-white border border-neutral-200 rounded-xl flex flex-col overflow-hidden shadow-sm h-[420px] xl:h-[calc(100vh-7rem)] xl:max-h-[760px] xl:min-h-[480px]">
 
       {/* Header */}
       <div className="px-4 h-12 flex items-center gap-2.5 border-b border-neutral-100 flex-shrink-0">

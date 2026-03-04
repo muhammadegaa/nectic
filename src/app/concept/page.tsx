@@ -281,24 +281,25 @@ export default function ConceptPage() {
   return (
     <div className="min-h-screen bg-neutral-50">
       <nav className="bg-white border-b border-neutral-200 px-4 sm:px-6 h-12 flex items-center justify-between sticky top-0 z-10">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 sm:gap-4">
           <Link href="/" className="flex items-center gap-2 hover:opacity-70 transition-opacity">
             <LogoIcon size={20} />
             <span className="text-sm font-semibold text-neutral-900">Nectic</span>
           </Link>
-          <span className="text-neutral-200">·</span>
-          <div className="flex items-center gap-3 text-xs">
+          <span className="text-neutral-200 hidden sm:inline">·</span>
+          <div className="hidden sm:flex items-center gap-3 text-xs">
             <span className="text-neutral-900 font-semibold border-b-2 border-neutral-900 pb-0.5">Accounts</span>
             <Link href="/concept/board" className="text-neutral-400 hover:text-neutral-700 transition-colors">Signal board</Link>
             <Link href="/concept/workspace" className="text-neutral-400 hover:text-neutral-700 transition-colors">Workspace</Link>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <span className="text-xs bg-amber-50 border border-amber-200 text-amber-700 px-3 py-1 rounded-full font-medium">Early access</span>
+        <div className="flex items-center gap-2 sm:gap-3">
+          <span className="hidden sm:inline text-xs bg-amber-50 border border-amber-200 text-amber-700 px-3 py-1 rounded-full font-medium">Early access</span>
           {accounts.length > 0 && !loadingAccounts && (
             <button onClick={openConnect} className="flex items-center gap-1.5 text-xs bg-neutral-900 text-white px-3 py-1.5 rounded-lg hover:bg-neutral-700 transition-colors font-medium">
               <WhatsAppIcon size={12} />
-              Connect account
+              <span className="hidden sm:inline">Connect account</span>
+              <span className="sm:hidden">Connect</span>
             </button>
           )}
           <div className="flex items-center gap-2 pl-2 border-l border-neutral-200">
@@ -308,7 +309,7 @@ export default function ConceptPage() {
         </div>
       </nav>
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8 pb-24 sm:pb-8">
         {loadingAccounts ? (
           <div className="flex items-center justify-center py-24">
             <div className="w-5 h-5 border-2 border-neutral-300 border-t-neutral-900 rounded-full animate-spin" />
@@ -319,8 +320,8 @@ export default function ConceptPage() {
             {accounts.length > 0 && (
               <div className="space-y-6">
                 {/* Stats + actions row */}
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-5 text-xs text-neutral-500">
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                  <div className="flex items-center gap-4 sm:gap-5 text-xs text-neutral-500 flex-wrap">
                     <span><span className="text-lg font-light text-neutral-900 mr-1.5">{accounts.length}</span>accounts</span>
                     {atRisk > 0 ? (
                       <span><span className="text-lg font-light text-red-600 mr-1.5">{atRisk}</span><span className="text-red-500">need attention</span></span>
@@ -409,6 +410,22 @@ export default function ConceptPage() {
           </>
         )}
       </main>
+
+      {/* Mobile bottom nav */}
+      <nav className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 z-10 flex">
+        <Link href="/concept" className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-neutral-900">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          <span className="text-[10px] font-semibold">Accounts</span>
+        </Link>
+        <Link href="/concept/board" className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-neutral-400">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>
+          <span className="text-[10px] font-medium">Signals</span>
+        </Link>
+        <Link href="/concept/workspace" className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-neutral-400">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+          <span className="text-[10px] font-medium">Workspace</span>
+        </Link>
+      </nav>
 
       {showConnect && (
         <ConnectModal
