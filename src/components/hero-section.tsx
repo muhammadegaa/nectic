@@ -36,8 +36,9 @@ export default function HeroSection() {
             isLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
           }`}
         >
-          Nectic reads your WhatsApp sales conversations and delivers a weekly brief to your PM —
-          what customers actually said, clustered and ranked, without the sales filter.
+          Nectic connects to wherever your deals actually happen — WhatsApp, Zoom calls, CRM notes —
+          and delivers a weekly product intelligence brief to your PM. What customers said, not what
+          sales decided to pass on.
         </p>
 
         <div
@@ -64,7 +65,7 @@ export default function HeroSection() {
             isLoaded ? "opacity-100" : "opacity-0"
           }`}
         >
-          Built for B2B SaaS product teams in Southeast Asia.
+          WhatsApp · Zoom · HubSpot · Salesforce → PM brief → Jira ticket → shipped feature.
         </p>
       </div>
     </section>
