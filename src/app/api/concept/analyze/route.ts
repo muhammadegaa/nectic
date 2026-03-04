@@ -94,9 +94,8 @@ export async function POST(req: NextRequest) {
         "X-Title": "Nectic - WhatsApp Signal Extractor",
       },
       body: JSON.stringify({
-        model: "openai/gpt-4o",
+        model: "anthropic/claude-3.5-sonnet",
         temperature: 0.2,
-        response_format: { type: "json_object" },
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: USER_PROMPT(conversation) },

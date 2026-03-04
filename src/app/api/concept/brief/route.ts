@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
         "X-Title": "Nectic - Feature Brief Generator",
       },
       body: JSON.stringify({
-        model: "openai/gpt-4o",
+        model: "anthropic/claude-3.5-haiku",
         temperature: 0.2,
         stream: true,
         messages: [

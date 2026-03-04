@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
         "X-Title": "Nectic - PM Co-pilot Chat",
       },
       body: JSON.stringify({
-        model: "openai/gpt-4o",
+        model: "anthropic/claude-3.5-haiku",
         temperature: 0.3,
         stream: true,
         messages: [
