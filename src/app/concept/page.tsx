@@ -663,6 +663,17 @@ function ConnectModal({
   const [waConnecting, setWaConnecting] = useState(false)
   const [waError, setWaError] = useState("")
 
+  // Sync credential fields when workspace loads async (race condition fix)
+  useEffect(() => {
+    if (workspace.watiEndpoint && !waEndpoint) setWaEndpoint(workspace.watiEndpoint)
+    if (workspace.watiToken && !waToken) setWaToken(workspace.watiToken)
+    // If credentials just became available, switch to loading substage
+    if (workspace.watiEndpoint && workspace.watiToken && waSubStage === "credentials" && waContacts.length === 0 && !waError) {
+      setWaSubStage("loading")
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workspace.watiEndpoint, workspace.watiToken])
+
   // Auto-load contacts when stage becomes "wa" and credentials exist
   useEffect(() => {
     if (stage !== "wa") return
@@ -670,7 +681,7 @@ function ConnectModal({
       loadWaContacts(workspace.watiEndpoint, workspace.watiToken)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stage])
+  }, [stage, waSubStage])
 
   const loadWaContacts = async (endpoint: string, token: string) => {
     setWaSubStage("loading")
@@ -776,8 +787,16 @@ function ConnectModal({
                 {waSubStage === "credentials" && (
                   <div className="space-y-4">
                     <div>
-                      <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-1">WhatsApp Business API</p>
-                      <p className="text-xs text-neutral-500 leading-relaxed mb-4">Enter your API endpoint and access token. Found in your WhatsApp Business Solution Provider dashboard.</p>
+                      <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-1">WhatsApp Business</p>
+                      <p className="text-xs text-neutral-500 leading-relaxed mb-1">
+                        Connect your WhatsApp Business account to pull conversations directly.
+                      </p>
+                      <p className="text-xs text-neutral-400 mb-4">
+                        Get your API endpoint and token from your{" "}
+                        <a href="https://app.wati.io/settings/api" target="_blank" rel="noopener noreferrer" className="text-neutral-600 underline hover:text-neutral-900">
+                          WATI dashboard → Settings → API
+                        </a>.
+                      </p>
                       {waError && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-3">{waError}</p>}
                     </div>
                     <div>
@@ -786,7 +805,7 @@ function ConnectModal({
                         type="text"
                         value={waEndpoint}
                         onChange={(e) => setWaEndpoint(e.target.value)}
-                        placeholder="https://live-server.wati.io"
+                        placeholder="https://live-mt-server.wati.io/12345"
                         className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 text-neutral-700 placeholder:text-neutral-300 focus:outline-none focus:border-neutral-400 bg-white"
                       />
                     </div>
@@ -797,7 +816,8 @@ function ConnectModal({
                           type={waTokenVisible ? "text" : "password"}
                           value={waToken}
                           onChange={(e) => setWaToken(e.target.value)}
-                          placeholder="Bearer token"
+                          onKeyDown={(e) => { if (e.key === "Enter" && waEndpoint.trim() && waToken.trim()) handleWaConnect() }}
+                          placeholder="eyJhbGci…"
                           className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 pr-16 text-neutral-700 placeholder:text-neutral-300 focus:outline-none focus:border-neutral-400 bg-white"
                         />
                         <button type="button" onClick={() => setWaTokenVisible(!waTokenVisible)} className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-neutral-400 hover:text-neutral-600">
@@ -825,18 +845,16 @@ function ConnectModal({
 
                 {waSubStage === "contacts" && (
                   <div className="-mx-6">
-                    {waContacts.length > 5 && (
-                      <div className="px-4 pb-3 border-b border-neutral-100">
-                        <input
-                          type="text"
-                          value={waSearch}
-                          onChange={(e) => setWaSearch(e.target.value)}
-                          placeholder="Search contacts…"
-                          className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:outline-none focus:border-neutral-400"
-                          autoFocus
-                        />
-                      </div>
-                    )}
+                    <div className="px-4 pb-3 border-b border-neutral-100 space-y-2">
+                      <input
+                        type="text"
+                        value={waSearch}
+                        onChange={(e) => setWaSearch(e.target.value)}
+                        placeholder="Search contacts…"
+                        className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:outline-none focus:border-neutral-400"
+                        autoFocus
+                      />
+                    </div>
                     {waFiltered.length === 0 && (
                       <p className="text-center py-10 text-sm text-neutral-400">
                         {waSearch ? "No contacts match." : "No contacts found."}
@@ -845,26 +863,42 @@ function ConnectModal({
                     <div className="divide-y divide-neutral-100">
                       {waFiltered.map((contact) => {
                         const displayName = contact.name || `${contact.firstName ?? ""} ${contact.lastName ?? ""}`.trim() || contact.wAid
+                        const lastActive = contact.lastUpdated
+                          ? (() => {
+                              const diff = Date.now() - new Date(contact.lastUpdated).getTime()
+                              const d = Math.floor(diff / 86400000)
+                              return d === 0 ? "today" : d === 1 ? "yesterday" : `${d}d ago`
+                            })()
+                          : null
                         return (
                           <button
                             key={contact.id}
                             onClick={() => onWaContactAnalyze(contact)}
-                            className="w-full flex items-center gap-3 px-6 py-3.5 hover:bg-neutral-50 transition-colors text-left"
+                            className="w-full flex items-center gap-3 px-6 py-3.5 hover:bg-neutral-50 transition-colors text-left group"
                           >
-                            <div className="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center shrink-0">
+                            <div className="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center shrink-0 group-hover:bg-neutral-200 transition-colors">
                               <span className="text-xs font-semibold text-neutral-600">{displayName.charAt(0).toUpperCase()}</span>
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium text-neutral-900 truncate">{displayName}</p>
                               <p className="text-xs text-neutral-400 truncate">{contact.phone || contact.wAid}</p>
                             </div>
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-neutral-300 shrink-0"><path d="M9 18l6-6-6-6"/></svg>
+                            {lastActive && (
+                              <span className="text-[11px] text-neutral-400 shrink-0">{lastActive}</span>
+                            )}
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-neutral-300 shrink-0 group-hover:text-neutral-500 transition-colors"><path d="M9 18l6-6-6-6"/></svg>
                           </button>
                         )
                       })}
                     </div>
-                    <div className="px-6 pt-3 pb-1 border-t border-neutral-100">
-                      <p className="text-xs text-neutral-400 text-center">{waFiltered.length} contact{waFiltered.length !== 1 ? "s" : ""}</p>
+                    <div className="px-6 pt-3 pb-3 border-t border-neutral-100 flex items-center justify-between">
+                      <p className="text-xs text-neutral-400">{waFiltered.length} contact{waFiltered.length !== 1 ? "s" : ""}</p>
+                      <button
+                        onClick={() => { setWaSubStage("credentials"); setWaContacts([]) }}
+                        className="text-xs text-neutral-400 hover:text-neutral-600 transition-colors"
+                      >
+                        Change credentials
+                      </button>
                     </div>
                   </div>
                 )}
@@ -1022,9 +1056,9 @@ function ConnectModal({
               <div className="py-8 text-center">
                 <div className="w-12 h-12 border-2 border-neutral-200 border-t-neutral-900 rounded-full animate-spin mx-auto mb-4" />
                 <p className="text-sm font-semibold text-neutral-900">
-                  {parsed ? `Analysing ${parsed.totalMessages} messages` : "Analysing conversation…"}
+                  {parsed ? `Analysing ${parsed.totalMessages} messages` : fileName ? `Analysing ${fileName.replace("WA: ", "")}…` : "Analysing conversation…"}
                 </p>
-                <p className="mt-1 text-xs text-neutral-400">Usually takes about 10 seconds</p>
+                <p className="mt-1 text-xs text-neutral-400">Usually takes about 15–30 seconds</p>
                 <div className="mt-5 space-y-2 text-left">
                   {["Identifying customer voice…", "Extracting risk signals…", "Grouping product signals…", "Scoring account health…"].map((s, i) => (
                     <div key={i} className="flex items-center gap-2">
