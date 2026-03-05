@@ -4,16 +4,15 @@
 export interface WatiContact {
   id: string
   wAid: string         // WhatsApp ID / phone number
-  name: string
-  phone: string
+  fullName?: string
   firstName?: string
   lastName?: string
+  phone: string
   created?: string
   lastUpdated?: string
   source?: string
   optedIn?: boolean
-  notes?: string
-  assignedTo?: string
+  contactStatus?: string
 }
 
 export interface WatiMessage {
@@ -59,8 +58,8 @@ export async function watiGetContacts(
   pageNumber = 1
 ): Promise<WatiContactsResponse> {
   const base = normalizeEndpoint(endpoint)
-  // Try v1 first, fallback to v3 path
-  const url = `${base}/api/v1/getContacts?pageSize=${pageSize}&pageNumber=${pageNumber}`
+  // WATI EU API: GET /api/v1/contacts returns { ok: true, result: WatiContact[] }
+  const url = `${base}/api/v1/contacts?pageSize=${pageSize}&pageNumber=${pageNumber}`
 
   const res = await fetch(url, {
     method: "GET",
@@ -74,9 +73,9 @@ export async function watiGetContacts(
 
   const data = await res.json()
 
-  // WATI v1 returns { contacts: { items: [], totalCount: number } }
-  const items: WatiContact[] = data?.contacts?.items ?? data?.items ?? data?.contacts ?? []
-  const totalCount: number = data?.contacts?.totalCount ?? data?.totalCount ?? items.length
+  // Response: { ok: true, result: WatiContact[] }
+  const items: WatiContact[] = Array.isArray(data?.result) ? data.result : []
+  const totalCount: number = data?.totalCount ?? items.length
 
   return { contacts: items, totalCount }
 }
@@ -104,7 +103,12 @@ export async function watiGetMessages(
 
   const data = await res.json()
 
-  // WATI v1: { messages: { items: [], totalCount: number } }
+  // WATI returns { result: false, info: "..." } when no conversation exists — treat as empty
+  if (data?.result === false) {
+    return { messages: [], totalCount: 0 }
+  }
+
+  // Success: { result: true, messages: { items: [], totalCount: number } }
   const items: WatiMessage[] = data?.messages?.items ?? data?.items ?? data?.messages ?? []
   const totalCount: number = data?.messages?.totalCount ?? data?.totalCount ?? items.length
 

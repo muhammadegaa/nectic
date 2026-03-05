@@ -26,7 +26,7 @@ import { trackEvent, identifyUser } from "@/lib/posthog"
 
 type ConnectStage = "method" | "instructions" | "upload" | "ready" | "analyzing" | "error" | "wa"
 
-interface WaContact { id: string; wAid: string; name: string; phone: string; firstName?: string; lastName?: string; lastUpdated?: string }
+interface WaContact { id: string; wAid: string; fullName?: string; firstName?: string; lastName?: string; phone: string; lastUpdated?: string }
 
 const INDUSTRIES = ["SaaS / Software", "Fintech", "Logistics", "HR Tech", "E-commerce", "Healthcare", "Education", "Other"]
 const CONTRACT_TIERS = [
@@ -118,7 +118,7 @@ export default function ConceptPage() {
   }
 
   const handleWaContactAnalyze = async (contact: WaContact) => {
-    const contactName = contact.name || `${contact.firstName ?? ""} ${contact.lastName ?? ""}`.trim() || contact.wAid
+    const contactName = contact.fullName || `${contact.firstName ?? ""} ${contact.lastName ?? ""}`.trim() || contact.wAid
     setConnectStage("analyzing")
     setFileName(`WA: ${contactName}`)
     try {
@@ -715,7 +715,8 @@ function ConnectModal({
 
   const waFiltered = waContacts.filter((c) => {
     const q = waSearch.toLowerCase()
-    return (c.name ?? "").toLowerCase().includes(q) || (c.phone ?? "").includes(q) || (c.wAid ?? "").includes(q)
+    const name = c.fullName || `${c.firstName ?? ""} ${c.lastName ?? ""}`.trim()
+    return name.toLowerCase().includes(q) || (c.phone ?? "").includes(q) || (c.wAid ?? "").includes(q)
   })
 
   return (
@@ -805,7 +806,7 @@ function ConnectModal({
                         type="text"
                         value={waEndpoint}
                         onChange={(e) => setWaEndpoint(e.target.value)}
-                        placeholder="https://live-mt-server.wati.io/12345"
+                        placeholder="https://eu-app-api.wati.io"
                         className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 text-neutral-700 placeholder:text-neutral-300 focus:outline-none focus:border-neutral-400 bg-white"
                       />
                     </div>
@@ -862,7 +863,7 @@ function ConnectModal({
                     )}
                     <div className="divide-y divide-neutral-100">
                       {waFiltered.map((contact) => {
-                        const displayName = contact.name || `${contact.firstName ?? ""} ${contact.lastName ?? ""}`.trim() || contact.wAid
+                        const displayName = contact.fullName || `${contact.firstName ?? ""} ${contact.lastName ?? ""}`.trim() || contact.wAid
                         const lastActive = contact.lastUpdated
                           ? (() => {
                               const diff = Date.now() - new Date(contact.lastUpdated).getTime()
