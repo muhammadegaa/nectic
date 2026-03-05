@@ -32,6 +32,9 @@ export interface WorkspaceContext {
   roadmapFocus?: string
   knownIssues?: string
   updatedAt?: string
+  // WATI BSP integration
+  watiEndpoint?: string
+  watiToken?: string
 }
 
 export interface StoredAccount {

@@ -16,6 +16,8 @@ export default function WorkspacePage() {
     featureAreas: "",
     roadmapFocus: "",
     knownIssues: "",
+    watiEndpoint: "",
+    watiToken: "",
   })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -33,6 +35,8 @@ export default function WorkspacePage() {
         featureAreas: ws.featureAreas ?? "",
         roadmapFocus: ws.roadmapFocus ?? "",
         knownIssues: ws.knownIssues ?? "",
+        watiEndpoint: ws.watiEndpoint ?? "",
+        watiToken: ws.watiToken ?? "",
       })
       setLoading(false)
     })
@@ -47,6 +51,7 @@ export default function WorkspacePage() {
     setTimeout(() => setSaved(false), 2500)
   }
 
+  const [watiTokenVisible, setWatiTokenVisible] = useState(false)
   const hasContent = Object.values(form).some((v) => v?.trim())
 
   if (authLoading || !user) {
@@ -140,6 +145,55 @@ export default function WorkspacePage() {
               onChange={(v) => setForm({ ...form, knownIssues: v })}
               rows={3}
             />
+
+            {/* WATI Integration */}
+            <div className="border border-neutral-200 rounded-xl overflow-hidden">
+              <div className="bg-[#25D366]/8 border-b border-neutral-200 px-5 py-4 flex items-center gap-3">
+                <div className="w-7 h-7 bg-[#25D366] rounded-lg flex items-center justify-center shrink-0">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.132.558 4.13 1.534 5.865L.054 23.454l5.787-1.517A11.944 11.944 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.8 9.8 0 01-4.994-1.368l-.358-.213-3.715.973.99-3.615-.234-.371A9.827 9.827 0 012.182 12C2.182 6.573 6.573 2.182 12 2.182c5.427 0 9.818 4.391 9.818 9.818 0 5.427-4.391 9.818-9.818 9.818z"/></svg>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-neutral-900">WATI Integration</p>
+                  <p className="text-xs text-neutral-500">Connect your WATI account to import conversations directly — no manual export needed.</p>
+                </div>
+                {form.watiEndpoint && form.watiToken && (
+                  <span className="ml-auto text-xs bg-green-100 text-green-700 border border-green-200 px-2 py-0.5 rounded-full font-medium">Connected</span>
+                )}
+              </div>
+              <div className="px-5 py-4 space-y-4 bg-white">
+                <div>
+                  <label className="block text-xs font-semibold text-neutral-700 mb-1">API Endpoint</label>
+                  <input
+                    type="text"
+                    value={form.watiEndpoint ?? ""}
+                    onChange={(e) => setForm({ ...form, watiEndpoint: e.target.value })}
+                    placeholder="https://eu-app-api.wati.io"
+                    className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 text-neutral-700 placeholder:text-neutral-300 focus:outline-none focus:border-neutral-400 bg-white"
+                  />
+                  <p className="text-xs text-neutral-400 mt-1">Found in WATI Settings → API → Endpoint URL</p>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-neutral-700 mb-1">Access Token</label>
+                  <div className="relative">
+                    <input
+                      type={watiTokenVisible ? "text" : "password"}
+                      value={form.watiToken ?? ""}
+                      onChange={(e) => setForm({ ...form, watiToken: e.target.value })}
+                      placeholder="Bearer token from WATI Settings → API"
+                      className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 pr-20 text-neutral-700 placeholder:text-neutral-300 focus:outline-none focus:border-neutral-400 bg-white"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setWatiTokenVisible(!watiTokenVisible)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-neutral-400 hover:text-neutral-600"
+                    >
+                      {watiTokenVisible ? "Hide" : "Show"}
+                    </button>
+                  </div>
+                  <p className="text-xs text-neutral-400 mt-1">Found in WATI Settings → API → Access Token. Stored securely in your account.</p>
+                </div>
+              </div>
+            </div>
 
             <div className="pt-2 flex items-center gap-3">
               <button
