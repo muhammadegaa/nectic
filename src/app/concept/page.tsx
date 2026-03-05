@@ -334,6 +334,9 @@ export default function ConceptPage() {
                   </div>
                 </div>
 
+                {/* ROI calculator — shown when accounts are at risk */}
+                {atRisk > 0 && <RoiCalculator atRiskCount={atRisk} />}
+
                 {/* Workspace setup nudge */}
                 {!hasWorkspace && (
                   <Link href="/concept/workspace" className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 hover:bg-amber-100 transition-colors group">
@@ -872,6 +875,76 @@ function CrossAccountSignals({ signals, accountCount }: { signals: ReturnType<ty
           </div>
         )
       })}
+    </div>
+  )
+}
+
+// ─── ROI Calculator ────────────────────────────────────────────────────────────
+
+function RoiCalculator({ atRiskCount }: { atRiskCount: number }) {
+  const [acv, setAcv] = useState(10000)
+  const [open, setOpen] = useState(false)
+
+  const atRiskMrr = Math.round((atRiskCount * acv) / 12)
+  const earlyDetectionSave = Math.round(atRiskMrr * 0.40)
+  const reactiveSave = Math.round(atRiskMrr * 0.10)
+  const missedValue = earlyDetectionSave - reactiveSave
+
+  return (
+    <div className="bg-red-50 border border-red-200 rounded-lg overflow-hidden">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-red-100/50 transition-colors text-left"
+      >
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+          <span className="text-xs font-semibold text-red-800">
+            {atRiskCount} account{atRiskCount > 1 ? "s" : ""} at high risk
+          </span>
+          <span className="text-xs text-red-600 hidden sm:inline">
+            — calculate your at-risk MRR
+          </span>
+        </div>
+        <svg className={`w-4 h-4 text-red-500 transition-transform ${open ? "rotate-180" : ""}`} viewBox="0 0 16 16" fill="none">
+          <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+
+      {open && (
+        <div className="px-4 pb-4 pt-1 border-t border-red-200/60">
+          <div className="flex items-center gap-3 mb-4 flex-wrap">
+            <span className="text-xs text-red-700">Average contract value (ACV)</span>
+            <div className="flex items-center gap-1">
+              <span className="text-xs text-red-600">$</span>
+              <input
+                type="number"
+                value={acv}
+                onChange={(e) => setAcv(Math.max(0, Number(e.target.value)))}
+                className="w-24 text-xs border border-red-200 rounded px-2 py-1 bg-white text-red-900 focus:outline-none focus:border-red-400"
+                step={1000}
+              />
+              <span className="text-xs text-red-600">/year</span>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-white border border-red-100 rounded-lg p-3 text-center">
+              <p className="text-xl font-semibold text-red-600">${atRiskMrr.toLocaleString()}</p>
+              <p className="text-xs text-red-500 mt-0.5">at-risk MRR</p>
+            </div>
+            <div className="bg-white border border-emerald-100 rounded-lg p-3 text-center">
+              <p className="text-xl font-semibold text-emerald-600">+${earlyDetectionSave.toLocaleString()}</p>
+              <p className="text-xs text-emerald-500 mt-0.5">saved with early signal</p>
+            </div>
+            <div className="bg-white border border-neutral-100 rounded-lg p-3 text-center">
+              <p className="text-xl font-semibold text-neutral-500">+${reactiveSave.toLocaleString()}</p>
+              <p className="text-xs text-neutral-400 mt-0.5">saved if you wait</p>
+            </div>
+          </div>
+          <p className="text-xs text-red-700 mt-3 leading-relaxed">
+            Acting on these signals now vs. waiting = <strong>${missedValue.toLocaleString()}/month</strong> in recoverable churn. Early detection saves 40% of at-risk accounts; reactive saves under 10%.
+          </p>
+        </div>
+      )}
     </div>
   )
 }

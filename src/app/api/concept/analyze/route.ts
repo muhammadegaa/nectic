@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 
-export const maxDuration = 60
+export const maxDuration = 120
 
 type ParticipantRole = "vendor" | "customer" | "partner" | "other"
 type ParticipantRoles = Record<string, ParticipantRole>
@@ -20,9 +20,17 @@ interface WorkspaceContext {
 
 const SYSTEM_PROMPT = `You are a B2B SaaS customer intelligence analyst specialising in Southeast Asia markets.
 
-You will receive a WhatsApp group conversation, participant roles, and optional account context. The conversation may be in Bahasa Indonesia, English, or code-switched. Analyse it deeply from the CUSTOMER's perspective only.
+You will receive a WhatsApp group conversation, participant roles, and optional account context. The conversation may be in Bahasa Indonesia, English, or code-switched (Bahasa + English mixed). Analyse it deeply from the CUSTOMER's perspective only.
 
 Your job: surface what the customer actually thinks — churn signals, product pain points, feature requests, relationship health — things the CS/sales rep might have missed or not escalated.
+
+Language guidance for SEA conversations:
+- Bahasa Indonesia often expresses dissatisfaction indirectly. "Agak" (somewhat), "lumayan" (fairly), "nanti saja" (later/we'll see) signal low urgency or avoidance that can mask deeper issues.
+- Code-switching from Bahasa to English mid-sentence often signals emphasis or escalation to a serious point.
+- "Iya iya" (yes yes) without follow-up action is a soft rejection pattern.
+- Formal tone shift (from casual Bahasa to formal Indonesian) often signals unhappiness or escalation.
+
+If the conversation is predominantly Bahasa Indonesia (>50% non-English messages), set analysisQuality.confidence one level lower than you would for English-only, and add a caveat noting the language.
 
 Return ONLY valid JSON. No markdown wrapper, no explanation, just the JSON object.`
 
@@ -175,7 +183,7 @@ export async function POST(req: NextRequest) {
         "X-Title": "Nectic - WhatsApp Signal Extractor",
       },
       body: JSON.stringify({
-        model: "anthropic/claude-haiku-4.5",
+        model: "anthropic/claude-sonnet-4.6",
         temperature: 0.2,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },

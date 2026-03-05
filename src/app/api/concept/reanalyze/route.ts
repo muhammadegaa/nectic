@@ -2,11 +2,17 @@ import { NextRequest, NextResponse } from "next/server"
 import type { AnalysisResult } from "@/app/api/concept/analyze/route"
 import { buildSignalActionsBlock, type SignalAction } from "@/lib/signal-utils"
 
-export const maxDuration = 60
+export const maxDuration = 120
 
 const SYSTEM_PROMPT = `You are a B2B SaaS customer intelligence analyst specialising in Southeast Asia markets.
 
 You are updating an existing account analysis with new WhatsApp conversation data. Your job is to produce an updated analysis that reflects the current state of the account, and to surface what has changed since the previous analysis.
+
+Language guidance for SEA conversations:
+- Bahasa Indonesia often expresses dissatisfaction indirectly. "Agak", "lumayan", "nanti saja" signal avoidance that can mask deeper issues.
+- Code-switching from Bahasa to English often signals emphasis or escalation.
+- Formal tone shift (casual → formal Indonesian) signals unhappiness.
+- If the conversation is predominantly Bahasa Indonesia (>50% non-English), lower confidence one level and note it in caveats.
 
 Return ONLY valid JSON. No markdown wrapper, no explanation.`
 
@@ -123,7 +129,7 @@ export async function POST(req: NextRequest) {
         "X-Title": "Nectic - Account Re-analysis",
       },
       body: JSON.stringify({
-        model: "anthropic/claude-haiku-4.5",
+        model: "anthropic/claude-sonnet-4.6",
         temperature: 0.2,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
