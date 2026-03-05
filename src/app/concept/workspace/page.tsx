@@ -1,11 +1,73 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import LogoIcon from "@/components/logo-icon"
 import { useAuth } from "@/contexts/auth-context"
 import { getWorkspace, saveWorkspace, type WorkspaceContext } from "@/lib/concept-firestore"
+
+const FIELDS: {
+  key: keyof WorkspaceContext
+  label: string
+  sublabel: string
+  hint: string
+  placeholder: string
+  rows: number
+  icon: React.ReactNode
+  unlocks: string
+}[] = [
+  {
+    key: "productDescription",
+    label: "What your product does",
+    sublabel: "Product context",
+    hint: "Who it serves, what problem it solves, the market. 2–3 sentences.",
+    placeholder: "e.g. We build an HR SaaS for SMEs in Indonesia — payroll, attendance, and leave management for companies with 20–500 employees. Our customers are HR managers and finance teams who previously ran everything in spreadsheets.",
+    rows: 4,
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+    ),
+    unlocks: "Account name inference, risk scoring, summary framing",
+  },
+  {
+    key: "featureAreas",
+    label: "Feature areas",
+    sublabel: "Capability map",
+    hint: "Your product's core modules. Comma-separated.",
+    placeholder: "e.g. Payroll processing, attendance tracking, leave management, reimbursement, approval workflows, HR analytics",
+    rows: 2,
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    ),
+    unlocks: "Signal categorisation, product brief generation",
+  },
+  {
+    key: "roadmapFocus",
+    label: "Roadmap this quarter",
+    sublabel: "In-flight work",
+    hint: "What's being built or shipped. Nectic uses this to distinguish gaps from work in progress.",
+    placeholder: "e.g. Mobile app (approval + leave), bulk payroll import from Excel, BPJS integration, multi-level approval chains",
+    rows: 3,
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+    ),
+    unlocks: "Avoids surfacing known work as new discoveries",
+  },
+  {
+    key: "knownIssues",
+    label: "Known issues",
+    sublabel: "Suppression list",
+    hint: "Bugs and limitations your team already knows about. Nectic won't surface these as new findings.",
+    placeholder: "e.g. Reports slow for 200+ employee accounts. Overtime edge case on split shifts. Push notifications unreliable on Android 13.",
+    rows: 3,
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    ),
+    unlocks: "Reduces noise — only surfaces net-new signals",
+  },
+]
+
+type SaveStatus = "idle" | "saving" | "saved"
 
 export default function WorkspacePage() {
   const { user, loading: authLoading, signOut } = useAuth()
@@ -18,8 +80,9 @@ export default function WorkspacePage() {
     knownIssues: "",
   })
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle")
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const latestForm = useRef(form)
 
   useEffect(() => {
     if (!authLoading && !user) router.replace("/concept/login")
@@ -28,26 +91,50 @@ export default function WorkspacePage() {
   useEffect(() => {
     if (!user) return
     getWorkspace(user.uid).then((ws) => {
-      setForm({
+      const loaded = {
         productDescription: ws.productDescription ?? "",
         featureAreas: ws.featureAreas ?? "",
         roadmapFocus: ws.roadmapFocus ?? "",
         knownIssues: ws.knownIssues ?? "",
-      })
+      }
+      setForm(loaded)
+      latestForm.current = loaded
       setLoading(false)
     })
   }, [user])
 
-  const handleSave = async () => {
+  const triggerSave = useCallback((nextForm: WorkspaceContext) => {
     if (!user) return
-    setSaving(true)
-    await saveWorkspace(user.uid, form)
-    setSaving(false)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2500)
+    if (debounceTimer.current) clearTimeout(debounceTimer.current)
+    setSaveStatus("saving")
+    debounceTimer.current = setTimeout(async () => {
+      await saveWorkspace(user.uid, nextForm)
+      setSaveStatus("saved")
+      setTimeout(() => setSaveStatus("idle"), 2000)
+    }, 900)
+  }, [user])
+
+  const handleChange = (key: keyof WorkspaceContext, value: string) => {
+    const next = { ...form, [key]: value }
+    setForm(next)
+    latestForm.current = next
+    triggerSave(next)
   }
 
-  const hasContent = Object.values(form).some((v) => v?.trim())
+  const filledCount = FIELDS.filter((f) => (form[f.key] as string)?.trim()).length
+  const completionPct = Math.round((filledCount / FIELDS.length) * 100)
+
+  const qualityLabel =
+    completionPct === 100 ? "Fully calibrated" :
+    completionPct >= 75 ? "Well calibrated" :
+    completionPct >= 50 ? "Partially calibrated" :
+    completionPct > 0 ? "Minimally calibrated" :
+    "Not calibrated"
+
+  const qualityColor =
+    completionPct === 100 ? "text-emerald-600" :
+    completionPct >= 50 ? "text-amber-600" :
+    "text-neutral-400"
 
   if (authLoading || !user) {
     return (
@@ -72,9 +159,23 @@ export default function WorkspacePage() {
             <span className="text-neutral-900 font-semibold border-b-2 border-neutral-900 pb-0.5">Workspace</span>
           </div>
         </div>
-        <div className="flex items-center gap-2 text-xs text-neutral-400">
-          <span className="hidden sm:block">{user.displayName ?? user.email}</span>
-          <button onClick={() => signOut()} className="hover:text-neutral-700 transition-colors">Sign out</button>
+        <div className="flex items-center gap-3">
+          {saveStatus === "saving" && (
+            <span className="text-xs text-neutral-400 flex items-center gap-1.5">
+              <span className="w-3 h-3 border border-neutral-300 border-t-neutral-600 rounded-full animate-spin" />
+              Saving…
+            </span>
+          )}
+          {saveStatus === "saved" && (
+            <span className="text-xs text-emerald-600 flex items-center gap-1.5 transition-opacity">
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><polyline points="2 8 6 12 14 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              Saved
+            </span>
+          )}
+          <div className="flex items-center gap-2 pl-3 border-l border-neutral-200 text-xs text-neutral-400">
+            <span className="hidden sm:block">{user.displayName ?? user.email}</span>
+            <button onClick={() => signOut()} className="hover:text-neutral-700 transition-colors">Sign out</button>
+          </div>
         </div>
       </nav>
 
@@ -94,12 +195,49 @@ export default function WorkspacePage() {
         </Link>
       </nav>
 
-      <main className="max-w-2xl mx-auto px-4 sm:px-6 py-10 pb-24 sm:pb-10">
+      <main className="max-w-2xl mx-auto px-4 sm:px-6 py-8 pb-24 sm:pb-12">
+
+        {/* Header + calibration state */}
         <div className="mb-8">
-          <h1 className="text-xl font-semibold text-neutral-900">Workspace</h1>
-          <p className="text-sm text-neutral-500 mt-1">
-            Tell Nectic about your product. This context is injected into every analysis, re-analysis, brief, and chat — the more specific you are, the more useful the output.
-          </p>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h1 className="text-xl font-semibold text-neutral-900">Product Intelligence</h1>
+              <p className="text-sm text-neutral-500 mt-1 leading-relaxed max-w-md">
+                Every field below is injected into each analysis, brief, and PM chat. The more specific you are, the more your AI thinks like someone who actually knows your product.
+              </p>
+            </div>
+          </div>
+
+          {/* Calibration bar */}
+          {!loading && (
+            <div className="mt-5 bg-white border border-neutral-200 rounded-xl px-5 py-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${completionPct === 100 ? "bg-emerald-500" : completionPct > 0 ? "bg-amber-400" : "bg-neutral-300"}`} />
+                  <span className={`text-sm font-semibold ${qualityColor}`}>{qualityLabel}</span>
+                </div>
+                <span className="text-xs text-neutral-400">{filledCount} / {FIELDS.length} fields</span>
+              </div>
+              <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${completionPct === 100 ? "bg-emerald-500" : completionPct >= 50 ? "bg-amber-400" : "bg-neutral-300"}`}
+                  style={{ width: `${completionPct}%` }}
+                />
+              </div>
+              {completionPct < 100 && (
+                <p className="text-xs text-neutral-400 mt-2.5">
+                  {completionPct === 0
+                    ? "Fill in your product context to unlock higher-quality analysis."
+                    : `${FIELDS.length - filledCount} field${FIELDS.length - filledCount !== 1 ? "s" : ""} remaining — each one improves signal accuracy.`}
+                </p>
+              )}
+              {completionPct === 100 && (
+                <p className="text-xs text-emerald-600 mt-2.5 font-medium">
+                  All context loaded — your AI has full product awareness.
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         {loading ? (
@@ -107,85 +245,55 @@ export default function WorkspacePage() {
             <div className="w-5 h-5 border-2 border-neutral-300 border-t-neutral-900 rounded-full animate-spin" />
           </div>
         ) : (
-          <div className="space-y-6">
-            <Field
-              label="What your product does"
-              hint="Who it serves, what problem it solves, the market. 2–3 sentences."
-              placeholder="e.g. We build an HR SaaS for SMEs in Indonesia — payroll, attendance, and leave management for companies with 20–500 employees. Our customers are HR managers and finance teams who previously ran everything in spreadsheets."
-              value={form.productDescription ?? ""}
-              onChange={(v) => setForm({ ...form, productDescription: v })}
-              rows={4}
-            />
-            <Field
-              label="Main feature areas"
-              hint="Your product's core modules or capabilities, comma-separated."
-              placeholder="e.g. Payroll processing, attendance tracking, leave management, reimbursement, approval workflows, HR analytics, employee self-service"
-              value={form.featureAreas ?? ""}
-              onChange={(v) => setForm({ ...form, featureAreas: v })}
-              rows={2}
-            />
-            <Field
-              label="Roadmap this quarter"
-              hint="What your team is actively building or shipping. Be specific — Nectic uses this to distinguish blind spots from work already in progress."
-              placeholder="e.g. Mobile app for employees (approval + leave), bulk payroll import from Excel, BPJS integration, multi-level approval chains"
-              value={form.roadmapFocus ?? ""}
-              onChange={(v) => setForm({ ...form, roadmapFocus: v })}
-              rows={3}
-            />
-            <Field
-              label="Known issues"
-              hint="Bugs, limitations, or pain points your team already knows about. Nectic won't surface these as new discoveries."
-              placeholder="e.g. Report generation is slow for accounts with 200+ employees. Overtime calculation has an edge case with split shifts. Mobile push notifications unreliable on Android 13."
-              value={form.knownIssues ?? ""}
-              onChange={(v) => setForm({ ...form, knownIssues: v })}
-              rows={3}
-            />
+          <div className="space-y-4">
+            {FIELDS.map((field, i) => {
+              const isFilled = !!(form[field.key] as string)?.trim()
+              return (
+                <div
+                  key={field.key}
+                  className={`bg-white border rounded-xl overflow-hidden transition-all duration-200 ${isFilled ? "border-neutral-200 shadow-sm" : "border-neutral-200"}`}
+                >
+                  {/* Field header */}
+                  <div className="flex items-center gap-3 px-5 pt-4 pb-3 border-b border-neutral-100">
+                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors ${isFilled ? "bg-neutral-900 text-white" : "bg-neutral-100 text-neutral-400"}`}>
+                      {field.icon}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-neutral-400 uppercase tracking-wide">{i + 1} · {field.sublabel}</span>
+                        {isFilled && (
+                          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" className="text-emerald-500 shrink-0"><polyline points="2 8 6 12 14 4" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        )}
+                      </div>
+                      <p className="text-sm font-semibold text-neutral-800 leading-tight">{field.label}</p>
+                    </div>
+                    <div className="shrink-0 hidden sm:flex items-center gap-1 text-[10px] text-neutral-400 bg-neutral-50 border border-neutral-100 px-2 py-1 rounded-md max-w-[160px]">
+                      <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M8 1l2 5h5l-4 3 1.5 5L8 11l-4.5 3L5 9 1 6h5z" fill="currentColor" opacity="0.5"/></svg>
+                      <span className="truncate">{field.unlocks}</span>
+                    </div>
+                  </div>
 
-            <div className="pt-2 flex items-center gap-3">
-              <button
-                onClick={handleSave}
-                disabled={!hasContent || saving}
-                className="bg-neutral-900 text-white text-sm font-semibold px-5 py-2.5 rounded-lg hover:bg-neutral-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                {saving ? "Saving…" : saved ? "Saved" : "Save workspace"}
-              </button>
-              {saved && (
-                <span className="text-xs text-green-600 font-medium">All analyses will now use this context.</span>
-              )}
-            </div>
+                  {/* Textarea */}
+                  <div className="px-5 pt-3 pb-4">
+                    <p className="text-xs text-neutral-400 mb-2 leading-relaxed">{field.hint}</p>
+                    <textarea
+                      value={(form[field.key] as string) ?? ""}
+                      onChange={(e) => handleChange(field.key, e.target.value)}
+                      placeholder={field.placeholder}
+                      rows={field.rows}
+                      className="w-full text-sm border border-neutral-200 rounded-lg px-4 py-3 text-neutral-700 placeholder:text-neutral-300 focus:outline-none focus:border-neutral-400 bg-neutral-50 resize-none leading-relaxed transition-colors"
+                    />
+                  </div>
+                </div>
+              )
+            })}
+
+            <p className="text-xs text-neutral-400 text-center pt-2">
+              Changes save automatically · context applies to all future analyses
+            </p>
           </div>
         )}
       </main>
-    </div>
-  )
-}
-
-function Field({
-  label,
-  hint,
-  placeholder,
-  value,
-  onChange,
-  rows,
-}: {
-  label: string
-  hint: string
-  placeholder: string
-  value: string
-  onChange: (v: string) => void
-  rows: number
-}) {
-  return (
-    <div>
-      <label className="block text-sm font-semibold text-neutral-800 mb-1">{label}</label>
-      <p className="text-xs text-neutral-400 mb-2 leading-relaxed">{hint}</p>
-      <textarea
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        rows={rows}
-        className="w-full text-sm border border-neutral-200 rounded-lg px-4 py-3 text-neutral-700 placeholder:text-neutral-300 focus:outline-none focus:border-neutral-400 bg-white resize-none leading-relaxed"
-      />
     </div>
   )
 }

@@ -401,23 +401,34 @@ export default function ConceptPage() {
             )}
             {accounts.length > 0 && (
               <div className="space-y-6">
-                {/* Stats + actions row */}
-                <div className="flex items-center justify-between gap-4 flex-wrap">
-                  <div className="flex items-center gap-4 sm:gap-5 text-xs text-neutral-500 flex-wrap">
-                    <span><span className="text-lg font-light text-neutral-900 mr-1.5">{accounts.length}</span>accounts</span>
-                    {atRisk > 0 ? (
-                      <span><span className="text-lg font-light text-red-600 mr-1.5">{atRisk}</span><span className="text-red-500">need attention</span></span>
-                    ) : (
-                      <span className="text-green-600 font-medium">All accounts healthy</span>
-                    )}
-                    {sharedPatterns.length > 0 && (
-                      <span><span className="text-lg font-light text-blue-600 mr-1.5">{sharedPatterns.length}</span><span className="text-blue-500">cross-account patterns</span></span>
-                    )}
+                {/* Stats row */}
+                <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                  <div className="flex items-center gap-1.5 bg-white border border-neutral-200 rounded-lg px-3 py-2">
+                    <span className="text-base font-semibold text-neutral-900 tabular-nums">{accounts.length}</span>
+                    <span className="text-xs text-neutral-400">account{accounts.length !== 1 ? "s" : ""}</span>
                   </div>
+                  {atRisk > 0 ? (
+                    <div className="flex items-center gap-1.5 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse shrink-0" />
+                      <span className="text-base font-semibold text-red-700 tabular-nums">{atRisk}</span>
+                      <span className="text-xs text-red-600">need attention</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+                      <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><polyline points="2 8 6 12 14 4" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      <span className="text-xs text-emerald-700 font-medium">All healthy</span>
+                    </div>
+                  )}
+                  {sharedPatterns.length > 0 && (
+                    <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+                      <span className="text-base font-semibold text-blue-700 tabular-nums">{sharedPatterns.length}</span>
+                      <span className="text-xs text-blue-600">cross-account pattern{sharedPatterns.length !== 1 ? "s" : ""}</span>
+                    </div>
+                  )}
                 </div>
 
-                {/* ROI calculator — shown when accounts are at risk */}
-                {atRisk > 0 && <RoiCalculator atRiskCount={atRisk} />}
+                {/* Revenue at Risk — shown when accounts are at risk */}
+                {atRisk > 0 && <RevenueAtRisk atRiskCount={atRisk} topAccountId={sortedAccounts[0]?.id} topAccountName={sortedAccounts[0]?.result.accountName} />}
 
                 {/* Workspace setup nudge */}
                 {!hasWorkspace && (
@@ -1067,42 +1078,62 @@ function AccountCard({ account, onDelete, confirmingDelete, onConfirmDelete, onC
   const topRisk = account.result.riskSignals?.[0]
   const topProduct = account.result.productSignals?.[0]
   const hasChanges = !!account.result.changesSince
+  const isCritical = account.result.riskLevel === "critical"
+  const isHigh = account.result.riskLevel === "high"
+  const score = account.result.healthScore ?? 0
+  const scoreBarColor = isCritical ? "bg-red-500" : isHigh ? "bg-orange-400" : account.result.riskLevel === "medium" ? "bg-amber-400" : "bg-emerald-500"
 
   return (
-    <div className={`bg-white border rounded-lg overflow-hidden transition-shadow hover:shadow-sm ${confirmingDelete ? "border-red-300" : "border-neutral-200"}`}>
+    <div className={`bg-white border rounded-xl overflow-hidden transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md ${confirmingDelete ? "border-red-300" : "border-neutral-200"}`}>
       <Link href={`/concept/account/${account.id}`} className="block p-5">
         <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 mb-1.5 flex-wrap">
               <div className="w-5 h-5 bg-[#25D366] rounded flex items-center justify-center flex-shrink-0">
                 <WhatsAppIcon size={11} className="text-white" />
               </div>
               <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded-full border ${risk.bg} ${risk.text} ${risk.border}`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${risk.dot}`} />
-                {risk.label} risk
+                <span className={`w-1.5 h-1.5 rounded-full ${risk.dot} ${(isCritical || isHigh) ? "animate-pulse" : ""}`} />
+                {risk.label}
               </span>
               {hasChanges && (
                 <span className="text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">Updated</span>
               )}
             </div>
             <p className="text-sm font-semibold text-neutral-900 truncate">{account.result.accountName}</p>
-            {topRisk && <p className="mt-1.5 text-xs text-neutral-500 line-clamp-1 italic">&ldquo;{topRisk.quote}&rdquo;</p>}
-            {!topRisk && topProduct && <p className="mt-1.5 text-xs text-neutral-500 line-clamp-1">{topProduct.title}</p>}
+            {topRisk && (
+              <p className="mt-1.5 text-xs text-neutral-400 line-clamp-1 italic leading-relaxed">&ldquo;{topRisk.quote}&rdquo;</p>
+            )}
+            {!topRisk && topProduct && (
+              <p className="mt-1.5 text-xs text-neutral-400 line-clamp-1">{topProduct.title}</p>
+            )}
           </div>
+
+          {/* Health score with mini bar */}
           <div className="flex-shrink-0 text-right">
-            <p className={`text-2xl font-light ${risk.text}`}>{account.result.healthScore}</p>
-            <p className="text-xs text-neutral-400">/ 10</p>
+            <p className={`text-2xl font-light tabular-nums ${risk.text}`}>{score}</p>
+            <p className="text-[10px] text-neutral-400 mb-1.5">/ 10</p>
+            <div className="w-10 h-1 bg-neutral-100 rounded-full overflow-hidden ml-auto">
+              <div
+                className={`h-full rounded-full ${scoreBarColor}`}
+                style={{ width: `${(score / 10) * 100}%` }}
+              />
+            </div>
           </div>
         </div>
+
         <div className="mt-3 flex items-center gap-3 text-xs text-neutral-400 border-t border-neutral-100 pt-3 flex-wrap">
-          <span>{account.result.stats?.messageCount ?? "?"} messages</span>
-          <span>·</span>
+          <span>{account.result.stats?.messageCount ?? "?"} msg</span>
+          <span className="text-neutral-200">·</span>
           <span>{account.result.riskSignals?.length ?? 0} risk signals</span>
-          <span>·</span>
+          <span className="text-neutral-200">·</span>
           <span>{timeAgo(account.updatedAt ?? account.analyzedAt)}</span>
-          {account.context?.industry && <><span>·</span><span>{account.context.industry}</span></>}
+          {account.context?.industry && (
+            <><span className="text-neutral-200">·</span><span className="capitalize">{account.context.industry}</span></>
+          )}
         </div>
       </Link>
+
       {confirmingDelete ? (
         <div className="px-5 py-3 bg-red-50 border-t border-red-200 flex items-center justify-between gap-3">
           <p className="text-xs text-red-700">Remove this account?</p>
@@ -1115,9 +1146,14 @@ function AccountCard({ account, onDelete, confirmingDelete, onConfirmDelete, onC
         <div className="px-5 py-2 bg-neutral-50 border-t border-neutral-100 flex items-center justify-between">
           <div className="flex items-center gap-1.5 text-xs text-neutral-400">
             <WhatsAppIcon size={10} className="text-neutral-300" />
-            <span>{account.fileName}</span>
+            <span className="truncate max-w-[160px]">{account.fileName}</span>
           </div>
-          <button onClick={(e) => { e.preventDefault(); onDelete() }} className="text-xs text-neutral-300 hover:text-red-500 transition-colors">Remove</button>
+          <button
+            onClick={(e) => { e.preventDefault(); onDelete() }}
+            className="text-xs text-neutral-300 hover:text-red-500 transition-colors"
+          >
+            Remove
+          </button>
         </div>
       )}
     </div>
@@ -1166,72 +1202,148 @@ function CrossAccountSignals({ signals, accountCount }: { signals: ReturnType<ty
   )
 }
 
-// ─── ROI Calculator ────────────────────────────────────────────────────────────
+// ─── Revenue at Risk ──────────────────────────────────────────────────────────
 
-function RoiCalculator({ atRiskCount }: { atRiskCount: number }) {
+const ACV_PRESETS = [
+  { label: "$5k", value: 5000 },
+  { label: "$10k", value: 10000 },
+  { label: "$25k", value: 25000 },
+  { label: "$50k", value: 50000 },
+]
+
+function RevenueAtRisk({ atRiskCount, topAccountId, topAccountName }: {
+  atRiskCount: number
+  topAccountId?: string
+  topAccountName?: string
+}) {
   const [acv, setAcv] = useState(10000)
-  const [open, setOpen] = useState(false)
+  const [customAcv, setCustomAcv] = useState("")
+  const [showCustom, setShowCustom] = useState(false)
 
-  const atRiskMrr = Math.round((atRiskCount * acv) / 12)
-  const earlyDetectionSave = Math.round(atRiskMrr * 0.40)
-  const reactiveSave = Math.round(atRiskMrr * 0.10)
-  const missedValue = earlyDetectionSave - reactiveSave
+  const effectiveAcv = showCustom ? (parseInt(customAcv.replace(/\D/g, "")) || 0) : acv
+  const atRiskArr = atRiskCount * effectiveAcv
+  const earlyRecovery = Math.round(atRiskArr * 0.40)
+  const reactiveRecovery = Math.round(atRiskArr * 0.10)
+  const opportunityCost = earlyRecovery - reactiveRecovery
+  const earlyPct = Math.round((earlyRecovery / atRiskArr) * 100)
+  const reactivePct = Math.round((reactiveRecovery / atRiskArr) * 100)
 
   return (
-    <div className="bg-red-50 border border-red-200 rounded-lg overflow-hidden">
-      <button
-        onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between px-4 py-3 hover:bg-red-100/50 transition-colors text-left"
-      >
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-          <span className="text-xs font-semibold text-red-800">
-            {atRiskCount} account{atRiskCount > 1 ? "s" : ""} at high risk
+    <div className="rounded-xl border border-neutral-200 bg-white overflow-hidden shadow-sm">
+      {/* Header bar */}
+      <div className="flex items-center justify-between px-5 py-3.5 border-b border-neutral-100 bg-neutral-900">
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-2 w-2 relative">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
           </span>
-          <span className="text-xs text-red-600 hidden sm:inline">
-            — calculate your at-risk MRR
+          <span className="text-sm font-semibold text-white">
+            {atRiskCount} account{atRiskCount !== 1 ? "s" : ""} at risk
           </span>
+          <span className="hidden sm:inline text-xs text-neutral-400">— revenue exposure below</span>
         </div>
-        <svg className={`w-4 h-4 text-red-500 transition-transform ${open ? "rotate-180" : ""}`} viewBox="0 0 16 16" fill="none">
-          <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </button>
+        {topAccountId && (
+          <Link
+            href={`/concept/account/${topAccountId}`}
+            className="text-xs text-neutral-300 hover:text-white transition-colors font-medium flex items-center gap-1"
+          >
+            Act on {topAccountName ?? "top risk"}
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          </Link>
+        )}
+      </div>
 
-      {open && (
-        <div className="px-4 pb-4 pt-1 border-t border-red-200/60">
-          <div className="flex items-center gap-3 mb-4 flex-wrap">
-            <span className="text-xs text-red-700">Average contract value (ACV)</span>
+      <div className="px-5 py-4">
+        {/* ACV selector */}
+        <div className="flex items-center gap-2 mb-4 flex-wrap">
+          <span className="text-xs text-neutral-500 font-medium mr-1">ACV:</span>
+          {ACV_PRESETS.map((p) => (
+            <button
+              key={p.value}
+              onClick={() => { setAcv(p.value); setShowCustom(false) }}
+              className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-all duration-100 ${
+                !showCustom && acv === p.value
+                  ? "bg-neutral-900 text-white border-neutral-900"
+                  : "border-neutral-200 text-neutral-500 hover:border-neutral-400 hover:text-neutral-700"
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+          <button
+            onClick={() => setShowCustom(true)}
+            className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-all duration-100 ${
+              showCustom
+                ? "bg-neutral-900 text-white border-neutral-900"
+                : "border-neutral-200 text-neutral-500 hover:border-neutral-400"
+            }`}
+          >
+            Custom
+          </button>
+          {showCustom && (
             <div className="flex items-center gap-1">
-              <span className="text-xs text-red-600">$</span>
+              <span className="text-xs text-neutral-400">$</span>
               <input
-                type="number"
-                value={acv}
-                onChange={(e) => setAcv(Math.max(0, Number(e.target.value)))}
-                className="w-24 text-xs border border-red-200 rounded px-2 py-1 bg-white text-red-900 focus:outline-none focus:border-red-400"
-                step={1000}
+                autoFocus
+                type="text"
+                value={customAcv}
+                onChange={(e) => setCustomAcv(e.target.value.replace(/\D/g, ""))}
+                placeholder="Enter ACV"
+                className="w-24 text-xs border border-neutral-300 rounded-lg px-2 py-1 focus:outline-none focus:border-neutral-500 text-neutral-700"
               />
-              <span className="text-xs text-red-600">/year</span>
+              <span className="text-xs text-neutral-400">/yr</span>
             </div>
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div className="bg-white border border-red-100 rounded-lg p-3 text-center">
-              <p className="text-xl font-semibold text-red-600">${atRiskMrr.toLocaleString()}</p>
-              <p className="text-xs text-red-500 mt-0.5">at-risk MRR</p>
-            </div>
-            <div className="bg-white border border-emerald-100 rounded-lg p-3 text-center">
-              <p className="text-xl font-semibold text-emerald-600">+${earlyDetectionSave.toLocaleString()}</p>
-              <p className="text-xs text-emerald-500 mt-0.5">saved with early signal</p>
-            </div>
-            <div className="bg-white border border-neutral-100 rounded-lg p-3 text-center">
-              <p className="text-xl font-semibold text-neutral-500">+${reactiveSave.toLocaleString()}</p>
-              <p className="text-xs text-neutral-400 mt-0.5">saved if you wait</p>
-            </div>
-          </div>
-          <p className="text-xs text-red-700 mt-3 leading-relaxed">
-            Acting on these signals now vs. waiting = <strong>${missedValue.toLocaleString()}/month</strong> in recoverable churn. Early detection saves 40% of at-risk accounts; reactive saves under 10%.
-          </p>
+          )}
         </div>
-      )}
+
+        {/* Primary metric */}
+        <div className="flex items-end justify-between gap-4 mb-4">
+          <div>
+            <p className="text-3xl font-light text-neutral-900 tabular-nums">
+              ${atRiskArr.toLocaleString()}
+            </p>
+            <p className="text-xs text-neutral-400 mt-0.5">ARR at risk across {atRiskCount} account{atRiskCount !== 1 ? "s" : ""}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-xl font-semibold text-emerald-600 tabular-nums">
+              +${opportunityCost.toLocaleString()}
+            </p>
+            <p className="text-xs text-neutral-400 mt-0.5">ARR saved by acting now</p>
+          </div>
+        </div>
+
+        {/* Recovery comparison bar */}
+        <div className="space-y-2.5 mb-4">
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-medium text-neutral-700">Act on signals now</span>
+              <span className="text-xs font-semibold text-emerald-600">${earlyRecovery.toLocaleString()} recovered · {earlyPct}%</span>
+            </div>
+            <div className="h-2 bg-neutral-100 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                style={{ width: `${earlyPct}%` }}
+              />
+            </div>
+          </div>
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-neutral-400">Wait and react</span>
+              <span className="text-xs text-neutral-400">${reactiveRecovery.toLocaleString()} recovered · {reactivePct}%</span>
+            </div>
+            <div className="h-2 bg-neutral-100 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-neutral-300 rounded-full transition-all duration-500"
+                style={{ width: `${reactivePct}%` }}
+              />
+            </div>
+          </div>
+        </div>
+
+        <p className="text-xs text-neutral-400 leading-relaxed">
+          Based on industry benchmarks: early signal detection recovers ~40% of at-risk ARR; reactive saves ~10%.
+        </p>
+      </div>
     </div>
   )
 }
