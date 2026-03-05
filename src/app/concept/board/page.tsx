@@ -203,12 +203,12 @@ export default function BoardPage() {
             <button
               key={f.key}
               onClick={() => setFilter(f.key)}
-              className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors ${
-                filter === f.key ? f.active : "bg-white text-neutral-500 border-neutral-200 hover:border-neutral-300"
+              className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border transition-all ${
+                filter === f.key ? f.active : "bg-white text-neutral-500 border-neutral-200 hover:border-neutral-300 hover:text-neutral-700"
               }`}
             >
               {f.label}
-              <span className={`text-xs px-1.5 py-0.5 rounded-full font-semibold ${filter === f.key ? "bg-white/20" : "bg-neutral-100 text-neutral-600"}`}>{f.count}</span>
+              <span className={`text-[11px] min-w-[18px] text-center px-1 py-0.5 rounded-md font-semibold tabular-nums ${filter === f.key ? "bg-black/10" : "bg-neutral-100 text-neutral-500"}`}>{f.count}</span>
             </button>
           ))}
         </div>
@@ -218,18 +218,21 @@ export default function BoardPage() {
             <div className="w-5 h-5 border-2 border-neutral-300 border-t-neutral-900 rounded-full animate-spin" />
           </div>
         ) : filtered.length === 0 ? (
-          <div className="bg-white border border-neutral-200 rounded-lg py-16 text-center">
+          <div className="bg-white border border-neutral-200 rounded-xl py-16 text-center">
             {filter === "needs_action" ? (
               <>
-                <p className="text-2xl mb-2">All clear</p>
-                <p className="text-sm text-neutral-400">No open signals. Every signal has been addressed.</p>
+                <div className="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center mx-auto mb-3">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><polyline points="2 8 6 12 14 4" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </div>
+                <p className="text-sm font-semibold text-neutral-800 mb-1">All clear</p>
+                <p className="text-xs text-neutral-400">Every signal has been addressed.</p>
               </>
             ) : (
               <p className="text-sm text-neutral-400">No signals in this view.</p>
             )}
           </div>
         ) : (
-          <div className="bg-white border border-neutral-200 rounded-lg overflow-hidden">
+          <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
             <div className="divide-y divide-neutral-100">
               {filtered.map((s) => (
                 <BoardSignalRow
@@ -297,7 +300,7 @@ function BoardSignalRow({
   }
 
   return (
-    <div className={`px-4 sm:px-5 py-4 ${status === "done" || status === "dismissed" ? "opacity-60" : ""}`}>
+    <div className={`px-4 sm:px-5 py-4 transition-colors hover:bg-neutral-50/50 ${status === "done" || status === "dismissed" ? "opacity-50" : ""}`}>
       <div className="flex items-start gap-3">
         {/* Account risk dot */}
         <div className="flex-shrink-0 mt-1.5">

@@ -1051,6 +1051,7 @@ function ChatPanel({ account, workspace }: { account: StoredAccount; workspace: 
           question: q,
           accountMeta: buildAccountMeta(),
           workspace,
+          signalActions: account.signalActions ?? null,
         }),
       })
 

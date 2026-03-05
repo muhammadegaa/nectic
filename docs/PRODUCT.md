@@ -448,6 +448,124 @@ Every feature decision should be answerable with: does this help a Head of CS de
 
 ---
 
+## Agentic system design — context window, temporal awareness, and memory
+
+> Written March 2026. Framework for future build decisions.
+
+### The context window model
+
+Every Nectic analysis and chat is built on a context window containing four layers:
+
+| Layer | Source | Updated by | Staleness risk |
+|---|---|---|---|
+| Product context | Workspace fields | PM manually | High — quarter boundaries |
+| Account state | Signal analysis result | Each analysis run | Medium — new data needed |
+| PM decisions | Signal actions (in_progress / done) | PM on signal board | Low — tracked per-action |
+| Conversation | WhatsApp export | PM on re-analysis | High — needs fresh uploads |
+
+**What's built:**
+- All four layers are injected into the reanalysis prompt ✅
+- Workspace and signal actions are injected into the account chat ✅
+- Staleness detection (quarter boundary check) alerts the PM on the roadmapFocus field ✅
+
+**Gap: chat missing signal actions was fixed (March 2026).** The chat API now passes the PM's prior signal decisions to the AI. This means: when a PM asks "what should I do next?", the AI knows what's already in-progress or done and won't re-suggest resolved issues.
+
+---
+
+### Temporal context — the Q1→Q2 problem
+
+**The job:** "When I move to a new quarter, Nectic should help me understand what's still unresolved from last quarter, not just re-surface stale signals as if they're new."
+
+**Current state (March 2026):**
+- The `roadmapFocus` field stores one quarter's roadmap. When the PM updates it, the old value is overwritten.
+- The AI has no memory that "mobile app" was Q1's priority and is now shipped.
+- The staleness nudge (>45 days / quarter boundary) prompts the PM to update, but doesn't preserve history.
+
+**Why we're NOT building roadmap versioning yet:**
+No user has completed a full quarter cycle on Nectic. Building history storage before a single user experiences the Q1→Q2 transition is feature factory. We'd be designing for an edge case we haven't observed. Build this when the first user says "it's Q2, I want to archive my Q1 roadmap."
+
+**Design for when we build it (Sprint N):**
+
+Extend `WorkspaceContext` in Firestore:
+```typescript
+interface WorkspaceContext {
+  // ... existing fields ...
+  roadmapHistory?: {
+    quarter: string        // "Q1 2026"
+    focus: string          // the roadmap text
+    archivedAt: string     // ISO timestamp
+    archiveReason?: string // "new quarter" | "major pivot" | "manual"
+  }[]
+}
+```
+
+UI: When the PM updates `roadmapFocus` and a quarter boundary is detected, show: "Archive Q1 roadmap before updating?" → on confirm, push current value to `roadmapHistory` array.
+
+AI usage: In the reanalysis prompt, inject:
+```
+PREVIOUS ROADMAP (Q1 2026, archived):
+[archived focus]
+CURRENT ROADMAP (Q2 2026):
+[current focus]
+```
+
+This lets the AI say: "This feature request was already in your Q1 roadmap — if it shipped, customers are still not satisfied. If it slipped, this is escalating priority."
+
+**Trigger to build:** First user complaint about stale roadmap context OR first enterprise customer asking for quarterly review features.
+
+---
+
+### Agentic memory loop — signal → action → outcome
+
+**The vision:** Nectic should detect: "You said you'd fix the login issue in January. You marked it in-progress. Re-analysis in March shows customers are still mentioning it. This is escalating — either the fix wasn't effective or it hasn't shipped."
+
+**What exists:**
+- `signalActions` per account: `{ status, note, updatedAt }` ✅
+- `buildSignalActionsBlock` injects prior decisions into reanalysis prompts ✅
+- Signal actions now injected into chat context ✅
+
+**What's missing for the full loop:**
+1. **Outcome tracking** — did the health score improve after the PM said "done"? We don't correlate action → outcome.
+2. **Cross-account pattern persistence** — if "login bug" is marked done in 3 accounts but still being complained about, Nectic doesn't know this.
+3. **Proactive nudges** — "You have 4 signals marked in-progress for >30 days — want to re-analyze those accounts?"
+
+**Why not building proactive nudges yet:**
+Requires a background job (cron/webhook), a notification surface (email, in-app), and a well-tuned algorithm to avoid noise. Building this before we have 10+ active users who've used signal actions consistently will produce a feature nobody uses. The trigger: first user says "I keep forgetting to check back on in-progress signals."
+
+**Design for proactive nudges (Sprint N+1):**
+- Vercel Cron job: runs weekly, queries all users' signal actions
+- For each user: find signals in `in_progress` status with `updatedAt` > 21 days old
+- Surface: in-app banner on dashboard next login — "3 signals you're working on haven't had a re-analysis in 30+ days. [Review]"
+- No email until product-market fit confirmed.
+
+---
+
+### Design system reference
+
+All `/concept` pages should use these primitives consistently:
+
+| Token | Value |
+|---|---|
+| Page background | `bg-neutral-50` |
+| Card | `bg-white border border-neutral-200 rounded-xl` |
+| Card hover | `transition-all hover:-translate-y-0.5 hover:shadow-md` (account cards) or `hover:bg-neutral-50/50` (list rows) |
+| Nav height | `h-12` |
+| Nav active | `text-neutral-900 font-semibold border-b-2 border-neutral-900 pb-0.5` |
+| Spinner | `w-5 h-5 border-2 border-neutral-300 border-t-neutral-900 rounded-full animate-spin` |
+| Page title | `text-xl font-semibold text-neutral-900` |
+| Subtitle | `text-sm text-neutral-500 mt-0.5` |
+| Risk: critical | `bg-red-500` / `text-red-700` |
+| Risk: high | `bg-orange-400` / `text-orange-700` |
+| Risk: medium | `bg-amber-400` / `text-amber-700` |
+| Risk: low | `bg-green-400` / `text-green-700` |
+| Max-width: narrow (workspace) | `max-w-2xl` |
+| Max-width: standard (accounts) | `max-w-4xl` |
+| Max-width: wide (board, account detail) | `max-w-5xl` / `max-w-6xl` |
+
+**Rule:** `rounded-xl` on all card containers. `rounded-lg` only for inline elements (input fields, buttons, tags).
+
+---
+
 ## Research appendix (LuminixAI, March 2026)
 
 Eight research reports were commissioned to validate the Nectic thesis. Summaries:

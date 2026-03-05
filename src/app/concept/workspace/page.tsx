@@ -69,6 +69,26 @@ const FIELDS: {
 
 type SaveStatus = "idle" | "saving" | "saved"
 
+type AutofillState =
+  | { phase: "idle" }
+  | { phase: "loading" }
+  | { phase: "review"; productDescription: string; featureAreas: string; source: string }
+  | { phase: "error"; message: string }
+
+function getQuarterLabel(date: Date): string {
+  const q = Math.floor(date.getMonth() / 3) + 1
+  return `Q${q} ${date.getFullYear()}`
+}
+
+function isRoadmapStale(updatedAt: string | undefined): boolean {
+  if (!updatedAt) return false
+  const updated = new Date(updatedAt)
+  const now = new Date()
+  const updatedQ = Math.floor(updated.getMonth() / 3)
+  const nowQ = Math.floor(now.getMonth() / 3)
+  return updated.getFullYear() < now.getFullYear() || (updated.getFullYear() === now.getFullYear() && updatedQ < nowQ)
+}
+
 export default function WorkspacePage() {
   const { user, loading: authLoading, signOut } = useAuth()
   const router = useRouter()
@@ -79,10 +99,13 @@ export default function WorkspacePage() {
     roadmapFocus: "",
     knownIssues: "",
   })
+  const [workspaceUpdatedAt, setWorkspaceUpdatedAt] = useState<string | undefined>()
   const [loading, setLoading] = useState(true)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle")
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const latestForm = useRef(form)
+  const [autofillUrl, setAutofillUrl] = useState("")
+  const [autofill, setAutofill] = useState<AutofillState>({ phase: "idle" })
 
   useEffect(() => {
     if (!authLoading && !user) router.replace("/concept/login")
@@ -99,9 +122,43 @@ export default function WorkspacePage() {
       }
       setForm(loaded)
       latestForm.current = loaded
+      setWorkspaceUpdatedAt(ws.updatedAt)
       setLoading(false)
     })
   }, [user])
+
+  const handleAutofill = async () => {
+    const url = autofillUrl.trim()
+    if (!url) return
+    setAutofill({ phase: "loading" })
+    try {
+      const res = await fetch("/api/workspace/autofill", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setAutofill({ phase: "error", message: data.error ?? "Auto-fill failed" })
+        return
+      }
+      if (!data.productDescription && !data.featureAreas) {
+        setAutofill({ phase: "error", message: "Couldn't extract product details. Try filling in manually." })
+        return
+      }
+      setAutofill({ phase: "review", productDescription: data.productDescription, featureAreas: data.featureAreas, source: data.source })
+    } catch {
+      setAutofill({ phase: "error", message: "Network error — please try again." })
+    }
+  }
+
+  const applyAutofill = () => {
+    if (autofill.phase !== "review") return
+    if (autofill.productDescription) handleChange("productDescription", autofill.productDescription)
+    if (autofill.featureAreas) handleChange("featureAreas", autofill.featureAreas)
+    setAutofill({ phase: "idle" })
+    setAutofillUrl("")
+  }
 
   const triggerSave = useCallback((nextForm: WorkspaceContext) => {
     if (!user) return
@@ -236,6 +293,58 @@ export default function WorkspacePage() {
                   All context loaded — your AI has full product awareness.
                 </p>
               )}
+              {completionPct < 100 && completionPct === 0 && (
+                <div className="mt-3 pt-3 border-t border-neutral-100">
+                  <p className="text-xs text-neutral-500 font-medium mb-2">Quick setup — auto-fill from your website</p>
+                  {autofill.phase === "idle" || autofill.phase === "error" ? (
+                    <div className="flex gap-2">
+                      <input
+                        type="url"
+                        value={autofillUrl}
+                        onChange={(e) => setAutofillUrl(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") handleAutofill() }}
+                        placeholder="https://yourproduct.com"
+                        className="flex-1 text-xs border border-neutral-200 rounded-lg px-3 py-2 text-neutral-700 placeholder:text-neutral-300 focus:outline-none focus:border-neutral-400 bg-white"
+                      />
+                      <button
+                        onClick={handleAutofill}
+                        disabled={!autofillUrl.trim()}
+                        className="text-xs font-medium px-3 py-2 bg-neutral-900 text-white rounded-lg hover:bg-neutral-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+                      >
+                        Auto-fill
+                      </button>
+                    </div>
+                  ) : autofill.phase === "loading" ? (
+                    <div className="flex items-center gap-2 text-xs text-neutral-400 py-1">
+                      <span className="w-3 h-3 border border-neutral-300 border-t-neutral-600 rounded-full animate-spin" />
+                      Fetching your site…
+                    </div>
+                  ) : autofill.phase === "review" ? (
+                    <div className="space-y-2">
+                      <p className="text-[11px] text-neutral-500">Extracted from <span className="font-medium text-neutral-700">{autofill.source}</span> — review before applying:</p>
+                      {autofill.productDescription && (
+                        <div className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+                          <p className="text-[10px] font-medium text-blue-600 mb-1">Product description</p>
+                          <p className="text-xs text-neutral-700 leading-relaxed">{autofill.productDescription}</p>
+                        </div>
+                      )}
+                      {autofill.featureAreas && (
+                        <div className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+                          <p className="text-[10px] font-medium text-blue-600 mb-1">Feature areas</p>
+                          <p className="text-xs text-neutral-700">{autofill.featureAreas}</p>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2 pt-1">
+                        <button onClick={applyAutofill} className="text-xs font-medium px-3 py-1.5 bg-neutral-900 text-white rounded-lg hover:bg-neutral-700 transition-colors">Apply suggestions</button>
+                        <button onClick={() => setAutofill({ phase: "idle" })} className="text-xs text-neutral-400 hover:text-neutral-600 transition-colors">Dismiss</button>
+                      </div>
+                    </div>
+                  ) : null}
+                  {autofill.phase === "error" && (
+                    <p className="text-xs text-red-500 mt-1.5">{autofill.message}</p>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -272,6 +381,18 @@ export default function WorkspacePage() {
                       <span className="truncate">{field.unlocks}</span>
                     </div>
                   </div>
+
+                  {/* Staleness nudge for roadmapFocus */}
+                  {field.key === "roadmapFocus" && isFilled && isRoadmapStale(workspaceUpdatedAt) && (
+                    <div className="mx-5 mt-0 mb-0 mt-3">
+                      <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-amber-500 mt-0.5 shrink-0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        <p className="text-xs text-amber-800 leading-relaxed">
+                          Last updated in <span className="font-semibold">{getQuarterLabel(new Date(workspaceUpdatedAt!))}</span>. A new quarter has started — is this roadmap still current?
+                        </p>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Textarea */}
                   <div className="px-5 pt-3 pb-4">

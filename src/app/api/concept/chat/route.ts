@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server"
 import type { AnalysisResult } from "@/app/api/concept/analyze/route"
+import { buildSignalActionsBlock, type SignalAction } from "@/lib/signal-utils"
 
 export const maxDuration = 60
 
@@ -23,7 +24,12 @@ interface WorkspaceContext {
   knownIssues?: string
 }
 
-const SYSTEM_PROMPT = (analysis: AnalysisResult, meta: AccountMeta, workspace?: WorkspaceContext) => {
+const SYSTEM_PROMPT = (
+  analysis: AnalysisResult,
+  meta: AccountMeta,
+  workspace?: WorkspaceContext,
+  signalActions?: Record<string, SignalAction>
+) => {
   const qualityWarning = analysis.analysisQuality?.confidence === "low"
     ? `\n⚠️ ANALYSIS QUALITY: Low confidence (${analysis.analysisQuality.caveats.join("; ")}). Be explicit about this when answering — do not overstate certainty.`
     : analysis.analysisQuality?.confidence === "medium"
@@ -45,12 +51,17 @@ const SYSTEM_PROMPT = (analysis: AnalysisResult, meta: AccountMeta, workspace?: 
     workspace.knownIssues && `Known issues: ${workspace.knownIssues}`,
   ].filter(Boolean).join("\n") : ""
 
+  const actionsBlock = signalActions
+    ? buildSignalActionsBlock(signalActions, analysis)
+    : ""
+
   return `You are Nectic, an agentic PM co-pilot embedded in a B2B SaaS customer intelligence tool. You are talking to a product manager or CS manager who is trying to understand and act on a specific customer account.
 
 ACCOUNT DATA:
 ${JSON.stringify(analysis, null, 2)}
 ${metaBlock ? `\nACCOUNT META:\n${metaBlock}` : ""}
 ${workspaceBlock ? `\nWORKSPACE CONTEXT:\n${workspaceBlock}` : ""}
+${actionsBlock ? `\nYOUR PRIOR SIGNAL ACTIONS (what the PM has already decided):\n${actionsBlock}\nReference these when suggesting next steps. Do not re-suggest actions already marked in_progress or done. If a signal is in_progress, ask whether it has been resolved. If done, acknowledge it and focus on remaining open issues.` : ""}
 ${qualityWarning}
 
 ## Your role and behavior
@@ -91,12 +102,13 @@ Do not pretend certainty you don't have. If signals in the analysis are thin (fe
 
 export async function POST(req: NextRequest) {
   try {
-    const { analysis, messages, question, accountMeta = {}, workspace } = await req.json() as {
+    const { analysis, messages, question, accountMeta = {}, workspace, signalActions } = await req.json() as {
       analysis: AnalysisResult
       messages: ChatMessage[]
       question: string
       accountMeta?: Partial<AccountMeta>
       workspace?: WorkspaceContext
+      signalActions?: Record<string, SignalAction>
     }
 
     if (!question || !analysis) {
@@ -131,7 +143,7 @@ export async function POST(req: NextRequest) {
         temperature: 0.3,
         stream: true,
         messages: [
-          { role: "system", content: SYSTEM_PROMPT(analysis, meta, workspace) },
+          { role: "system", content: SYSTEM_PROMPT(analysis, meta, workspace, signalActions ?? undefined) },
           ...chatMessages,
         ],
       }),
