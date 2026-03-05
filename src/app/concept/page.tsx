@@ -1222,7 +1222,7 @@ function EmptyState({ onConnect, userName, hasWati, onWatiImport }: { onConnect:
       )}
       <button onClick={onConnect} className={`${hasWati ? "mt-3" : "mt-8"} flex items-center gap-2 ${hasWati ? "border border-neutral-200 text-neutral-700 hover:bg-neutral-50" : "bg-neutral-900 text-white hover:bg-neutral-700"} text-sm font-semibold px-6 py-3 rounded-lg transition-colors mx-auto`}>
         <WhatsAppIcon size={14} className={hasWati ? "text-neutral-500" : "text-white"} />
-        Upload .txt export manually
+        {hasWati ? "Upload .txt export manually" : "Connect first account"}
       </button>
       <p className="mt-4 text-xs text-neutral-400">Works with .txt and .zip exports · Bahasa Indonesia + English · Processed in memory only</p>
     </div>
