@@ -9,6 +9,7 @@ import type { Components } from "react-markdown"
 import LogoIcon from "@/components/logo-icon"
 import { useAuth } from "@/contexts/auth-context"
 import { getAccount, deleteAccount, updateAccount, prefillFromContactBook, mergeContactBook, saveSignalAction, signalKey, getWorkspace, type StoredAccount, type ParticipantRole, type ParticipantRoles, type SignalAction, type SignalActionStatus, type WorkspaceContext } from "@/lib/concept-firestore"
+import { trackEvent } from "@/lib/posthog"
 import { parseWhatsAppFile, formatForPrompt, type WaParsed } from "@/lib/whatsapp-parser"
 import type { AnalysisResult } from "@/app/api/concept/analyze/route"
 
@@ -241,6 +242,7 @@ export default function AccountPage() {
 
   const runReanalysis = async () => {
     if (!user || !account || !reanalyzeParsed || !reanalyzeFile) return
+    trackEvent("reanalysis_triggered", { accountId: id, riskLevel: account.result.riskLevel })
     setReanalyzeRunning(true)
     try {
       const conversation = formatForPrompt(reanalyzeParsed)
@@ -926,6 +928,7 @@ function SignalActionControl({
   const handleStatusChange = async (next: SignalActionStatus) => {
     setStatus(next)
     setSaving(true)
+    trackEvent("signal_actioned", { status: next })
     try {
       await onUpdate(key, { status: next, note: note || undefined, updatedAt: new Date().toISOString() })
       if (next !== "open") setExpanded(true)
@@ -1029,6 +1032,10 @@ function ChatPanel({ account, workspace }: { account: StoredAccount; workspace: 
     const q = question.trim()
     setInput("")
     setFollowUps([])
+    trackEvent("chat_message_sent", {
+      accountRiskLevel: analysis.riskLevel,
+      isFollowUp: messages.length > 0,
+    })
     const newMessages: ChatMessage[] = [...messages, { role: "user", content: q }]
     setMessages(newMessages)
     setStreaming(true)
@@ -1259,6 +1266,7 @@ function BriefPanel({
     setGenerating(true)
     setContent("")
     setDone(false)
+    trackEvent("brief_generated", { signalType: signal.type, signalPriority: signal.priority, roadmapStatus: status })
 
     try {
       const res = await fetch("/api/concept/brief", {

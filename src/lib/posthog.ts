@@ -2,6 +2,7 @@
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let posthog: any = null
+let initialized = false
 
 async function getPostHog() {
   if (!process.env.NEXT_PUBLIC_POSTHOG_KEY) return null
@@ -18,13 +19,15 @@ async function getPostHog() {
 }
 
 export async function initPostHog() {
+  if (initialized) return
   const ph = await getPostHog()
-  if (!ph || ph.__loaded) return
+  if (!ph) return
   ph.init(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
     api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST ?? "https://app.posthog.com",
     capture_pageview: false,
     persistence: "localStorage",
   })
+  initialized = true
 }
 
 export async function trackEvent(event: string, properties?: Record<string, unknown>) {

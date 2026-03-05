@@ -21,6 +21,7 @@ import {
   type WorkspaceContext,
 } from "@/lib/concept-firestore"
 import type { AnalysisResult } from "@/app/api/concept/analyze/route"
+import { trackEvent, identifyUser } from "@/lib/posthog"
 
 type ConnectStage = "instructions" | "upload" | "ready" | "analyzing" | "error"
 
@@ -93,6 +94,7 @@ export default function ConceptPage() {
 
   useEffect(() => {
     if (!user) return
+    identifyUser(user.uid, { email: user.email ?? undefined, name: user.displayName ?? undefined })
     setLoadingAccounts(true)
     getAccounts(user.uid)
       .then(setAccounts)
@@ -151,6 +153,7 @@ export default function ConceptPage() {
         return
       }
       setParsed(p)
+      trackEvent("file_uploaded", { messageCount: p.messages.length, participants: p.participants.length })
 
       // Step 1: prefill known contacts from the contact book
       const prefilled = user
@@ -250,9 +253,15 @@ export default function ConceptPage() {
       await mergeContactBook(user.uid, participantRoles)
 
       await refreshAccounts()
+      trackEvent("analysis_completed", {
+        riskLevel: (data.result as AnalysisResult).riskLevel,
+        healthScore: (data.result as AnalysisResult).healthScore,
+        messageCount: parsed.totalMessages,
+      })
       closeConnect()
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Something went wrong"
+      trackEvent("analysis_failed", { error: message })
       setUploadError(message)
       setConnectStage("error")
     }
@@ -260,6 +269,7 @@ export default function ConceptPage() {
 
   const analyzeFromWati = async (conversation: string, participantRoles: ParticipantRoles, messageCount: number, contactName: string) => {
     if (!user) return
+    trackEvent("wati_import_attempted", { contactName })
     try {
       const res = await fetch("/api/concept/analyze", {
         method: "POST",
@@ -286,6 +296,10 @@ export default function ConceptPage() {
       })
       await mergeContactBook(user.uid, participantRoles)
       await refreshAccounts()
+      trackEvent("wati_import_completed", {
+        riskLevel: (data.result as AnalysisResult).riskLevel,
+        healthScore: (data.result as AnalysisResult).healthScore,
+      })
     } catch (err) {
       throw err
     }

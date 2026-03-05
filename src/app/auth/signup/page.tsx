@@ -11,6 +11,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { ArrowRight, Loader2 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { calculatePasswordStrength, getPasswordStrengthColor, getPasswordStrengthLabel } from "@/lib/password-utils"
+import { trackEvent } from "@/lib/posthog"
 
 export default function SignupPage() {
   const [email, setEmail] = useState("")
@@ -87,6 +88,7 @@ export default function SignupPage() {
 
     try {
       await signUpWithEmail(email, password)
+      trackEvent("signup_completed", { method: "email" })
       toast({
         title: "Account created!",
         description: "Welcome to Nectic. Your account has been created successfully.",
@@ -108,6 +110,7 @@ export default function SignupPage() {
 
     try {
       await signInWithGoogle()
+      trackEvent("signup_completed", { method: "google" })
       toast({
         title: "Welcome!",
         description: "Your account has been created successfully.",

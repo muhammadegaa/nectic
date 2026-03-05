@@ -1,10 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import LogoIcon from "@/components/logo-icon"
 import { useAuth } from "@/contexts/auth-context"
+import { trackEvent } from "@/lib/posthog"
 
 const PLANS = [
   {
@@ -77,6 +78,10 @@ export default function PricingPage() {
   const router = useRouter()
   const { user } = useAuth()
 
+  useEffect(() => {
+    trackEvent("pricing_page_viewed")
+  }, [])
+
   async function handleSelect(planId: string) {
     if (planId === "free") {
       router.push(user ? "/concept" : "/auth/signup")
@@ -89,6 +94,7 @@ export default function PricingPage() {
     }
 
     setLoading(planId)
+    trackEvent("checkout_started", { plan: planId, billing })
     try {
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",

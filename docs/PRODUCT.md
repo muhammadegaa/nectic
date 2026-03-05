@@ -21,12 +21,14 @@ B2B SaaS teams in SEA manage customer relationships on WhatsApp, but have no way
 In SEA B2B SaaS, WhatsApp IS the CRM. Customer success, sales, and product feedback all happen in WhatsApp group chats. Product managers and CS leads receive a filtered, delayed version of what customers actually said — because sales reps decide what gets escalated.
 
 The result:
+
 - Churn signals surface weeks after the save window closes
 - Product roadmap decisions are based on escalated anecdotes, not actual customer language
 - CS teams waste hours reading chat history to understand account health
 - Feature requests representing real pain get lost between weekly standups
 
 **Why this is worse in SEA:**
+
 - Indonesian B2B SaaS retention: 62–70% (vs. 90% global median)
 - Monthly churn at Series A: 5.7% (vs. 3.5% global)
 - 91% of B2B customer communication in Indonesia happens on WhatsApp
@@ -34,6 +36,7 @@ The result:
 
 **The cost of a one-month detection delay:**
 At 5% monthly churn, 200 accounts, $10K ACV:
+
 - $100K/month at risk
 - Save rate drops from 40% (early detection) to under 10% (post-notice)
 - One missed month = $40K in preventable churn
@@ -48,6 +51,7 @@ At 5% monthly churn, 200 accounts, $10K ACV:
 > Series B Indonesian or Singaporean B2B SaaS company. 100–300 enterprise accounts. Tracking account health in spreadsheets or HubSpot comments. WhatsApp groups are the primary customer communication channel. Head of Customer Success is the champion; CRO or CEO is the approver.
 
 **Profile:**
+
 - ARR: $3–15M
 - Team: 50–150 people, CS team of 4–8
 - ACV: $8–40K
@@ -56,6 +60,7 @@ At 5% monthly churn, 200 accounts, $10K ACV:
 - Current solution: manual WhatsApp reading, weekly syncs, gut feel
 
 **Buyer persona — "Rina Tan":**
+
 - Head of CS, 35–42, Series B Singapore-HQ B2B SaaS (HR tech, fintech, vertical SaaS)
 - Reports to CRO or CEO. Owns NRR target 110%+. Manages 4–7 CSMs.
 - Controls tooling budget $20–60K/year (7–10% of ARR, post-sales allocation)
@@ -64,6 +69,7 @@ At 5% monthly churn, 200 accounts, $10K ACV:
 - Pain in her own words: "I only hear about unhappy accounts through sales, and by then it's already late"
 
 **Secondary buyer (expansion path):**
+
 - VP Product at same company. Pain: "I don't know what customers are actually complaining about versus what sales tells me." Separate budget from CS stack.
 
 ---
@@ -83,12 +89,14 @@ Users export WhatsApp group chats as `.txt` or `.zip` files and upload them. The
 7. Provides PM agent chat for follow-up questions about the account
 
 **Technical stack:**
+
 - Next.js 14, TypeScript, Tailwind CSS
 - Firebase / Firestore (auth, data persistence)
 - OpenRouter → Claude Haiku 4.5 (analysis, chat) / Claude Sonnet 4.6 (brief generation)
 - WhatsApp `.txt`/`.zip` parser (client-side, 250 message cap)
 
 **Current limitations:**
+
 - 250 message cap truncates long group histories
 - Manual upload is not a sustainable production data ingestion method
 - No pricing or payment flow — cannot convert to paid
@@ -114,14 +122,16 @@ Meta's January 2026 policy explicitly bans AI providers from using the Business 
 
 ### What exists
 
-| Tool | What it does | Why it is not Nectic |
-|------|-------------|---------------------|
-| Wati ($35M Series B) | WhatsApp chatbots, broadcast analytics, sales intent tagging | Sales automation. No PM use case. No churn detection. |
-| Mekari Qontak (Mekari acquisition, Indonesia) | WhatsApp CRM, CSAT analytics, ticket escalation | Customer support ops. Potential BSP partner, not a competitor. |
-| Respond.io ($8.8M, Malaysia) | Multi-channel AI routing, lead qualification | Sales and support. No product signals. No churn intelligence. |
-| SleekFlow ($15M, Singapore) | AI lead nurture, campaign ROI | Marketing automation. Not CS or PM tooling. |
-| Gainsight / ChurnZero | CS platform, health scoring, playbooks | US pricing ($2.5K–10K+/month). No WhatsApp. No SEA. |
-| Gong / Chorus | Call recording and signal extraction | Call-focused. No WhatsApp. No SEA presence. |
+
+| Tool                                          | What it does                                                 | Why it is not Nectic                                           |
+| --------------------------------------------- | ------------------------------------------------------------ | -------------------------------------------------------------- |
+| Wati ($35M Series B)                          | WhatsApp chatbots, broadcast analytics, sales intent tagging | Sales automation. No PM use case. No churn detection.          |
+| Mekari Qontak (Mekari acquisition, Indonesia) | WhatsApp CRM, CSAT analytics, ticket escalation              | Customer support ops. Potential BSP partner, not a competitor. |
+| Respond.io ($8.8M, Malaysia)                  | Multi-channel AI routing, lead qualification                 | Sales and support. No product signals. No churn intelligence.  |
+| SleekFlow ($15M, Singapore)                   | AI lead nurture, campaign ROI                                | Marketing automation. Not CS or PM tooling.                    |
+| Gainsight / ChurnZero                         | CS platform, health scoring, playbooks                       | US pricing ($2.5K–10K+/month). No WhatsApp. No SEA.            |
+| Gong / Chorus                                 | Call recording and signal extraction                         | Call-focused. No WhatsApp. No SEA presence.                    |
+
 
 **The gap (confirmed by LuminixAI research, March 2026):** No tool extracts product signals and churn indicators from WhatsApp group conversations specifically for B2B SaaS PM and CS teams. This gap is real and uncontested across all SEA markets.
 
@@ -139,19 +149,22 @@ Meta's January 2026 policy explicitly bans AI providers from using the Business 
 
 **Structure:** Per-account, not per-seat. SEA teams share logins; per-seat pricing gets circumvented and creates resentment. Per-account pricing scales directly with the value delivered.
 
-| Tier | Price | Accounts | Notes |
-|------|-------|----------|-------|
-| Free | $0 | 3 accounts | No credit card. Hook for trials. |
-| Starter | $79/month | 15 accounts | Indonesia accessible (~IDR 1.3M/month) |
-| Growth | $199/month | 50 accounts | Singapore mid-market sweet spot |
-| Pro | $499/month | Unlimited | BSP integration, priority support |
-| Annual | 20% discount | — | Lock ARR, incentivize commitment |
+
+| Tier    | Price        | Accounts    | Notes                                  |
+| ------- | ------------ | ----------- | -------------------------------------- |
+| Free    | $0           | 3 accounts  | No credit card. Hook for trials.       |
+| Starter | $79/month    | 15 accounts | Indonesia accessible (~IDR 1.3M/month) |
+| Growth  | $199/month   | 50 accounts | Singapore mid-market sweet spot        |
+| Pro     | $499/month   | Unlimited   | BSP integration, priority support      |
+| Annual  | 20% discount | —           | Lock ARR, incentivize commitment       |
+
 
 **PPP localization:** Indonesia pricing quoted in IDR. Singapore in SGD. Annual billing pushed from day 1.
 
 **Sales motion:** Freemium self-serve for Starter. Growth and Pro require a 30-minute demo call (used to qualify fit, understand their WhatsApp setup, and introduce BSP integration path).
 
 **Revenue targets:**
+
 - Weeks 1–8: 3 paying customers ($79–199/month) = proof of willingness to pay
 - Month 3–6: 10 paying customers = $1–2K MRR, Antler pitch ready
 - Month 6–12: 30 paying customers via BSP partner distribution channel
@@ -206,6 +219,7 @@ We are not a WhatsApp chatbot. We are not a CRM. We are the intelligence layer t
 TAM: $2.31B CRM market in SEA, underserved by US tools never designed for messaging-first markets. Expanding to any market where WhatsApp or messaging is the dominant B2B communication channel — MENA, LATAM, India.
 
 **Traction signals to have before pitch:**
+
 - 3+ paying customers at any price point
 - 10+ accounts analyzed across different companies
 - 1 testimonial from a Head of CS or VP Product
@@ -253,12 +267,14 @@ Meta's multi-device update replaced participant phone numbers with @lid IDs in g
 Fully enforced since October 2024. Classifies WhatsApp group data as personal data. Requires explicit consent before processing. DPIAs required for high-risk activities.
 
 **Current status:**
+
 - Explicit consent checkbox implemented at upload (mandatory)
 - Privacy policy at `/privacy` covering UU PDP obligations
 - Data minimization: only conversation text processed, no phone numbers stored
 - Cross-border transfer disclosed: OpenRouter processes data on US servers, covered by user consent
 
 **Outstanding — must complete before enterprise sales:**
+
 - Right to erasure: no UI for users to delete their data — must build
 - Data retention: no auto-delete schedule — must implement (recommended: 90 days raw signals, 12 months summarized insights) and disclose
 - DPIA: must conduct and document formal Data Protection Impact Assessment before first enterprise contract
@@ -274,6 +290,7 @@ PDPA treats WhatsApp group chats as personal data disclosures. Purpose limitatio
 WhatsApp Business Terms prohibit sharing exported data with unauthorized third parties. January 2026 AI Provider restriction bans general-purpose AI on the Business API.
 
 **Nectic's position:**
+
 - Current MVP (user-initiated exports): Compliant
 - Phase 2 (BSP-mediated API): Compliant
 - Direct Business API integration: Not permitted — architectural decision made accordingly
@@ -296,14 +313,16 @@ A DPA template is available for enterprise customers. Required for any contract 
 
 ### Known gaps — must fix before enterprise sales
 
-| Gap | Risk | Priority |
-|-----|------|----------|
-| No rate limiting on API routes | Abuse and cost explosion | Critical |
-| No security headers (CSP, HSTS) | XSS vulnerability | Critical |
-| Right to erasure UI missing | UU PDP violation risk | Critical |
-| Data retention auto-delete missing | UU PDP violation risk | Critical |
-| No audit logging | Compliance gap | Medium |
-| Shared links have no expiry | Data leakage risk | Medium |
+
+| Gap                                | Risk                     | Priority |
+| ---------------------------------- | ------------------------ | -------- |
+| No rate limiting on API routes     | Abuse and cost explosion | Critical |
+| No security headers (CSP, HSTS)    | XSS vulnerability        | Critical |
+| Right to erasure UI missing        | UU PDP violation risk    | Critical |
+| Data retention auto-delete missing | UU PDP violation risk    | Critical |
+| No audit logging                   | Compliance gap           | Medium   |
+| Shared links have no expiry        | Data leakage risk        | Medium   |
+
 
 ---
 
@@ -311,41 +330,45 @@ A DPA template is available for enterprise customers. Required for any contract 
 
 ### Live
 
-| Feature | Notes |
-|---------|-------|
-| WhatsApp `.txt`/`.zip` upload and parsing | 250 message cap; production ingestion via BSP |
-| Signal extraction (churn, features, complaints, relationship health) | Claude Haiku 4.5; confidence scores + caveats |
-| Account context | Users add product/customer metadata to enrich analysis |
-| Workspace context | Company-wide product, feature areas, and roadmap context injected into all analyses |
-| Participant role detection | AI auto-classification + global contact book per user |
-| Re-analysis with signal action feedback | Previous tracked actions feed into re-analysis prompt |
-| Analysis quality indicators | Confidence score, caveats, identified data gaps |
-| Signal status tracking | Open/in-progress/done/dismissed per signal, per account |
-| Signal notes | Freetext notes attached to any signal |
-| Cross-account signal board | Triage view across all accounts |
-| Signal actions feed back into re-analysis | Closes the product intelligence loop |
-| PM agent chat | Claude Haiku 4.5, streaming, full account context |
-| Dynamic starter prompts | Generated from analysis context, not static |
-| Follow-up suggestions after each message | Post-message contextual prompts |
-| Feature brief generation | Claude Sonnet 4.6; structured PM output |
-| Brief context inputs | Roadmap status and notes influence brief quality |
-| Shareable read-only links | Public URLs for analysis reports |
-| Mobile-responsive UI | Bottom nav bar, mobile tab switcher for chat vs report |
-| Explicit consent mechanism | Required checkbox at upload |
-| Privacy policy | Covers UU PDP, PDPA, GDPR |
+
+| Feature                                                              | Notes                                                                               |
+| -------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| WhatsApp `.txt`/`.zip` upload and parsing                            | 250 message cap; production ingestion via BSP                                       |
+| Signal extraction (churn, features, complaints, relationship health) | Claude Haiku 4.5; confidence scores + caveats                                       |
+| Account context                                                      | Users add product/customer metadata to enrich analysis                              |
+| Workspace context                                                    | Company-wide product, feature areas, and roadmap context injected into all analyses |
+| Participant role detection                                           | AI auto-classification + global contact book per user                               |
+| Re-analysis with signal action feedback                              | Previous tracked actions feed into re-analysis prompt                               |
+| Analysis quality indicators                                          | Confidence score, caveats, identified data gaps                                     |
+| Signal status tracking                                               | Open/in-progress/done/dismissed per signal, per account                             |
+| Signal notes                                                         | Freetext notes attached to any signal                                               |
+| Cross-account signal board                                           | Triage view across all accounts                                                     |
+| Signal actions feed back into re-analysis                            | Closes the product intelligence loop                                                |
+| PM agent chat                                                        | Claude Haiku 4.5, streaming, full account context                                   |
+| Dynamic starter prompts                                              | Generated from analysis context, not static                                         |
+| Follow-up suggestions after each message                             | Post-message contextual prompts                                                     |
+| Feature brief generation                                             | Claude Sonnet 4.6; structured PM output                                             |
+| Brief context inputs                                                 | Roadmap status and notes influence brief quality                                    |
+| Shareable read-only links                                            | Public URLs for analysis reports                                                    |
+| Mobile-responsive UI                                                 | Bottom nav bar, mobile tab switcher for chat vs report                              |
+| Explicit consent mechanism                                           | Required checkbox at upload                                                         |
+| Privacy policy                                                       | Covers UU PDP, PDPA, GDPR                                                           |
+
 
 ### Missing — blocking first revenue
 
-| Feature | Priority | Why it blocks |
-|---------|----------|---------------|
-| Pricing page + Stripe integration | Critical | Cannot collect payment |
-| Right to erasure UI | Critical | UU PDP compliance required for enterprise |
-| Data retention auto-delete | Critical | UU PDP compliance |
-| Rate limiting on API routes | Critical | Security before any enterprise contract |
-| ROI calculator in product UI | High | Users self-justify upgrade with their own numbers |
-| Bahasa confidence calibration | High | Trust in signal quality for Indonesian customers |
-| Demo/sample data onboarding | Medium | Current UX requires an existing WhatsApp export to start |
-| BSP integration (Qiscus API) | High | Production data ingestion path |
+
+| Feature                           | Priority | Why it blocks                                            |
+| --------------------------------- | -------- | -------------------------------------------------------- |
+| Pricing page + Stripe integration | Critical | Cannot collect payment                                   |
+| Right to erasure UI               | Critical | UU PDP compliance required for enterprise                |
+| Data retention auto-delete        | Critical | UU PDP compliance                                        |
+| Rate limiting on API routes       | Critical | Security before any enterprise contract                  |
+| ROI calculator in product UI      | High     | Users self-justify upgrade with their own numbers        |
+| Bahasa confidence calibration     | High     | Trust in signal quality for Indonesian customers         |
+| Demo/sample data onboarding       | Medium   | Current UX requires an existing WhatsApp export to start |
+| BSP integration (Qiscus API)      | High     | Production data ingestion path                           |
+
 
 ---
 
@@ -389,22 +412,26 @@ A DPA template is available for enterprise customers. Required for any contract 
 
 ### Product health
 
-| Metric | Definition | Target (Month 6) |
-|--------|------------|-----------------|
-| Accounts analyzed | Unique WhatsApp groups processed | 50 |
-| Signals actioned rate | Signals moved from open to in-progress or done | 40% |
-| Weekly active users | % of paying customers who open app at least once per week | 70% |
-| Re-analysis rate | Accounts with 2 or more analyses | 50% |
-| False positive rate | Signals marked incorrect by users | Less than 20% |
+
+| Metric                | Definition                                                | Target (Month 6) |
+| --------------------- | --------------------------------------------------------- | ---------------- |
+| Accounts analyzed     | Unique WhatsApp groups processed                          | 50               |
+| Signals actioned rate | Signals moved from open to in-progress or done            | 40%              |
+| Weekly active users   | % of paying customers who open app at least once per week | 70%              |
+| Re-analysis rate      | Accounts with 2 or more analyses                          | 50%              |
+| False positive rate   | Signals marked incorrect by users                         | Less than 20%    |
+
 
 ### Business health
 
-| Metric | Definition | Target (Month 6) |
-|--------|------------|-----------------|
-| MRR | Monthly recurring revenue | $2,000 |
-| Paying customers | Active paid subscriptions | 10 |
-| NRR | Net revenue retention | Above 100% |
-| CAC payback | Months to recover customer acquisition cost | Under 3 months |
+
+| Metric           | Definition                                  | Target (Month 6) |
+| ---------------- | ------------------------------------------- | ---------------- |
+| MRR              | Monthly recurring revenue                   | $2,000           |
+| Paying customers | Active paid subscriptions                   | 10               |
+| NRR              | Net revenue retention                       | Above 100%       |
+| CAC payback      | Months to recover customer acquisition cost | Under 3 months   |
+
 
 ---
 
