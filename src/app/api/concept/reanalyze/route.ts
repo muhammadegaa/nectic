@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import type { AnalysisResult } from "@/app/api/concept/analyze/route"
 import { buildSignalActionsBlock, type SignalAction } from "@/lib/signal-utils"
 
-export const maxDuration = 120
+export const maxDuration = 60
 
 const SYSTEM_PROMPT = `You are a B2B SaaS customer intelligence analyst specialising in Southeast Asia markets.
 

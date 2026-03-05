@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 
-export const maxDuration = 120
+export const maxDuration = 60
 
 type ParticipantRole = "vendor" | "customer" | "partner" | "other"
 type ParticipantRoles = Record<string, ParticipantRole>
