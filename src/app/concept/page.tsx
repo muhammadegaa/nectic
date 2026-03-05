@@ -14,6 +14,7 @@ import {
   prefillFromContactBook,
   mergeContactBook,
   getWorkspace,
+  saveWorkspace,
   type StoredAccount,
   type AccountContext,
   type ParticipantRole,
@@ -23,7 +24,9 @@ import {
 import type { AnalysisResult } from "@/app/api/concept/analyze/route"
 import { trackEvent, identifyUser } from "@/lib/posthog"
 
-type ConnectStage = "instructions" | "upload" | "ready" | "analyzing" | "error"
+type ConnectStage = "method" | "instructions" | "upload" | "ready" | "analyzing" | "error" | "wa"
+
+interface WaContact { id: string; wAid: string; name: string; phone: string; firstName?: string; lastName?: string }
 
 const INDUSTRIES = ["SaaS / Software", "Fintech", "Logistics", "HR Tech", "E-commerce", "Healthcare", "Education", "Other"]
 const CONTRACT_TIERS = [
@@ -85,8 +88,6 @@ export default function ConceptPage() {
   const [classifying, setClassifying] = useState(false)
   const [context, setContext] = useState<AccountContext>({})
   const inputRef = useRef<HTMLInputElement>(null)
-  // WATI import
-  const [showWatiModal, setShowWatiModal] = useState(false)
 
   useEffect(() => {
     if (!authLoading && !user) router.replace("/concept/login")
@@ -109,8 +110,38 @@ export default function ConceptPage() {
     setAccounts(updated)
   }
 
+  const saveWaCredentials = async (endpoint: string, token: string) => {
+    if (!user) return
+    const updated = { ...workspace, watiEndpoint: endpoint, watiToken: token }
+    await saveWorkspace(user.uid, updated)
+    setWorkspace(updated)
+  }
+
+  const handleWaContactAnalyze = async (contact: WaContact) => {
+    const contactName = contact.name || `${contact.firstName ?? ""} ${contact.lastName ?? ""}`.trim() || contact.wAid
+    setConnectStage("analyzing")
+    setFileName(`WA: ${contactName}`)
+    try {
+      const endpoint = workspace.watiEndpoint!
+      const token = workspace.watiToken!
+      const res = await fetch("/api/wati/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ endpoint, token, phoneNumber: contact.wAid || contact.phone, contactName }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? "Failed to load messages")
+      await analyzeFromWati(data.conversation, data.participantRoles, data.messageCount, contactName)
+      closeConnect()
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Something went wrong"
+      setUploadError(message)
+      setConnectStage("error")
+    }
+  }
+
   const openConnect = () => {
-    setConnectStage("instructions")
+    setConnectStage("method")
     setParsed(null)
     setFileName("")
     setUploadError("")
@@ -345,23 +376,11 @@ export default function ConceptPage() {
         <div className="flex items-center gap-2 sm:gap-3">
           <span className="hidden sm:inline text-xs bg-amber-50 border border-amber-200 text-amber-700 px-3 py-1 rounded-full font-medium">Early access</span>
           {accounts.length > 0 && !loadingAccounts && (
-            <div className="flex items-center gap-2">
-              {workspace.watiEndpoint && workspace.watiToken && (
-                <button
-                  onClick={() => setShowWatiModal(true)}
-                  className="flex items-center gap-1.5 text-xs border border-[#25D366] text-[#25D366] px-3 py-1.5 rounded-lg hover:bg-[#25D366]/8 transition-colors font-medium"
-                >
-                  <WhatsAppIcon size={12} />
-                  <span className="hidden sm:inline">Import from WATI</span>
-                  <span className="sm:hidden">WATI</span>
-                </button>
-              )}
-              <button onClick={openConnect} className="flex items-center gap-1.5 text-xs bg-neutral-900 text-white px-3 py-1.5 rounded-lg hover:bg-neutral-700 transition-colors font-medium">
-                <WhatsAppIcon size={12} />
-                <span className="hidden sm:inline">Connect account</span>
-                <span className="sm:hidden">Connect</span>
-              </button>
-            </div>
+            <button onClick={openConnect} className="flex items-center gap-1.5 text-xs bg-neutral-900 text-white px-3 py-1.5 rounded-lg hover:bg-neutral-700 transition-colors font-medium">
+              <WhatsAppIcon size={12} />
+              <span className="hidden sm:inline">Connect account</span>
+              <span className="sm:hidden">Connect</span>
+            </button>
           )}
           <div className="flex items-center gap-2 pl-2 border-l border-neutral-200">
             <span className="text-xs text-neutral-500 hidden sm:block">{user.displayName ?? user.email}</span>
@@ -378,12 +397,7 @@ export default function ConceptPage() {
         ) : (
           <>
             {accounts.length === 0 && (
-              <EmptyState
-                onConnect={openConnect}
-                userName={user.displayName?.split(" ")[0] ?? null}
-                hasWati={!!(workspace.watiEndpoint && workspace.watiToken)}
-                onWatiImport={() => setShowWatiModal(true)}
-              />
+              <EmptyState onConnect={openConnect} userName={user.displayName?.split(" ")[0] ?? null} />
             )}
             {accounts.length > 0 && (
               <div className="space-y-6">
@@ -498,15 +512,6 @@ export default function ConceptPage() {
         </Link>
       </nav>
 
-      {showWatiModal && workspace.watiEndpoint && workspace.watiToken && (
-        <WatiImportModal
-          endpoint={workspace.watiEndpoint}
-          token={workspace.watiToken}
-          onClose={() => setShowWatiModal(false)}
-          onAnalyze={analyzeFromWati}
-        />
-      )}
-
       {showConnect && (
         <ConnectModal
           stage={connectStage}
@@ -519,9 +524,13 @@ export default function ConceptPage() {
           aiSuggestedRoles={aiSuggestedRoles}
           classifying={classifying}
           context={context}
+          workspace={workspace}
           onClose={closeConnect}
+          onSelectMethodFile={() => setConnectStage("instructions")}
+          onSelectMethodWa={() => setConnectStage("wa")}
           onContinueToUpload={() => setConnectStage("upload")}
           onBackToInstructions={() => setConnectStage("instructions")}
+          onBackToMethod={() => setConnectStage("method")}
           onDrop={onDrop}
           onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
           onDragLeave={() => setDragging(false)}
@@ -531,6 +540,8 @@ export default function ConceptPage() {
           onContextChange={setContext}
           onAnalyze={analyze}
           onRetry={() => { setConnectStage("upload"); setUploadError(""); if (inputRef.current) inputRef.current.value = "" }}
+          onSaveWaCredentials={saveWaCredentials}
+          onWaContactAnalyze={handleWaContactAnalyze}
         />
       )}
     </div>
@@ -594,10 +605,11 @@ function ConsentFooter({ onAnalyze, onRetry }: { onAnalyze: () => void; onRetry:
 
 function ConnectModal({
   stage, parsed, fileName, error, dragging, inputRef,
-  participantRoles, aiSuggestedRoles, classifying, context,
-  onClose, onContinueToUpload, onBackToInstructions,
+  participantRoles, aiSuggestedRoles, classifying, context, workspace,
+  onClose, onSelectMethodFile, onSelectMethodWa, onContinueToUpload, onBackToInstructions, onBackToMethod,
   onDrop, onDragOver, onDragLeave, onFileSelect, onInputChange,
   onSetRole, onContextChange, onAnalyze, onRetry,
+  onSaveWaCredentials, onWaContactAnalyze,
 }: {
   stage: ConnectStage
   parsed: WaParsed | null
@@ -609,9 +621,13 @@ function ConnectModal({
   aiSuggestedRoles: Set<string>
   classifying: boolean
   context: AccountContext
+  workspace: WorkspaceContext
   onClose: () => void
+  onSelectMethodFile: () => void
+  onSelectMethodWa: () => void
   onContinueToUpload: () => void
   onBackToInstructions: () => void
+  onBackToMethod: () => void
   onDrop: (e: React.DragEvent) => void
   onDragOver: (e: React.DragEvent) => void
   onDragLeave: () => void
@@ -621,7 +637,65 @@ function ConnectModal({
   onContextChange: (ctx: AccountContext) => void
   onAnalyze: () => void
   onRetry: () => void
+  onSaveWaCredentials: (endpoint: string, token: string) => Promise<void>
+  onWaContactAnalyze: (contact: WaContact) => Promise<void>
 }) {
+  // WA subflow state (managed locally inside ConnectModal)
+  const [waSubStage, setWaSubStage] = useState<"credentials" | "loading" | "contacts">(
+    workspace.watiEndpoint && workspace.watiToken ? "loading" : "credentials"
+  )
+  const [waEndpoint, setWaEndpoint] = useState(workspace.watiEndpoint ?? "")
+  const [waToken, setWaToken] = useState(workspace.watiToken ?? "")
+  const [waTokenVisible, setWaTokenVisible] = useState(false)
+  const [waContacts, setWaContacts] = useState<WaContact[]>([])
+  const [waSearch, setWaSearch] = useState("")
+  const [waConnecting, setWaConnecting] = useState(false)
+  const [waError, setWaError] = useState("")
+
+  // Auto-load contacts when stage becomes "wa" and credentials exist
+  useEffect(() => {
+    if (stage !== "wa") return
+    if (workspace.watiEndpoint && workspace.watiToken && waSubStage === "loading" && waContacts.length === 0 && !waError) {
+      loadWaContacts(workspace.watiEndpoint, workspace.watiToken)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stage])
+
+  const loadWaContacts = async (endpoint: string, token: string) => {
+    setWaSubStage("loading")
+    setWaError("")
+    try {
+      const res = await fetch("/api/wati/contacts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ endpoint, token, pageSize: 100 }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? "Failed to load contacts")
+      setWaContacts(data.contacts ?? [])
+      setWaSubStage("contacts")
+    } catch (err) {
+      setWaError(err instanceof Error ? err.message : "Connection failed")
+      setWaSubStage("credentials")
+    }
+  }
+
+  const handleWaConnect = async () => {
+    if (!waEndpoint.trim() || !waToken.trim()) return
+    setWaConnecting(true)
+    try {
+      await onSaveWaCredentials(waEndpoint.trim(), waToken.trim())
+      await loadWaContacts(waEndpoint.trim(), waToken.trim())
+    } finally {
+      setWaConnecting(false)
+    }
+  }
+
+  const waFiltered = waContacts.filter((c) => {
+    const q = waSearch.toLowerCase()
+    return (c.name ?? "").toLowerCase().includes(q) || (c.phone ?? "").includes(q) || (c.wAid ?? "").includes(q)
+  })
+
   return (
     <>
       <div className="fixed inset-0 bg-black/30 z-40 backdrop-blur-sm" onClick={stage === "analyzing" ? undefined : onClose} />
@@ -634,13 +708,15 @@ function ConnectModal({
                 <WhatsAppIcon size={16} className="text-white" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-neutral-900">Connect WhatsApp account</p>
+                <p className="text-sm font-semibold text-neutral-900">Connect account</p>
                 <p className="text-xs text-neutral-400">
+                  {stage === "method" && "Choose how to connect"}
                   {stage === "instructions" && "Export a group chat to get started"}
                   {stage === "upload" && "Drop your export file"}
                   {stage === "ready" && "Review before analysis"}
-                  {stage === "analyzing" && "Analysing..."}
+                  {stage === "analyzing" && "Analysing…"}
                   {stage === "error" && "Something went wrong"}
+                  {stage === "wa" && (waSubStage === "credentials" ? "Enter your API credentials" : waSubStage === "loading" ? "Connecting…" : "Select a contact")}
                 </p>
               </div>
             </div>
@@ -651,6 +727,138 @@ function ConnectModal({
 
           {/* Body — scrollable */}
           <div className="overflow-y-auto flex-1 px-6 py-5">
+
+            {stage === "method" && (
+              <div className="space-y-3">
+                <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-4">How do you want to connect?</p>
+                <button
+                  onClick={onSelectMethodWa}
+                  className="w-full flex items-center gap-4 border border-neutral-200 rounded-xl p-4 hover:border-[#25D366] hover:bg-green-50/40 transition-all text-left group"
+                >
+                  <div className="w-10 h-10 bg-[#25D366] rounded-xl flex items-center justify-center shrink-0">
+                    <WhatsAppIcon size={20} className="text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-neutral-900">Connect WhatsApp</p>
+                    <p className="text-xs text-neutral-400 mt-0.5">Pull conversations directly — no manual export needed</p>
+                  </div>
+                  <svg className="text-neutral-300 group-hover:text-[#25D366] shrink-0 transition-colors" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
+                </button>
+                <button
+                  onClick={onSelectMethodFile}
+                  className="w-full flex items-center gap-4 border border-neutral-200 rounded-xl p-4 hover:border-neutral-400 hover:bg-neutral-50 transition-all text-left group"
+                >
+                  <div className="w-10 h-10 bg-neutral-100 rounded-xl flex items-center justify-center shrink-0">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-neutral-500"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-neutral-900">Upload export</p>
+                    <p className="text-xs text-neutral-400 mt-0.5">WhatsApp .txt or .zip chat export file</p>
+                  </div>
+                  <svg className="text-neutral-300 group-hover:text-neutral-600 shrink-0 transition-colors" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
+                </button>
+              </div>
+            )}
+
+            {stage === "wa" && (
+              <div>
+                {waSubStage === "credentials" && (
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-1">WhatsApp Business API</p>
+                      <p className="text-xs text-neutral-500 leading-relaxed mb-4">Enter your API endpoint and access token. Found in your WhatsApp Business Solution Provider dashboard.</p>
+                      {waError && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-3">{waError}</p>}
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-neutral-700 mb-1.5">API Endpoint</label>
+                      <input
+                        type="text"
+                        value={waEndpoint}
+                        onChange={(e) => setWaEndpoint(e.target.value)}
+                        placeholder="https://live-server.wati.io"
+                        className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 text-neutral-700 placeholder:text-neutral-300 focus:outline-none focus:border-neutral-400 bg-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Access Token</label>
+                      <div className="relative">
+                        <input
+                          type={waTokenVisible ? "text" : "password"}
+                          value={waToken}
+                          onChange={(e) => setWaToken(e.target.value)}
+                          placeholder="Bearer token"
+                          className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 pr-16 text-neutral-700 placeholder:text-neutral-300 focus:outline-none focus:border-neutral-400 bg-white"
+                        />
+                        <button type="button" onClick={() => setWaTokenVisible(!waTokenVisible)} className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-neutral-400 hover:text-neutral-600">
+                          {waTokenVisible ? "Hide" : "Show"}
+                        </button>
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleWaConnect}
+                      disabled={!waEndpoint.trim() || !waToken.trim() || waConnecting}
+                      className="w-full bg-neutral-900 text-white text-sm font-semibold py-3 rounded-lg hover:bg-neutral-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      {waConnecting ? "Connecting…" : "Connect →"}
+                    </button>
+                    <button onClick={onBackToMethod} className="w-full text-xs text-neutral-400 hover:text-neutral-600 py-1 transition-colors">← Back</button>
+                  </div>
+                )}
+
+                {waSubStage === "loading" && (
+                  <div className="flex flex-col items-center justify-center py-16 gap-3">
+                    <div className="w-5 h-5 border-2 border-neutral-200 border-t-[#25D366] rounded-full animate-spin" />
+                    <p className="text-sm text-neutral-500">Loading contacts…</p>
+                  </div>
+                )}
+
+                {waSubStage === "contacts" && (
+                  <div className="-mx-6">
+                    {waContacts.length > 5 && (
+                      <div className="px-4 pb-3 border-b border-neutral-100">
+                        <input
+                          type="text"
+                          value={waSearch}
+                          onChange={(e) => setWaSearch(e.target.value)}
+                          placeholder="Search contacts…"
+                          className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:outline-none focus:border-neutral-400"
+                          autoFocus
+                        />
+                      </div>
+                    )}
+                    {waFiltered.length === 0 && (
+                      <p className="text-center py-10 text-sm text-neutral-400">
+                        {waSearch ? "No contacts match." : "No contacts found."}
+                      </p>
+                    )}
+                    <div className="divide-y divide-neutral-100">
+                      {waFiltered.map((contact) => {
+                        const displayName = contact.name || `${contact.firstName ?? ""} ${contact.lastName ?? ""}`.trim() || contact.wAid
+                        return (
+                          <button
+                            key={contact.id}
+                            onClick={() => onWaContactAnalyze(contact)}
+                            className="w-full flex items-center gap-3 px-6 py-3.5 hover:bg-neutral-50 transition-colors text-left"
+                          >
+                            <div className="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center shrink-0">
+                              <span className="text-xs font-semibold text-neutral-600">{displayName.charAt(0).toUpperCase()}</span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-neutral-900 truncate">{displayName}</p>
+                              <p className="text-xs text-neutral-400 truncate">{contact.phone || contact.wAid}</p>
+                            </div>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-neutral-300 shrink-0"><path d="M9 18l6-6-6-6"/></svg>
+                          </button>
+                        )
+                      })}
+                    </div>
+                    <div className="px-6 pt-3 pb-1 border-t border-neutral-100">
+                      <p className="text-xs text-neutral-400 text-center">{waFiltered.length} contact{waFiltered.length !== 1 ? "s" : ""}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {stage === "instructions" && (
               <div>
@@ -802,7 +1010,9 @@ function ConnectModal({
             {stage === "analyzing" && (
               <div className="py-8 text-center">
                 <div className="w-12 h-12 border-2 border-neutral-200 border-t-neutral-900 rounded-full animate-spin mx-auto mb-4" />
-                <p className="text-sm font-semibold text-neutral-900">Analysing {parsed?.totalMessages} messages</p>
+                <p className="text-sm font-semibold text-neutral-900">
+                  {parsed ? `Analysing ${parsed.totalMessages} messages` : "Analysing conversation…"}
+                </p>
                 <p className="mt-1 text-xs text-neutral-400">Usually takes about 10 seconds</p>
                 <div className="mt-5 space-y-2 text-left">
                   {["Identifying customer voice…", "Extracting risk signals…", "Grouping product signals…", "Scoring account health…"].map((s, i) => (
@@ -956,191 +1166,6 @@ function CrossAccountSignals({ signals, accountCount }: { signals: ReturnType<ty
   )
 }
 
-// ─── WATI Import Modal ─────────────────────────────────────────────────────────
-
-interface WatiContact { id: string; wAid: string; name: string; phone: string; firstName?: string; lastName?: string }
-
-function WatiImportModal({
-  endpoint,
-  token,
-  onClose,
-  onAnalyze,
-}: {
-  endpoint: string
-  token: string
-  onClose: () => void
-  onAnalyze: (conversation: string, participantRoles: Record<string, "vendor" | "customer">, messageCount: number, contactName: string) => Promise<void>
-}) {
-  const [stage, setStage] = useState<"contacts" | "loading-contacts" | "loading-messages" | "analyzing" | "error">("loading-contacts")
-  const [contacts, setContacts] = useState<WatiContact[]>([])
-  const [search, setSearch] = useState("")
-  const [error, setError] = useState("")
-  const [selectedContact, setSelectedContact] = useState<WatiContact | null>(null)
-
-  useEffect(() => {
-    fetch("/api/wati/contacts", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ endpoint, token, pageSize: 100 }),
-    })
-      .then(async (res) => {
-        const data = await res.json()
-        if (!res.ok) throw new Error(data.error ?? "Failed to load contacts")
-        setContacts(data.contacts ?? [])
-        setStage("contacts")
-      })
-      .catch((err) => {
-        setError(err.message)
-        setStage("error")
-      })
-  }, [endpoint, token])
-
-  const handleSelectContact = async (contact: WatiContact) => {
-    setSelectedContact(contact)
-    setStage("loading-messages")
-    try {
-      const res = await fetch("/api/wati/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          endpoint,
-          token,
-          phoneNumber: contact.wAid || contact.phone,
-          contactName: contact.name || `${contact.firstName ?? ""} ${contact.lastName ?? ""}`.trim() || contact.wAid,
-        }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? "Failed to load messages")
-
-      setStage("analyzing")
-      await onAnalyze(
-        data.conversation,
-        data.participantRoles,
-        data.messageCount,
-        contact.name || contact.wAid
-      )
-      onClose()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong")
-      setStage("error")
-    }
-  }
-
-  const filtered = contacts.filter((c) => {
-    const q = search.toLowerCase()
-    return (c.name ?? "").toLowerCase().includes(q) ||
-      (c.phone ?? "").includes(q) ||
-      (c.wAid ?? "").includes(q)
-  })
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100">
-          <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 bg-[#25D366] rounded-lg flex items-center justify-center">
-              <WhatsAppIcon size={14} className="text-white" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-neutral-900">Import from WATI</p>
-              <p className="text-xs text-neutral-400">Select a contact to analyse</p>
-            </div>
-          </div>
-          <button onClick={onClose} className="text-neutral-400 hover:text-neutral-700 transition-colors">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
-          </button>
-        </div>
-
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto">
-          {(stage === "loading-contacts") && (
-            <div className="flex flex-col items-center justify-center py-16 gap-3">
-              <div className="w-5 h-5 border-2 border-neutral-200 border-t-[#25D366] rounded-full animate-spin" />
-              <p className="text-sm text-neutral-500">Loading contacts from WATI…</p>
-            </div>
-          )}
-
-          {(stage === "loading-messages" || stage === "analyzing") && (
-            <div className="flex flex-col items-center justify-center py-16 gap-3">
-              <div className="w-5 h-5 border-2 border-neutral-200 border-t-neutral-900 rounded-full animate-spin" />
-              <p className="text-sm text-neutral-700 font-medium">
-                {stage === "loading-messages" ? `Fetching messages for ${selectedContact?.name ?? "contact"}…` : "Analysing conversation…"}
-              </p>
-              <p className="text-xs text-neutral-400">This takes 15–30 seconds</p>
-            </div>
-          )}
-
-          {stage === "error" && (
-            <div className="flex flex-col items-center justify-center py-16 gap-3 px-5 text-center">
-              <div className="w-10 h-10 bg-red-50 border border-red-200 rounded-full flex items-center justify-center">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2"><path d="M12 8v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
-              </div>
-              <p className="text-sm font-semibold text-neutral-800">Connection failed</p>
-              <p className="text-xs text-neutral-500 leading-relaxed">{error}</p>
-              <p className="text-xs text-neutral-400">Check your WATI credentials in Workspace settings.</p>
-              <button onClick={onClose} className="mt-2 text-xs text-neutral-500 underline">Close</button>
-            </div>
-          )}
-
-          {stage === "contacts" && (
-            <div>
-              {contacts.length > 5 && (
-                <div className="px-4 py-3 border-b border-neutral-100 sticky top-0 bg-white">
-                  <input
-                    type="text"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search contacts…"
-                    className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:outline-none focus:border-neutral-400"
-                    autoFocus
-                  />
-                </div>
-              )}
-              {filtered.length === 0 && (
-                <div className="text-center py-10 text-sm text-neutral-400">
-                  {search ? "No contacts match your search." : "No contacts found in WATI."}
-                </div>
-              )}
-              <div className="divide-y divide-neutral-100">
-                {filtered.map((contact) => {
-                  const displayName = contact.name || `${contact.firstName ?? ""} ${contact.lastName ?? ""}`.trim() || contact.wAid
-                  const phone = contact.phone || contact.wAid
-                  return (
-                    <button
-                      key={contact.id}
-                      onClick={() => handleSelectContact(contact)}
-                      className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-neutral-50 transition-colors text-left"
-                    >
-                      <div className="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center shrink-0">
-                        <span className="text-xs font-semibold text-neutral-600">
-                          {displayName.charAt(0).toUpperCase()}
-                        </span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-neutral-900 truncate">{displayName}</p>
-                        <p className="text-xs text-neutral-400 truncate">{phone}</p>
-                      </div>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-neutral-300 shrink-0"><path d="M9 18l6-6-6-6"/></svg>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {stage === "contacts" && (
-          <div className="px-5 py-3 border-t border-neutral-100 bg-neutral-50">
-            <p className="text-xs text-neutral-400 text-center">{filtered.length} contact{filtered.length !== 1 ? "s" : ""} from WATI</p>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
 // ─── ROI Calculator ────────────────────────────────────────────────────────────
 
 function RoiCalculator({ atRiskCount }: { atRiskCount: number }) {
@@ -1213,7 +1238,7 @@ function RoiCalculator({ atRiskCount }: { atRiskCount: number }) {
 
 // ─── Empty state ───────────────────────────────────────────────────────────────
 
-function EmptyState({ onConnect, userName, hasWati, onWatiImport }: { onConnect: () => void; userName: string | null; hasWati?: boolean; onWatiImport?: () => void }) {
+function EmptyState({ onConnect, userName }: { onConnect: () => void; userName: string | null }) {
   return (
     <div className="max-w-md mx-auto pt-16 text-center">
       <div className="w-14 h-14 bg-[#25D366] rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-green-200">
@@ -1228,17 +1253,11 @@ function EmptyState({ onConnect, userName, hasWati, onWatiImport }: { onConnect:
       <p className="mt-4 text-sm text-neutral-500 leading-relaxed max-w-sm mx-auto">
         Connect a WhatsApp account group to extract churn signals, product pain points, and patterns your team would never catch manually.
       </p>
-      {hasWati && onWatiImport && (
-        <button onClick={onWatiImport} className="mt-8 flex items-center gap-2 bg-[#25D366] text-white text-sm font-semibold px-6 py-3 rounded-lg hover:bg-[#1faf57] transition-colors mx-auto">
-          <WhatsAppIcon size={14} className="text-white" />
-          Import from WATI
-        </button>
-      )}
-      <button onClick={onConnect} className={`${hasWati ? "mt-3" : "mt-8"} flex items-center gap-2 ${hasWati ? "border border-neutral-200 text-neutral-700 hover:bg-neutral-50" : "bg-neutral-900 text-white hover:bg-neutral-700"} text-sm font-semibold px-6 py-3 rounded-lg transition-colors mx-auto`}>
-        <WhatsAppIcon size={14} className={hasWati ? "text-neutral-500" : "text-white"} />
-        {hasWati ? "Upload .txt export manually" : "Connect first account"}
+      <button onClick={onConnect} className="mt-8 flex items-center gap-2 bg-neutral-900 text-white text-sm font-semibold px-6 py-3 rounded-lg hover:bg-neutral-700 transition-colors mx-auto">
+        <WhatsAppIcon size={14} className="text-white" />
+        Connect first account
       </button>
-      <p className="mt-4 text-xs text-neutral-400">Works with .txt and .zip exports · Bahasa Indonesia + English · Processed in memory only</p>
+      <p className="mt-4 text-xs text-neutral-400">Connect WhatsApp live · or upload .txt and .zip exports · Bahasa Indonesia + English</p>
     </div>
   )
 }
