@@ -26,7 +26,7 @@ import { trackEvent, identifyUser } from "@/lib/posthog"
 
 type ConnectStage = "method" | "instructions" | "upload" | "ready" | "analyzing" | "error" | "wa"
 
-interface WaContact { id: string; wAid: string; name: string; phone: string; firstName?: string; lastName?: string }
+interface WaContact { id: string; wAid: string; name: string; phone: string; firstName?: string; lastName?: string; lastUpdated?: string }
 
 const INDUSTRIES = ["SaaS / Software", "Fintech", "Logistics", "HR Tech", "E-commerce", "Healthcare", "Education", "Other"]
 const CONTRACT_TIERS = [
