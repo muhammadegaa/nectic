@@ -1,95 +1,123 @@
 "use client"
 
+import { useRef } from "react"
+import { motion, useInView } from "framer-motion"
+
 const steps = [
   {
     number: "01",
     title: "Connect",
     description:
-      "Upload a WhatsApp .txt export or connect your WATI Business API. Nectic parses the conversation in under 60 seconds. No IT ticket, no migration.",
-    detail: "Works with any WhatsApp group — customer onboarding, support, renewal, and everything in between.",
+      "Link your WATI Business account. Nectic reads your existing WhatsApp conversations in under 60 seconds. No new tools for your CS team, no IT ticket.",
+    detail:
+      "Works with any 1:1 WhatsApp Business conversation. Customer onboarding, renewal, support — all of it.",
   },
   {
     number: "02",
     title: "Detect",
     description:
-      "AI surfaces churn signals with exact customer quotes — competitor mentions, sentiment drops, unresolved complaints, renewal risk. In Bahasa Indonesia and English.",
-    detail: "Every signal links to the message that triggered it. No black-box scores — you see exactly what the customer said.",
+      "AI reads each conversation and extracts churn signals with the exact customer quote. Competitor mentions, sentiment drops, renewal hesitation. Works in Bahasa Indonesia and English.",
+    detail:
+      "Every signal links to the original message. No black-box scores. You see exactly what the customer said and why it matters.",
   },
   {
     number: "03",
     title: "Act",
     description:
-      "Get your Monday briefing with accounts that changed, competitor mentions, and AI-drafted WhatsApp responses ready to send. Close the loop before it's too late.",
-    detail: "Signal detected → draft response generated → copy and send. The whole loop in under 2 minutes.",
+      "Accounts ranked by health score. Competitor alerts with a co-pilot to draft your retention response. A weekly briefing lands every Monday before standup.",
+    detail:
+      "Signal detected, response drafted, sent. The full loop in under 2 minutes.",
   },
 ]
 
+const container = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.14 } },
+}
+
+const item = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] } },
+}
+
 export default function HowItWorks() {
+  const ref = useRef(null)
+  const isInView = useInView(ref, { once: true, margin: "-100px" })
+
   return (
-    <section id="how-it-works" className="py-24 px-6 lg:px-8 bg-neutral-50">
+    <section id="how-it-works" className="py-20 sm:py-28 px-6 lg:px-8 bg-white" ref={ref}>
       <div className="max-w-5xl mx-auto">
-        <div className="mb-16">
-          <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-4">
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={isInView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+          className="mb-14"
+        >
+          <p className="text-xs font-medium text-neutral-400 uppercase tracking-widest mb-4">
             How it works
           </p>
-          <h2 className="text-3xl font-light text-neutral-900 leading-tight">
+          <h2 className="text-3xl font-light text-neutral-900 leading-tight max-w-lg">
             From WhatsApp conversation<br />
             <span className="text-neutral-400">to action queue in minutes.</span>
           </h2>
-        </div>
+        </motion.div>
 
-        <div className="grid md:grid-cols-3 gap-px bg-neutral-200">
+        <motion.div
+          variants={container}
+          initial="hidden"
+          animate={isInView ? "visible" : "hidden"}
+          className="grid md:grid-cols-3 gap-px bg-neutral-100 rounded-xl overflow-hidden"
+        >
           {steps.map((step) => (
-            <div key={step.number} className="bg-neutral-50 p-8 flex flex-col">
-              <span className="text-xs font-mono text-neutral-300 mb-4">{step.number}</span>
+            <motion.div
+              key={step.number}
+              variants={item}
+              className="bg-white px-7 py-8 flex flex-col"
+            >
+              <span className="text-xs font-mono text-neutral-300 mb-5">{step.number}</span>
               <h3 className="text-lg font-semibold text-neutral-900 mb-3">{step.title}</h3>
-              <p className="text-sm text-neutral-600 leading-relaxed mb-4">{step.description}</p>
-              <p className="text-xs text-neutral-400 leading-relaxed mt-auto pt-4 border-t border-neutral-200">{step.detail}</p>
-            </div>
+              <p className="text-sm text-neutral-600 leading-relaxed mb-5">{step.description}</p>
+              <p className="text-xs text-neutral-400 leading-relaxed mt-auto pt-5 border-t border-neutral-100">
+                {step.detail}
+              </p>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
 
-        {/* Proof points */}
-        <div className="mt-16 grid sm:grid-cols-2 gap-6">
-          <div className="bg-white border border-neutral-200 rounded-xl p-6">
-            <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-3">What you get</p>
-            <ul className="space-y-2.5 text-sm text-neutral-600">
-              {[
-                "Health score (1–10) per account, updated on every re-analysis",
-                "Risk signals with exact customer quotes and suggested next steps",
-                "Competitor mention alerts with AI-drafted retention responses",
-                "Weekly digest email — Monday, before your standup",
-                "Account-grouped action queue so nothing falls through",
-              ].map((item) => (
-                <li key={item} className="flex items-start gap-2.5">
-                  <svg className="mt-0.5 shrink-0 text-emerald-500" width="14" height="14" viewBox="0 0 16 16" fill="none">
-                    <polyline points="2 8 6 12 14 4" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="bg-neutral-900 rounded-xl p-6">
-            <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-3">Built for SEA</p>
-            <ul className="space-y-2.5 text-sm text-neutral-300">
-              {[
-                "Bahasa Indonesia signal detection — reads indirect language accurately",
-                "Code-switching support (BI ↔ EN) in the same conversation",
-                "WhatsApp-first architecture — no email or CRM required",
-                "Works with group chats where multiple CS reps and customers mix",
-              ].map((item) => (
-                <li key={item} className="flex items-start gap-2.5">
-                  <svg className="mt-0.5 shrink-0 text-amber-400" width="14" height="14" viewBox="0 0 16 16" fill="none">
-                    <polyline points="2 8 6 12 14 4" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
+        {/* Feature chips */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={isInView ? { opacity: 1 } : {}}
+          transition={{ duration: 0.5, delay: 0.6 }}
+          className="mt-10 flex flex-wrap gap-2"
+        >
+          {[
+            "Health score 1-10",
+            "Competitor mention detection",
+            "Bahasa Indonesia support",
+            "Risk-ranked action queue",
+            "Co-pilot response drafting",
+            "Weekly digest email",
+          ].map((chip) => (
+            <span
+              key={chip}
+              className="inline-flex items-center gap-1.5 text-xs text-neutral-500 border border-neutral-200 bg-white px-3 py-1.5 rounded-full"
+            >
+              <svg width="10" height="10" viewBox="0 0 16 16" fill="none">
+                <polyline
+                  points="2 8 6 12 14 4"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="text-emerald-500"
+                  style={{ stroke: "#10b981" }}
+                />
+              </svg>
+              {chip}
+            </span>
+          ))}
+        </motion.div>
       </div>
     </section>
   )

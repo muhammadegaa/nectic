@@ -2,70 +2,211 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
+import { motion } from "framer-motion"
 
-export default function HeroSection() {
-  const [isLoaded, setIsLoaded] = useState(false)
+const fadeUp = {
+  hidden: { opacity: 0, y: 18 },
+  visible: (i = 0) => ({
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.6, delay: i * 0.1, ease: [0.22, 1, 0.36, 1] },
+  }),
+}
+
+function AccountHealthCard() {
+  const [stage, setStage] = useState(0)
 
   useEffect(() => {
-    setIsLoaded(true)
+    const timers = [
+      setTimeout(() => setStage(1), 500),
+      setTimeout(() => setStage(2), 1100),
+      setTimeout(() => setStage(3), 1800),
+      setTimeout(() => setStage(4), 2600),
+    ]
+    return () => timers.forEach(clearTimeout)
   }, [])
 
-  const fade = (delay: string) =>
-    `transition-all duration-700 ${delay} ${isLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`
-
   return (
-    <section className="min-h-screen flex items-center px-6 lg:px-8 bg-white">
-      <div className="max-w-5xl mx-auto w-full pt-24 pb-16">
-
-        <div className={fade("delay-0")}>
-          <span className="inline-flex items-center gap-2 text-xs font-semibold text-neutral-400 uppercase tracking-widest">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            AI-native churn prevention · WhatsApp-first B2B SaaS
+    <motion.div
+      initial={{ opacity: 0, x: 32 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.7, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
+      className="bg-white border border-neutral-200 rounded-xl overflow-hidden shadow-[0_2px_24px_rgba(0,0,0,0.06)]"
+    >
+      {/* Header */}
+      <div
+        className={`px-5 py-4 border-b border-neutral-100 transition-all duration-500 ${stage >= 1 ? "opacity-100" : "opacity-0 translate-y-1"}`}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-sm font-medium text-neutral-900">PT Mandiri Teknologi</p>
+            <p className="text-xs text-neutral-400 mt-0.5">Last message: 3 days ago</p>
+          </div>
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-orange-700 bg-orange-50 border border-orange-200 px-2 py-1 rounded-md shrink-0">
+            <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse" />
+            HIGH
           </span>
         </div>
+      </div>
 
-        <h1 className={`mt-6 text-4xl sm:text-5xl lg:text-6xl font-light text-neutral-900 leading-[1.1] tracking-tight ${fade("delay-100")}`}>
-          You find out a customer<br />
-          <span className="text-neutral-400">is leaving after they stop replying.</span>
-        </h1>
+      {/* Health score */}
+      <div
+        className={`px-5 py-4 border-b border-neutral-100 transition-all duration-500 ${stage >= 2 ? "opacity-100" : "opacity-0 translate-y-1"}`}
+      >
+        <div className="flex items-baseline gap-1.5 mb-2">
+          <span className="text-3xl font-light text-neutral-900 tabular-nums">4</span>
+          <span className="text-sm text-neutral-400">/10</span>
+          <span className="ml-auto text-xs text-red-500 font-medium tabular-nums">-3 this week</span>
+        </div>
+        <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-orange-400 rounded-full transition-all duration-700"
+            style={{ width: stage >= 2 ? "40%" : "0%" }}
+          />
+        </div>
+      </div>
 
-        <p className={`mt-8 text-lg text-neutral-500 max-w-xl leading-relaxed ${fade("delay-150")}`}>
-          Nectic detects churn signals 2–4 weeks early in WhatsApp conversations —
-          built for B2B SaaS teams in Southeast Asia where 91% of deals happen on WhatsApp.
+      {/* Competitor signal */}
+      <div
+        className={`bg-orange-50 border-b border-orange-100 px-5 py-4 transition-all duration-500 ${stage >= 3 ? "opacity-100" : "opacity-0 translate-y-1"}`}
+      >
+        <div className="flex items-center gap-2 mb-2.5">
+          <span className="w-3 h-3 rounded-full bg-orange-400 shrink-0" />
+          <span className="text-xs font-medium text-orange-700">Competitor mentioned</span>
+          <span className="text-xs text-orange-700 bg-orange-100 border border-orange-200 px-1.5 py-0.5 rounded ml-auto">
+            Qontak
+          </span>
+        </div>
+        <p className="text-sm text-neutral-800 leading-relaxed">
+          &ldquo;Kita lagi coba Qontak juga bulan ini, nanti kita compare hasilnya...&rdquo;
         </p>
+        <p className="text-xs text-neutral-400 mt-2">Renewal: March 2026</p>
+      </div>
 
-        <div className={`mt-10 flex flex-col sm:flex-row gap-3 ${fade("delay-200")}`}>
-          <Link
-            href="/concept/login"
-            className="inline-flex items-center justify-center bg-neutral-900 text-white text-sm font-semibold px-6 py-3 rounded-lg hover:bg-neutral-700 transition-colors"
-          >
-            Start for free →
-          </Link>
-          <a
-            href="#how-it-works"
-            className="inline-flex items-center justify-center text-sm text-neutral-500 px-6 py-3 rounded-lg hover:text-neutral-900 border border-neutral-200 hover:border-neutral-300 transition-colors"
-          >
-            See how it works
-          </a>
+      {/* Co-pilot action */}
+      <div
+        className={`px-5 py-3.5 transition-all duration-500 ${stage >= 4 ? "opacity-100" : "opacity-0 translate-y-1"}`}
+      >
+        <button className="w-full flex items-center gap-2.5 text-xs font-medium text-neutral-500 hover:text-neutral-900 transition-colors">
+          <span className="w-5 h-5 rounded bg-neutral-100 flex items-center justify-center text-neutral-400 shrink-0 text-[10px]">
+            AI
+          </span>
+          Draft retention response with co-pilot
+          <span className="ml-auto text-neutral-300">→</span>
+        </button>
+      </div>
+    </motion.div>
+  )
+}
+
+export default function HeroSection() {
+  return (
+    <section className="min-h-[calc(100vh-64px)] flex items-center px-6 lg:px-8 bg-white">
+      <div className="max-w-5xl mx-auto w-full pt-20 pb-12 lg:pb-16">
+        <div className="grid lg:grid-cols-[1fr_360px] gap-10 lg:gap-16 items-center">
+          {/* Left — copy */}
+          <div>
+            <motion.span
+              custom={0}
+              variants={fadeUp}
+              initial="hidden"
+              animate="visible"
+              className="inline-flex items-center gap-2 text-xs font-medium text-neutral-400 uppercase tracking-widest"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              Account Health OS for WhatsApp-first B2B SaaS
+            </motion.span>
+
+            <motion.h1
+              custom={1}
+              variants={fadeUp}
+              initial="hidden"
+              animate="visible"
+              className="mt-6 text-4xl sm:text-5xl lg:text-[3.2rem] font-light text-neutral-900 leading-[1.1] tracking-tight"
+            >
+              Your best accounts<br />
+              don&apos;t send a<br />
+              <span className="text-neutral-400">goodbye message.</span>
+            </motion.h1>
+
+            <motion.p
+              custom={2}
+              variants={fadeUp}
+              initial="hidden"
+              animate="visible"
+              className="mt-7 text-lg text-neutral-500 max-w-md leading-relaxed"
+            >
+              Nectic connects to WhatsApp Business, reads your customer conversations,
+              and surfaces churn signals 2 to 4 weeks before the account goes quiet.
+            </motion.p>
+
+            <motion.p
+              custom={3}
+              variants={fadeUp}
+              initial="hidden"
+              animate="visible"
+              className="mt-3 text-base text-neutral-400 max-w-md leading-relaxed"
+            >
+              Health scores, competitor alerts, and a Monday briefing.
+              Built for CS leads and PMs in Indonesia and Singapore.
+            </motion.p>
+
+            <motion.div
+              custom={4}
+              variants={fadeUp}
+              initial="hidden"
+              animate="visible"
+              className="mt-9 flex flex-col sm:flex-row gap-3"
+            >
+              <Link
+                href="#early-access"
+                className="inline-flex items-center justify-center bg-neutral-900 text-white text-sm font-semibold px-6 py-3 rounded-lg hover:bg-neutral-700 transition-colors"
+              >
+                Request early access
+              </Link>
+              <a
+                href="#how-it-works"
+                className="inline-flex items-center justify-center text-sm text-neutral-500 px-6 py-3 rounded-lg hover:text-neutral-900 border border-neutral-200 hover:border-neutral-300 transition-colors"
+              >
+                See how it works
+              </a>
+            </motion.div>
+
+            <motion.p
+              custom={5}
+              variants={fadeUp}
+              initial="hidden"
+              animate="visible"
+              className="mt-5 text-xs text-neutral-400"
+            >
+              Requires WhatsApp Business API via WATI. No CRM needed.
+            </motion.p>
+          </div>
+
+          {/* Right — product card */}
+          <div className="hidden lg:block">
+            <AccountHealthCard />
+          </div>
         </div>
 
-        <p className={`mt-6 text-xs text-neutral-400 ${fade("delay-300")}`}>
-          Upload a WhatsApp export or connect WATI — first analysis in under 60 seconds.
-        </p>
-
         {/* Stats strip */}
-        <div className={`mt-16 pt-10 border-t border-neutral-100 grid grid-cols-1 sm:grid-cols-3 gap-8 ${fade("delay-[400ms]")}`}>
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 1.4, ease: [0.22, 1, 0.36, 1] }}
+          className="mt-14 pt-10 border-t border-neutral-100 grid grid-cols-1 sm:grid-cols-3 gap-8"
+        >
           {[
-            { stat: "91%", label: "of B2B communication in Indonesia is WhatsApp" },
-            { stat: "62–70%", label: "net revenue retention in SEA vs 90% global benchmark" },
-            { stat: "40%", label: "save rate when churn signals are caught early" },
+            { stat: "91%", label: "of B2B communication in Indonesia happens on WhatsApp" },
+            { stat: "62-70%", label: "net revenue retention in SEA vs 90% globally" },
+            { stat: "40%", label: "save rate when churn signals are caught 3 weeks early" },
           ].map((item) => (
             <div key={item.stat}>
               <p className="text-3xl font-light text-neutral-900 tabular-nums">{item.stat}</p>
               <p className="mt-1.5 text-sm text-neutral-500 leading-relaxed">{item.label}</p>
             </div>
           ))}
-        </div>
+        </motion.div>
       </div>
     </section>
   )

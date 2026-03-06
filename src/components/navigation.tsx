@@ -10,7 +10,7 @@ export default function Navigation() {
   const [scrolled, setScrolled] = useState(false)
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 10)
+    const handleScroll = () => setScrolled(window.scrollY > 12)
     window.addEventListener("scroll", handleScroll)
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
@@ -18,33 +18,47 @@ export default function Navigation() {
   return (
     <nav
       className={`fixed top-0 w-full z-50 transition-all duration-300 ${
-        scrolled ? "bg-white/90 backdrop-blur-md border-b border-neutral-100" : "bg-transparent"
+        scrolled
+          ? "bg-white/95 backdrop-blur-sm border-b border-neutral-100 shadow-[0_1px_8px_rgba(0,0,0,0.04)]"
+          : "bg-transparent"
       }`}
     >
       <div className="max-w-5xl mx-auto px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <Link href="/" className="flex items-center gap-2 hover:opacity-70 transition-opacity">
-            <LogoIcon size={24} />
-            <span className="text-base font-medium text-neutral-900 tracking-tight">Nectic</span>
+            <LogoIcon size={22} />
+            <span className="text-base font-semibold text-neutral-900 tracking-tight">Nectic</span>
           </Link>
 
-          <div className="hidden lg:flex items-center gap-6">
-            <a href="#how-it-works" className="text-sm text-neutral-500 hover:text-neutral-900 transition-colors">
+          <div className="hidden lg:flex items-center gap-7">
+            <a
+              href="#how-it-works"
+              className="text-sm text-neutral-500 hover:text-neutral-900 transition-colors"
+            >
               How it works
             </a>
-            <Link href="/concept/login" className="text-sm text-neutral-500 hover:text-neutral-900 transition-colors">
+            <a
+              href="#early-access"
+              className="text-sm text-neutral-500 hover:text-neutral-900 transition-colors"
+            >
+              Early access
+            </a>
+            <Link
+              href="/concept/login"
+              className="text-sm text-neutral-500 hover:text-neutral-900 transition-colors"
+            >
               Sign in
             </Link>
             <Link
-              href="/concept/login"
+              href="#early-access"
               className="text-sm font-semibold text-white bg-neutral-900 px-4 py-2 rounded-lg hover:bg-neutral-700 transition-colors"
             >
-              Start for free →
+              Request access
             </Link>
           </div>
 
           <button
-            className="lg:hidden p-2"
+            className="lg:hidden p-2 text-neutral-500 hover:text-neutral-900 transition-colors"
             onClick={() => setIsOpen(!isOpen)}
             aria-label="Toggle menu"
           >
@@ -53,19 +67,34 @@ export default function Navigation() {
         </div>
 
         {isOpen && (
-          <div className="lg:hidden pb-6 space-y-4 border-t border-neutral-100 pt-4">
-            <a href="#how-it-works" onClick={() => setIsOpen(false)} className="block text-sm text-neutral-500 hover:text-neutral-900 transition-colors">
+          <div className="lg:hidden pb-6 space-y-5 border-t border-neutral-100 pt-5">
+            <a
+              href="#how-it-works"
+              onClick={() => setIsOpen(false)}
+              className="block text-sm text-neutral-500 hover:text-neutral-900 transition-colors"
+            >
               How it works
             </a>
-            <Link href="/concept/login" onClick={() => setIsOpen(false)} className="block text-sm text-neutral-500 hover:text-neutral-900 transition-colors">
-              Sign in
-            </Link>
+            <a
+              href="#early-access"
+              onClick={() => setIsOpen(false)}
+              className="block text-sm text-neutral-500 hover:text-neutral-900 transition-colors"
+            >
+              Early access
+            </a>
             <Link
               href="/concept/login"
               onClick={() => setIsOpen(false)}
+              className="block text-sm text-neutral-500 hover:text-neutral-900 transition-colors"
+            >
+              Sign in
+            </Link>
+            <Link
+              href="#early-access"
+              onClick={() => setIsOpen(false)}
               className="block text-sm font-semibold text-neutral-900"
             >
-              Start for free →
+              Request access →
             </Link>
           </div>
         )}
