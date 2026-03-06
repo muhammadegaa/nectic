@@ -28,21 +28,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let isMounted = true
-    let unsubscribe: (() => void) | null = null
-    getGoogleRedirectResult()
-      .catch(() => {})
-      .finally(() => {
-        if (!isMounted) return
-        unsubscribe = onAuthStateChangedHelper((user) => {
-          if (isMounted) {
-            setUser(user)
-            setLoading(false)
-          }
-        })
-      })
+    const unsubscribe = onAuthStateChangedHelper((user) => {
+      if (isMounted) {
+        setUser(user)
+        setLoading(false)
+      }
+    })
+    getGoogleRedirectResult().catch(() => {})
     return () => {
       isMounted = false
-      unsubscribe?.()
+      unsubscribe()
     }
   }, [])
 
