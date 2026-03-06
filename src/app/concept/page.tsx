@@ -15,7 +15,6 @@ import {
   mergeContactBook,
   getWorkspace,
   saveWorkspace,
-  isOnboardingComplete,
   type StoredAccount,
   type AccountContext,
   type ParticipantRole,
@@ -92,11 +91,7 @@ export default function ConceptPage() {
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    if (authLoading) return
-    if (!user) { router.replace("/concept/login"); return }
-    isOnboardingComplete(user.uid).then((done) => {
-      if (!done) router.replace("/concept/onboarding")
-    })
+    if (!authLoading && !user) router.replace("/concept/login")
   }, [user, authLoading, router])
 
   useEffect(() => {

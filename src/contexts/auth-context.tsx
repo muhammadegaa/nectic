@@ -8,7 +8,6 @@ import {
   signInWithEmail,
   signOutUser,
   onAuthStateChangedHelper,
-  handleGoogleRedirectResult,
 } from "@/infrastructure/firebase/firebase-client"
 
 interface AuthContextType {
@@ -28,20 +27,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let isMounted = true
-
-    // Process any pending Google redirect result first.
-    // This must be called on page load after returning from the Google OAuth redirect.
-    handleGoogleRedirectResult().catch(() => {
-      // Redirect result errors are non-fatal (e.g. no pending redirect)
-    })
-
     const unsubscribe = onAuthStateChangedHelper((user) => {
       if (isMounted) {
         setUser(user)
         setLoading(false)
       }
     })
-
     return () => {
       isMounted = false
       unsubscribe()

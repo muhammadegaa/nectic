@@ -9,8 +9,7 @@ import { initializeApp, getApps, FirebaseApp } from 'firebase/app'
 import {
   getAuth,
   GoogleAuthProvider,
-  signInWithRedirect,
-  getRedirectResult,
+  signInWithPopup,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
@@ -59,16 +58,8 @@ setPersistence(auth, browserLocalPersistence)
 
 // Auth functions
 export const signInWithGoogle = async () => {
-  await signInWithRedirect(auth, googleProvider)
-}
-
-export const handleGoogleRedirectResult = async () => {
-  try {
-    const result = await getRedirectResult(auth)
-    return result
-  } catch (error) {
-    throw error
-  }
+  const result = await signInWithPopup(auth, googleProvider)
+  return result
 }
 
 export const signUpWithEmail = async (email: string, password: string) => {
