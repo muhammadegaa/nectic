@@ -1,10 +1,21 @@
 /** @type {import('next').NextConfig} */
+const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || ""
+
 const nextConfig = {
   reactStrictMode: true,
   experimental: {
     serverActions: {
       bodySizeLimit: '2mb',
     },
+  },
+  async rewrites() {
+    if (!projectId) return []
+    return [
+      {
+        source: "/__/auth/:path*",
+        destination: `https://${projectId}.firebaseapp.com/__/auth/:path*`,
+      },
+    ]
   },
   async headers() {
     return [
@@ -30,10 +41,6 @@ const nextConfig = {
           {
             key: 'X-XSS-Protection',
             value: '1; mode=block'
-          },
-          {
-            key: 'Cross-Origin-Opener-Policy',
-            value: 'same-origin-allow-popups'
           },
           {
             key: 'Referrer-Policy',

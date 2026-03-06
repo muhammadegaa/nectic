@@ -40,7 +40,6 @@ npm run dev
 ```env
 # Firebase
 NEXT_PUBLIC_FIREBASE_API_KEY=
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
 NEXT_PUBLIC_FIREBASE_PROJECT_ID=
 NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
@@ -57,6 +56,8 @@ WHATSAPP_PHONE_NUMBER_ID=
 # Resend (email)
 RESEND_API_KEY=
 ```
+
+**Firebase Auth:** Add your app domain to Firebase Console → Authentication → Settings → Authorized domains (e.g. `nectic.vercel.app`, `localhost` for dev). Auth is proxied through your domain to avoid COOP and third-party cookie issues.
 
 ---
 
