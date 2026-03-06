@@ -18,7 +18,9 @@ export async function POST(req: NextRequest) {
     const { messages, totalCount } = await watiGetMessages(endpoint, token, phoneNumber, pageSize)
 
     if (messages.length === 0) {
-      return NextResponse.json({ error: "No messages found for this contact" }, { status: 404 })
+      return NextResponse.json({
+        error: "No messages found for this contact. This contact may not have any conversations through your WATI account — if the chats happened on regular WhatsApp, use the file export path instead."
+      }, { status: 404 })
     }
 
     const { conversation, participantRoles } = formatWatiMessagesForAnalysis(
