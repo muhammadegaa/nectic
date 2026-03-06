@@ -13,6 +13,7 @@ export async function GET() {
       projectId: !!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
       hasServiceAccountKey: !!process.env.FIREBASE_SERVICE_ACCOUNT_KEY,
       apiKey: !!process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+      authDomain: !!process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
     },
     openai: {
       hasApiKey: !!process.env.OPENAI_API_KEY,
@@ -25,6 +26,7 @@ export async function GET() {
     checks.firebase.projectId &&
     checks.firebase.hasServiceAccountKey &&
     checks.firebase.apiKey &&
+    checks.firebase.authDomain &&
     checks.openai.hasApiKey
 
   return NextResponse.json({

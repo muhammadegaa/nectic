@@ -8,7 +8,6 @@ import {
   signInWithEmail,
   signOutUser,
   onAuthStateChangedHelper,
-  getGoogleRedirectResult,
 } from "@/infrastructure/firebase/firebase-client"
 
 interface AuthContextType {
@@ -34,10 +33,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false)
       }
     })
-    getGoogleRedirectResult().catch(() => {})
     const fallback = setTimeout(() => {
       if (isMounted) setLoading(false)
-    }, 5000)
+    }, 3000)
     return () => {
       isMounted = false
       clearTimeout(fallback)
