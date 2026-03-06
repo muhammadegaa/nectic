@@ -29,7 +29,7 @@ export default function ConceptLoginPage() {
     setError("")
     try {
       await signInWithGoogle()
-      // Redirect handled by useEffect when user state updates
+      // Browser navigates away to Google — no code runs after this
     } catch {
       setError("Sign-in failed. Please try again.")
       setSigningIn(false)

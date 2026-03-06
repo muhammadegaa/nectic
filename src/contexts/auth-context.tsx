@@ -8,6 +8,7 @@ import {
   signInWithEmail,
   signOutUser,
   onAuthStateChangedHelper,
+  handleGoogleRedirectResult,
 } from "@/infrastructure/firebase/firebase-client"
 
 interface AuthContextType {
@@ -27,54 +28,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let isMounted = true
-    let timeoutId: NodeJS.Timeout | null = null
-    
-    console.log('[AuthProvider] Initializing auth state listener')
-    
-    // Wait for auth state to be restored from persistence
-    // This is critical for enterprise users who expect sessions to persist
+
+    // Process any pending Google redirect result first.
+    // This must be called on page load after returning from the Google OAuth redirect.
+    handleGoogleRedirectResult().catch(() => {
+      // Redirect result errors are non-fatal (e.g. no pending redirect)
+    })
+
     const unsubscribe = onAuthStateChangedHelper((user) => {
-      console.log('[AuthProvider] onAuthStateChanged fired, user:', user?.uid || 'null')
-      
       if (isMounted) {
         setUser(user)
-        
-        // Clear any existing timeout
-        if (timeoutId) {
-          clearTimeout(timeoutId)
-          timeoutId = null
-        }
-        
-        // Set loading to false immediately when we get auth state
-        // The user object will be set, and if it's null, that's the actual state
         setLoading(false)
       }
     })
 
-    // Fallback timeout - if onAuthStateChanged doesn't fire within 2 seconds,
-    // check currentUser directly and mark as loaded
-    timeoutId = setTimeout(() => {
-      if (isMounted) {
-        console.log('[AuthProvider] Timeout reached, checking currentUser')
-        import('@/infrastructure/firebase/firebase-client').then(({ auth }) => {
-          if (isMounted) {
-            console.log('[AuthProvider] currentUser:', auth.currentUser?.uid || 'null')
-            if (auth.currentUser) {
-              setUser(auth.currentUser)
-            }
-            setLoading(false)
-          }
-        })
-      }
-    }, 2000)
-
     return () => {
-      console.log('[AuthProvider] Cleaning up')
       isMounted = false
       unsubscribe()
-      if (timeoutId) {
-        clearTimeout(timeoutId)
-      }
     }
   }, [])
 
