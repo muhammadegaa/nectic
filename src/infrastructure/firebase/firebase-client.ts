@@ -4,15 +4,14 @@ import { initializeApp, getApps, FirebaseApp } from 'firebase/app'
 import {
   getAuth,
   GoogleAuthProvider,
-  signInWithRedirect,
-  getRedirectResult,
+  signInWithCredential,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
   setPersistence,
   browserLocalPersistence,
-  User as FirebaseUser
+  User as FirebaseUser,
 } from 'firebase/auth'
 import { getFirestore, Timestamp, serverTimestamp } from 'firebase/firestore'
 
@@ -28,12 +27,12 @@ const firebaseConfig = {
 const app: FirebaseApp = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0]
 const auth = getAuth(app)
 const db = getFirestore(app)
-const googleProvider = new GoogleAuthProvider()
 
 setPersistence(auth, browserLocalPersistence).catch(() => {})
 
-export const signInWithGoogle = () => signInWithRedirect(auth, googleProvider)
-export const finishGoogleRedirect = () => getRedirectResult(auth)
+// Exchange a Google ID token (from GSI) for a Firebase session
+export const signInWithGoogleIdToken = (idToken: string) =>
+  signInWithCredential(auth, GoogleAuthProvider.credential(idToken))
 
 export const signUpWithEmail = async (email: string, password: string) => {
   const result = await createUserWithEmailAndPassword(auth, email, password)
@@ -50,4 +49,4 @@ export const signOutUser = () => signOut(auth)
 export const onAuthStateChangedHelper = (callback: (user: FirebaseUser | null) => void) =>
   onAuthStateChanged(auth, callback)
 
-export { auth, db, app, Timestamp, serverTimestamp, googleProvider }
+export { auth, db, app, Timestamp, serverTimestamp }

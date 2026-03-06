@@ -14,6 +14,7 @@ Nectic is a **PM and CS intelligence tool for WhatsApp-first B2B SaaS teams in S
 It reads WhatsApp conversations between your company and your customers, extracts churn signals and product insights, and gives you an agentic co-pilot to help you act on them.
 
 **What it does today:**
+
 - Parses WhatsApp exports (.txt / .zip) or pulls conversations via WATI API (1:1 contacts only)
 - Runs AI analysis against Claude Sonnet 4.6 to produce structured intelligence: health score, risk signals, product signals, relationship observations, competitor mentions, recommended action
 - Stores account analysis results per user in Firestore
@@ -24,6 +25,7 @@ It reads WhatsApp conversations between your company and your customers, extract
 - Shares read-only analysis reports via unique token links
 
 **What it does NOT do today:**
+
 - No real-time WhatsApp monitoring
 - No group chat support via WATI (WhatsApp Business API limitation — groups are not supported)
 - No email notifications or alerts
@@ -185,47 +187,49 @@ Path B — Context-only update (no new messages):
 
 ## Feature set — accurate status
 
-| Feature | Status | Notes |
-|---|---|---|
-| Google Sign-In | ✅ Working | Via Firebase Auth. Entry at /concept/login |
-| Email/password auth | ⚠️ Exists | At /auth/signup and /auth/login but not the primary product path |
-| File upload analysis (.txt, .zip) | ✅ Working | Client-side parsing, 1500 message cap |
-| WATI 1:1 contact analysis | ✅ Working (demo) | Requires user to provide WATI endpoint + token |
-| WATI group chat | ❌ Not possible | WhatsApp Business API does not support group chats |
-| AI participant role classification | ✅ Working | Runs on unknowns after file upload |
-| Contact book (cross-session role memory) | ✅ Working | Stored in Firestore per user |
-| Account health score | ✅ Working | AI-generated 1–10 integer |
-| Risk level classification | ✅ Working | low / medium / high / critical |
-| Risk signals with quotes | ✅ Working | Customer-side quotes with severity and date |
-| Product signals | ✅ Working | complaint / feature_request / praise / confusion + JTBD framing |
-| Relationship signals | ✅ Working | Tone observations, response pattern shifts |
-| Competitor mentions | ✅ Working | Extracted from conversation |
-| Recommended action | ✅ Working | What + Owner + Urgency |
-| Analysis quality indicator | ✅ Working | high/medium/low confidence + caveats + data gaps |
-| Account chat co-pilot | ✅ Working | Streaming, knows signal actions, workspace, account state |
-| Dynamic prompt suggestions | ✅ Working | Context-driven, based on risk/signals/renewal |
-| Follow-up suggestions | ✅ Working | Generated from last AI response keywords |
-| Signal board | ✅ Working | Cross-account, filter by status, note field |
-| Signal actions (open/in_progress/done/dismissed) | ✅ Working | Per-signal, stored in Firestore, injected into chat and reanalysis |
-| Feature brief generation | ✅ Working | JTBD framing, streaming, markdown output |
-| Re-analysis (new messages) | ✅ Working | Delta tracking (changesSince field) |
-| Re-analysis (context-only) | ✅ Working | Supplemental context text field |
-| Workspace (product intelligence) | ✅ Working | Auto-save, 4 fields injected into all analyses |
-| Workspace URL auto-fill | ✅ Working | Scrapes website → AI extracts productDescription + featureAreas |
-| Workspace staleness nudge | ✅ Working | Quarter boundary detection on roadmapFocus |
-| Revenue at Risk module | ✅ Working | ARR calculator, ACV presets, recovery comparison, link to top-risk account |
-| Account sharing (read-only) | ✅ Working | Tokenized public URLs |
-| Cross-account signal aggregation | ✅ Working | Groups identical signals across accounts with account count |
-| Account delete | ✅ Working | Removes from Firestore + cleans up sharedAccounts |
-| PostHog analytics | ✅ Working | 12 events tracked |
-| Pricing page | ⚠️ Exists | UI exists at /pricing, Stripe routes exist but checkout not wired to active plans |
-| Billing / paywall | ❌ Not active | No subscription enforcement |
-| Email notifications | ❌ Not built | |
-| Jira / Notion / Slack integration | ❌ Not built | |
-| Multi-user workspace | ❌ Not built | One workspace per Google account |
-| Proactive nudges (stale in-progress signals) | ❌ Not built | Design in "Agentic system design" section |
-| Roadmap versioning (Q1 → Q2 history) | ❌ Not built | Design in "Agentic system design" section |
-| WATI OAuth / consent flow | ❌ Not possible | WATI does not offer OAuth for third-party apps |
+
+| Feature                                          | Status           | Notes                                                                             |
+| ------------------------------------------------ | ---------------- | --------------------------------------------------------------------------------- |
+| Google Sign-In                                   | ✅ Working        | Via Firebase Auth. Entry at /concept/login                                        |
+| Email/password auth                              | ⚠️ Exists        | At /auth/signup and /auth/login but not the primary product path                  |
+| File upload analysis (.txt, .zip)                | ✅ Working        | Client-side parsing, 1500 message cap                                             |
+| WATI 1:1 contact analysis                        | ✅ Working (demo) | Requires user to provide WATI endpoint + token                                    |
+| WATI group chat                                  | ❌ Not possible   | WhatsApp Business API does not support group chats                                |
+| AI participant role classification               | ✅ Working        | Runs on unknowns after file upload                                                |
+| Contact book (cross-session role memory)         | ✅ Working        | Stored in Firestore per user                                                      |
+| Account health score                             | ✅ Working        | AI-generated 1–10 integer                                                         |
+| Risk level classification                        | ✅ Working        | low / medium / high / critical                                                    |
+| Risk signals with quotes                         | ✅ Working        | Customer-side quotes with severity and date                                       |
+| Product signals                                  | ✅ Working        | complaint / feature_request / praise / confusion + JTBD framing                   |
+| Relationship signals                             | ✅ Working        | Tone observations, response pattern shifts                                        |
+| Competitor mentions                              | ✅ Working        | Extracted from conversation                                                       |
+| Recommended action                               | ✅ Working        | What + Owner + Urgency                                                            |
+| Analysis quality indicator                       | ✅ Working        | high/medium/low confidence + caveats + data gaps                                  |
+| Account chat co-pilot                            | ✅ Working        | Streaming, knows signal actions, workspace, account state                         |
+| Dynamic prompt suggestions                       | ✅ Working        | Context-driven, based on risk/signals/renewal                                     |
+| Follow-up suggestions                            | ✅ Working        | Generated from last AI response keywords                                          |
+| Signal board                                     | ✅ Working        | Cross-account, filter by status, note field                                       |
+| Signal actions (open/in_progress/done/dismissed) | ✅ Working        | Per-signal, stored in Firestore, injected into chat and reanalysis                |
+| Feature brief generation                         | ✅ Working        | JTBD framing, streaming, markdown output                                          |
+| Re-analysis (new messages)                       | ✅ Working        | Delta tracking (changesSince field)                                               |
+| Re-analysis (context-only)                       | ✅ Working        | Supplemental context text field                                                   |
+| Workspace (product intelligence)                 | ✅ Working        | Auto-save, 4 fields injected into all analyses                                    |
+| Workspace URL auto-fill                          | ✅ Working        | Scrapes website → AI extracts productDescription + featureAreas                   |
+| Workspace staleness nudge                        | ✅ Working        | Quarter boundary detection on roadmapFocus                                        |
+| Revenue at Risk module                           | ✅ Working        | ARR calculator, ACV presets, recovery comparison, link to top-risk account        |
+| Account sharing (read-only)                      | ✅ Working        | Tokenized public URLs                                                             |
+| Cross-account signal aggregation                 | ✅ Working        | Groups identical signals across accounts with account count                       |
+| Account delete                                   | ✅ Working        | Removes from Firestore + cleans up sharedAccounts                                 |
+| PostHog analytics                                | ✅ Working        | 12 events tracked                                                                 |
+| Pricing page                                     | ⚠️ Exists        | UI exists at /pricing, Stripe routes exist but checkout not wired to active plans |
+| Billing / paywall                                | ❌ Not active     | No subscription enforcement                                                       |
+| Email notifications                              | ❌ Not built      |                                                                                   |
+| Jira / Notion / Slack integration                | ❌ Not built      |                                                                                   |
+| Multi-user workspace                             | ❌ Not built      | One workspace per Google account                                                  |
+| Proactive nudges (stale in-progress signals)     | ❌ Not built      | Design in "Agentic system design" section                                         |
+| Roadmap versioning (Q1 → Q2 history)             | ❌ Not built      | Design in "Agentic system design" section                                         |
+| WATI OAuth / consent flow                        | ❌ Not possible   | WATI does not offer OAuth for third-party apps                                    |
+
 
 ---
 
@@ -294,6 +298,7 @@ interface AnalysisResult {
 ```
 
 **Confidence rules:**
+
 - `high`: 50+ messages with clear customer voice
 - `medium`: 20–49 messages, ambiguous signals, or uncertain participant roles
 - `low`: under 20 messages, mostly vendor-side, or very short date range
@@ -350,20 +355,23 @@ Firestore
 
 All routes under `/api/`. All are POST. No authentication middleware — auth is handled client-side; server routes trust the data passed.
 
-| Route | Model | Max duration | Input | Output |
-|---|---|---|---|---|
-| `/api/concept/analyze` | claude-sonnet-4.6 | 60s | conversation, participantRoles, context, workspace | { result: AnalysisResult } |
-| `/api/concept/reanalyze` | claude-sonnet-4.6 | 60s | priorAnalysis, conversation?, supplementalContext?, signalActions, workspace | { result: AnalysisResult } |
-| `/api/concept/chat` | claude-haiku-4.5 | 60s | analysis, messages, question, accountMeta, workspace, signalActions | text/plain stream |
-| `/api/concept/brief` | claude-sonnet-4.6 | 60s | signal, accountName, accountSummary, roadmapStatus, additionalContext, workspace | text/plain stream (markdown) |
-| `/api/concept/classify-participants` | (unknown — check route) | — | participants: [{name, messages[]}] | { roles: Record<string, ParticipantRole> } |
-| `/api/wati/contacts` | — | — | endpoint, token, pageSize? | { contacts: WatiContact[], totalCount } |
-| `/api/wati/messages` | — | — | endpoint, token, phoneNumber, contactName, pageSize? | { conversation, participantRoles, messageCount, totalCount } |
-| `/api/workspace/autofill` | claude-haiku-4.5 | 30s | url | { productDescription, featureAreas, source } |
-| `/api/stripe/checkout` | — | — | plan, billing | { url } (Stripe session) |
-| `/api/stripe/webhook` | — | — | Stripe event | 200 OK |
+
+| Route                                | Model                   | Max duration | Input                                                                            | Output                                                       |
+| ------------------------------------ | ----------------------- | ------------ | -------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| `/api/concept/analyze`               | claude-sonnet-4.6       | 60s          | conversation, participantRoles, context, workspace                               | { result: AnalysisResult }                                   |
+| `/api/concept/reanalyze`             | claude-sonnet-4.6       | 60s          | priorAnalysis, conversation?, supplementalContext?, signalActions, workspace     | { result: AnalysisResult }                                   |
+| `/api/concept/chat`                  | claude-haiku-4.5        | 60s          | analysis, messages, question, accountMeta, workspace, signalActions              | text/plain stream                                            |
+| `/api/concept/brief`                 | claude-sonnet-4.6       | 60s          | signal, accountName, accountSummary, roadmapStatus, additionalContext, workspace | text/plain stream (markdown)                                 |
+| `/api/concept/classify-participants` | (unknown — check route) | —            | participants: [{name, messages[]}]                                               | { roles: Record<string, ParticipantRole> }                   |
+| `/api/wati/contacts`                 | —                       | —            | endpoint, token, pageSize?                                                       | { contacts: WatiContact[], totalCount }                      |
+| `/api/wati/messages`                 | —                       | —            | endpoint, token, phoneNumber, contactName, pageSize?                             | { conversation, participantRoles, messageCount, totalCount } |
+| `/api/workspace/autofill`            | claude-haiku-4.5        | 30s          | url                                                                              | { productDescription, featureAreas, source }                 |
+| `/api/stripe/checkout`               | —                       | —            | plan, billing                                                                    | { url } (Stripe session)                                     |
+| `/api/stripe/webhook`                | —                       | —            | Stripe event                                                                     | 200 OK                                                       |
+
 
 **Constraints:**
+
 - All routes run on Vercel Hobby plan → **maxDuration cap is 60 seconds**
 - Analysis and re-analysis are the most expensive; large conversations (1500 messages) can take 30–45s
 - Chat uses streaming — faster perceived performance
@@ -374,12 +382,14 @@ All routes under `/api/`. All are POST. No authentication middleware — auth is
 ## AI models and context
 
 ### Analysis (`/api/concept/analyze`, `/api/concept/reanalyze`)
+
 - Model: `anthropic/claude-sonnet-4.6` via OpenRouter
 - Temperature: 0.2 (low variance, consistent structure)
 - Context injected: workspace fields, participant roles, account context (industry/tier/renewal)
 - Re-analysis also injects: prior result JSON, signal actions with current status, supplemental context
 
 ### Chat co-pilot (`/api/concept/chat`)
+
 - Model: `anthropic/claude-haiku-4.5` via OpenRouter (faster, cheaper for conversation)
 - Temperature: 0.3
 - Context injected: full analysis JSON, account meta, workspace fields, **signal actions** (as of March 2026)
@@ -387,6 +397,7 @@ All routes under `/api/`. All are POST. No authentication middleware — auth is
 - Streaming via TransformStream
 
 ### Feature brief (`/api/concept/brief`)
+
 - Model: `anthropic/claude-sonnet-4.6` via OpenRouter
 - Temperature: 0.2
 - Context: signal details, account name/summary, roadmap status, workspace
@@ -394,13 +405,16 @@ All routes under `/api/`. All are POST. No authentication middleware — auth is
 - Streaming via TransformStream
 
 ### Workspace autofill (`/api/workspace/autofill`)
+
 - Model: `anthropic/claude-haiku-4.5` via OpenRouter
 - Fetches URL server-side (8s timeout), strips HTML, extracts first 6000 chars
 - Extraction prompt returns only `productDescription` and `featureAreas`
 - Does NOT attempt roadmap or known issues (those are internal data)
 
 ### SEA language handling
+
 All analysis prompts include explicit Bahasa Indonesia guidance:
+
 - "Agak", "lumayan", "nanti saja" → indirect dissatisfaction signals
 - Code-switching to English → escalation/emphasis
 - "Iya iya" without follow-up → soft rejection
@@ -411,16 +425,18 @@ All analysis prompts include explicit Bahasa Indonesia guidance:
 
 ## Infrastructure
 
-| Component | Service | Notes |
-|---|---|---|
-| Hosting | Vercel | Hobby plan. maxDuration=60s hard cap. |
-| Database | Firebase Firestore | No schema enforcement. Client-side Firebase SDK. |
-| Auth | Firebase Auth | Google Sign-In only at /concept/login |
-| AI routing | OpenRouter | Key: OPENROUTER_API_KEY in Vercel env vars |
-| Analytics | PostHog | Key: NEXT_PUBLIC_POSTHOG_KEY in Vercel env vars |
-| WhatsApp API | WATI | User-provided endpoint + token. No server-side key. |
-| Payments | Stripe | STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET in Vercel env vars. Not active. |
-| Framework | Next.js 14 (App Router) | TypeScript, Tailwind CSS |
+
+| Component    | Service                 | Notes                                                                     |
+| ------------ | ----------------------- | ------------------------------------------------------------------------- |
+| Hosting      | Vercel                  | Hobby plan. maxDuration=60s hard cap.                                     |
+| Database     | Firebase Firestore      | No schema enforcement. Client-side Firebase SDK.                          |
+| Auth         | Firebase Auth           | Google Sign-In only at /concept/login                                     |
+| AI routing   | OpenRouter              | Key: OPENROUTER_API_KEY in Vercel env vars                                |
+| Analytics    | PostHog                 | Key: NEXT_PUBLIC_POSTHOG_KEY in Vercel env vars                           |
+| WhatsApp API | WATI                    | User-provided endpoint + token. No server-side key.                       |
+| Payments     | Stripe                  | STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET in Vercel env vars. Not active. |
+| Framework    | Next.js 14 (App Router) | TypeScript, Tailwind CSS                                                  |
+
 
 ---
 
@@ -428,20 +444,22 @@ All analysis prompts include explicit Bahasa Indonesia guidance:
 
 PostHog events currently tracked:
 
-| Event | Fired when | Properties |
-|---|---|---|
-| `signup_completed` | After successful Google or email signup | `method: "google" | "email"` |
-| `file_uploaded` | WhatsApp file successfully parsed | `messageCount, participants` |
-| `analysis_completed` | Account saved after first analysis | `riskLevel, healthScore, messageCount` |
-| `analysis_failed` | Analysis API returned error | `error` |
-| `wati_import_attempted` | Before WATI message fetch | `contactName` |
-| `wati_import_completed` | WATI account saved | `riskLevel, healthScore` |
-| `reanalysis_triggered` | Re-analysis run button clicked | `accountId, riskLevel` |
-| `chat_message_sent` | User sends message in chat panel | `accountRiskLevel, isFollowUp` |
-| `signal_actioned` | Signal status changed on board or account detail | `status` |
-| `brief_generated` | PM generates a feature brief | `signalType, signalPriority, roadmapStatus` |
-| `pricing_page_viewed` | /pricing page loaded | — |
-| `checkout_started` | Stripe checkout initiated | `plan, billing` |
+
+| Event                   | Fired when                                       | Properties                                  |
+| ----------------------- | ------------------------------------------------ | ------------------------------------------- |
+| `signup_completed`      | After successful Google or email signup          | `method: "google"                           |
+| `file_uploaded`         | WhatsApp file successfully parsed                | `messageCount, participants`                |
+| `analysis_completed`    | Account saved after first analysis               | `riskLevel, healthScore, messageCount`      |
+| `analysis_failed`       | Analysis API returned error                      | `error`                                     |
+| `wati_import_attempted` | Before WATI message fetch                        | `contactName`                               |
+| `wati_import_completed` | WATI account saved                               | `riskLevel, healthScore`                    |
+| `reanalysis_triggered`  | Re-analysis run button clicked                   | `accountId, riskLevel`                      |
+| `chat_message_sent`     | User sends message in chat panel                 | `accountRiskLevel, isFollowUp`              |
+| `signal_actioned`       | Signal status changed on board or account detail | `status`                                    |
+| `brief_generated`       | PM generates a feature brief                     | `signalType, signalPriority, roadmapStatus` |
+| `pricing_page_viewed`   | /pricing page loaded                             | —                                           |
+| `checkout_started`      | Stripe checkout initiated                        | `plan, billing`                             |
+
 
 **User identification:** `identifyUser(uid, { email, name })` called on dashboard load when user is authenticated.
 
@@ -451,27 +469,30 @@ PostHog events currently tracked:
 
 All `/concept` pages use these conventions:
 
-| Element | Token |
-|---|---|
-| Page background | `bg-neutral-50` |
-| Nav | `h-12 bg-white border-b border-neutral-200 sticky top-0 z-10` |
-| Nav active link | `text-neutral-900 font-semibold border-b-2 border-neutral-900 pb-0.5` |
-| Cards | `bg-white border border-neutral-200 rounded-xl` |
-| Account card hover | `transition-all hover:-translate-y-0.5 hover:shadow-md` |
-| List row hover | `hover:bg-neutral-50/50 transition-colors` |
-| Loading spinner | `w-5 h-5 border-2 border-neutral-300 border-t-neutral-900 rounded-full animate-spin` |
-| Page title | `text-xl font-semibold text-neutral-900` |
-| Subtitle | `text-sm text-neutral-500 mt-0.5` |
-| Risk: critical | dot `bg-red-500`, badge `bg-red-50 text-red-700 border-red-200` |
-| Risk: high | dot `bg-orange-400`, badge `bg-orange-50 text-orange-700 border-orange-200` |
-| Risk: medium | dot `bg-amber-400`, badge `bg-amber-50 text-amber-700 border-amber-200` |
-| Risk: low | dot `bg-green-400`, badge `bg-green-50 text-green-700 border-green-200` |
-| Max-width: workspace | `max-w-2xl` |
-| Max-width: accounts dashboard | `max-w-4xl` |
-| Max-width: signal board | `max-w-5xl` |
-| Max-width: account detail | `max-w-6xl` |
+
+| Element                       | Token                                                                                |
+| ----------------------------- | ------------------------------------------------------------------------------------ |
+| Page background               | `bg-neutral-50`                                                                      |
+| Nav                           | `h-12 bg-white border-b border-neutral-200 sticky top-0 z-10`                        |
+| Nav active link               | `text-neutral-900 font-semibold border-b-2 border-neutral-900 pb-0.5`                |
+| Cards                         | `bg-white border border-neutral-200 rounded-xl`                                      |
+| Account card hover            | `transition-all hover:-translate-y-0.5 hover:shadow-md`                              |
+| List row hover                | `hover:bg-neutral-50/50 transition-colors`                                           |
+| Loading spinner               | `w-5 h-5 border-2 border-neutral-300 border-t-neutral-900 rounded-full animate-spin` |
+| Page title                    | `text-xl font-semibold text-neutral-900`                                             |
+| Subtitle                      | `text-sm text-neutral-500 mt-0.5`                                                    |
+| Risk: critical                | dot `bg-red-500`, badge `bg-red-50 text-red-700 border-red-200`                      |
+| Risk: high                    | dot `bg-orange-400`, badge `bg-orange-50 text-orange-700 border-orange-200`          |
+| Risk: medium                  | dot `bg-amber-400`, badge `bg-amber-50 text-amber-700 border-amber-200`              |
+| Risk: low                     | dot `bg-green-400`, badge `bg-green-50 text-green-700 border-green-200`              |
+| Max-width: workspace          | `max-w-2xl`                                                                          |
+| Max-width: accounts dashboard | `max-w-4xl`                                                                          |
+| Max-width: signal board       | `max-w-5xl`                                                                          |
+| Max-width: account detail     | `max-w-6xl`                                                                          |
+
 
 **Rules:**
+
 - `rounded-xl` on all card containers
 - `rounded-lg` only for inline elements (inputs, buttons, tags, chips)
 - `tabular-nums` on all numeric displays
@@ -482,23 +503,27 @@ All `/concept` pages use these conventions:
 ## Known limitations and honest gaps
 
 **Analysis quality:**
+
 - Low-message conversations (<20 messages) produce low-confidence output; AI flags this explicitly
 - WATI fetches max 200 messages per contact; very long relationships may be under-represented
 - Analysis is a point-in-time snapshot — it doesn't know about actions taken outside Nectic
 - Bahasa Indonesia NLP is imperfect; indirect dissatisfaction may be missed
 
 **Architecture:**
+
 - No server-side auth on API routes — anyone with the right JSON payload can call them (not exploitable in practice since data requires valid Firestore tokens, but technically open)
 - All accounts stored flat under users/{uid}/accounts — no team sharing, no org concept
 - shareToken is a UUID but never expires and has no access revocation
 - WATI credentials (endpoint + token) stored in Firestore in plaintext in the workspace document
 
 **Scalability:**
+
 - 60s Vercel function cap will be hit on very large conversation exports (close to 1500 messages)
 - No background processing — all analysis is synchronous in the request/response cycle
 - No job queue, no retry logic on analysis failure beyond client-side retry
 
 **WATI-specific:**
+
 - No OAuth or consent flow — user must manually copy endpoint and token from WATI dashboard
 - Only fetches page 1 of contacts (max 100)
 - `lastUpdated` on WATI contacts reflects contact record update time, not last message time
@@ -514,12 +539,14 @@ All `/concept` pages use these conventions:
 
 Every analysis and chat operates on a four-layer context window:
 
-| Layer | Source | Updated by | Staleness risk |
-|---|---|---|---|
-| Product context | Workspace fields | PM manually | High — quarter boundaries |
-| Account state | Analysis result | Each analysis run | Medium — needs fresh data |
-| PM decisions | Signal actions | PM on signal board / account detail | Low — tracked per-action |
-| Conversation | WhatsApp export / WATI | PM manually uploads | High — needs fresh exports |
+
+| Layer           | Source                 | Updated by                          | Staleness risk             |
+| --------------- | ---------------------- | ----------------------------------- | -------------------------- |
+| Product context | Workspace fields       | PM manually                         | High — quarter boundaries  |
+| Account state   | Analysis result        | Each analysis run                   | Medium — needs fresh data  |
+| PM decisions    | Signal actions         | PM on signal board / account detail | Low — tracked per-action   |
+| Conversation    | WhatsApp export / WATI | PM manually uploads                 | High — needs fresh exports |
+
 
 **What's built:** All four layers are injected into reanalysis and chat. Signal actions now included in chat context (March 2026 fix).
 
@@ -530,6 +557,7 @@ Every analysis and chat operates on a four-layer context window:
 **Current mitigation:** Staleness nudge on `roadmapFocus` when `updatedAt` timestamp is from a previous quarter.
 
 **Design when we build it:**
+
 ```typescript
 // Add to WorkspaceContext:
 roadmapHistory?: {
@@ -543,6 +571,7 @@ roadmapHistory?: {
 When PM updates `roadmapFocus` and quarter boundary detected: prompt "Archive Q1 roadmap before updating?" → push to history array.
 
 Inject into re-analysis prompt:
+
 ```
 PREVIOUS ROADMAP (Q1 2026, archived): [text]
 CURRENT ROADMAP (Q2 2026): [text]
@@ -555,6 +584,7 @@ CURRENT ROADMAP (Q2 2026): [text]
 **Problem:** PM marks signal as "in_progress", forgets to follow up. 30 days later, same customer complaint appears in new analysis.
 
 **Design:**
+
 - Vercel Cron job (weekly): query all users' signal actions
 - Find signals with `status: "in_progress"` and `updatedAt` > 21 days old
 - Surface: in-app banner on next dashboard load — "3 signals you're working on haven't had a re-analysis in 30+ days"
@@ -585,11 +615,13 @@ Every feature should be answerable with: does this reduce the gap between a cust
 In SEA B2B SaaS, WhatsApp IS the CRM. Customer success, sales, and product feedback all happen in WhatsApp group chats. PMs and CS leads receive a filtered, delayed version of what customers actually said — because sales reps decide what gets escalated.
 
 The result:
+
 - Churn signals surface weeks after the save window closes
 - Roadmap decisions are based on escalated anecdotes, not actual customer language
 - CS teams waste hours reading chat history to understand account health
 
 **Why this is worse in SEA:**
+
 - Indonesian B2B SaaS retention: 62–70% (vs. 90% global median)
 - Monthly churn at Series A: 5.7% (vs. 3.5% global)
 - 91% of B2B customer communication in Indonesia happens on WhatsApp
@@ -597,16 +629,19 @@ The result:
 ### ICP
 
 **Primary (locked):**
+
 - Role: Head of CS, VP Product, or co-founder in a post-Series A B2B SaaS company in Indonesia or Singapore
 - Company: 50–500 customers, $1–20M ARR, customer relationships managed via WhatsApp group chats
 - Pain: Churn is high, escalation process is broken, product roadmap is driven by sales-filtered anecdotes
 
 **Anti-ICP:**
+
 - SMB companies with <20 customers (analysis not worth it)
 - Companies that use Salesforce or HubSpot as the primary communication channel (not the SEA pattern)
 - Companies that don't use WhatsApp for customer communication
 
 ### What Nectic is NOT
+
 - Not a WhatsApp CRM (that is Qontak, Wati, Respond.io)
 - Not a chatbot platform
 - Not a customer support ticketing tool
