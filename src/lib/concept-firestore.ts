@@ -35,6 +35,8 @@ export interface WorkspaceContext {
   // WATI BSP integration
   watiEndpoint?: string
   watiToken?: string
+  // Notifications
+  notificationEmail?: string
 }
 
 export interface StoredAccount {
@@ -62,6 +64,31 @@ export async function saveSignalAction(
 ): Promise<void> {
   const ref = doc(accountsRef(uid), accountId)
   await setDoc(ref, { signalActions: { [key]: action } }, { merge: true })
+}
+
+export async function recalculateHealthFromResolutions(
+  uid: string,
+  accountId: string
+): Promise<number | null> {
+  const account = await getAccount(uid, accountId)
+  if (!account) return null
+
+  const totalSignals =
+    (account.result.riskSignals?.length ?? 0) +
+    (account.result.productSignals?.length ?? 0)
+  if (totalSignals === 0) return null
+
+  const resolvedCount = Object.values(account.signalActions ?? {}).filter(
+    (a) => a.status === "done"
+  ).length
+
+  const resolvedRatio = resolvedCount / totalSignals
+  const originalScore = account.result.healthScore ?? 5
+  const newScore = Math.min(10, Math.round((originalScore * 0.7 + 10 * resolvedRatio * 0.3) * 10) / 10)
+
+  const ref = doc(accountsRef(uid), accountId)
+  await updateDoc(ref, { "result.healthScore": newScore })
+  return newScore
 }
 
 export interface AggregatedSignal {

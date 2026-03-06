@@ -5,6 +5,8 @@ export type SignalActionStatus = "open" | "in_progress" | "done" | "dismissed"
 export interface SignalAction {
   status: SignalActionStatus
   note?: string
+  draftResponse?: string
+  resolvedAt?: string
   updatedAt: string
 }
 

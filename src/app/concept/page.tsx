@@ -3,7 +3,8 @@
 import { useState, useRef, useCallback, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import LogoIcon from "@/components/logo-icon"
+import { motion } from "framer-motion"
+import ConceptNav from "@/components/concept-nav"
 import { useAuth } from "@/contexts/auth-context"
 import { parseWhatsAppFile, formatForPrompt, type WaParsed } from "@/lib/whatsapp-parser"
 import {
@@ -387,36 +388,30 @@ export default function ConceptPage() {
   const sharedPatterns = aggregated.filter((s) => s.accountCount > 1)
   const hasWorkspace = !!(workspace.productDescription || workspace.featureAreas || workspace.roadmapFocus || workspace.knownIssues)
 
+  const urgentSignalCount = accounts.reduce((sum, a) => {
+    if (a.result.riskLevel !== "critical" && a.result.riskLevel !== "high") return sum
+    const openSignals = (a.result.riskSignals?.length ?? 0) + (a.result.productSignals?.length ?? 0)
+    const resolvedSignals = Object.values(a.signalActions ?? {}).filter((sa) => sa.status === "done" || sa.status === "dismissed").length
+    return sum + Math.max(0, openSignals - resolvedSignals)
+  }, 0)
+
   return (
     <div className="min-h-screen bg-neutral-50">
-      <nav className="bg-white border-b border-neutral-200 px-4 sm:px-6 h-12 flex items-center justify-between sticky top-0 z-10">
-        <div className="flex items-center gap-3 sm:gap-4">
-          <Link href="/" className="flex items-center gap-2 hover:opacity-70 transition-opacity">
-            <LogoIcon size={20} />
-            <span className="text-sm font-semibold text-neutral-900">Nectic</span>
-          </Link>
-          <span className="text-neutral-200 hidden sm:inline">·</span>
-          <div className="hidden sm:flex items-center gap-3 text-xs">
-            <span className="text-neutral-900 font-semibold border-b-2 border-neutral-900 pb-0.5">Accounts</span>
-            <Link href="/concept/board" className="text-neutral-400 hover:text-neutral-700 transition-colors">Signal board</Link>
-            <Link href="/concept/workspace" className="text-neutral-400 hover:text-neutral-700 transition-colors">Workspace</Link>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 sm:gap-3">
-          <span className="hidden sm:inline text-xs bg-amber-50 border border-amber-200 text-amber-700 px-3 py-1 rounded-full font-medium">Early access</span>
-          {accounts.length > 0 && !loadingAccounts && (
+      <ConceptNav
+        active="accounts"
+        urgentCount={urgentSignalCount}
+        userLabel={user.displayName ?? user.email ?? undefined}
+        onSignOut={() => signOut()}
+        rightSlot={
+          accounts.length > 0 && !loadingAccounts ? (
             <button onClick={openConnect} className="flex items-center gap-1.5 text-xs bg-neutral-900 text-white px-3 py-1.5 rounded-lg hover:bg-neutral-700 transition-colors font-medium">
               <WhatsAppIcon size={12} />
               <span className="hidden sm:inline">Connect account</span>
               <span className="sm:hidden">Connect</span>
             </button>
-          )}
-          <div className="flex items-center gap-2 pl-2 border-l border-neutral-200">
-            <span className="text-xs text-neutral-500 hidden sm:block">{user.displayName ?? user.email}</span>
-            <button onClick={() => signOut()} className="text-xs text-neutral-400 hover:text-neutral-700 transition-colors">Sign out</button>
-          </div>
-        </div>
-      </nav>
+          ) : undefined
+        }
+      />
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8 pb-24 sm:pb-8">
         {loadingAccounts ? (
@@ -431,7 +426,12 @@ export default function ConceptPage() {
             {accounts.length > 0 && (
               <div className="space-y-6">
                 {/* Stats row */}
-                <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, ease: "easeOut" }}
+                  className="flex items-center gap-2 sm:gap-3 flex-wrap"
+                >
                   <div className="flex items-center gap-1.5 bg-white border border-neutral-200 rounded-lg px-3 py-2">
                     <span className="text-base font-semibold text-neutral-900 tabular-nums">{accounts.length}</span>
                     <span className="text-xs text-neutral-400">account{accounts.length !== 1 ? "s" : ""}</span>
@@ -454,7 +454,7 @@ export default function ConceptPage() {
                       <span className="text-xs text-blue-600">cross-account pattern{sharedPatterns.length !== 1 ? "s" : ""}</span>
                     </div>
                   )}
-                </div>
+                </motion.div>
 
                 {/* Revenue at Risk — shown when accounts are at risk */}
                 {atRisk > 0 && <RevenueAtRisk atRiskCount={atRisk} topAccountId={sortedAccounts[0]?.id} topAccountName={sortedAccounts[0]?.result.accountName} />}
@@ -476,18 +476,30 @@ export default function ConceptPage() {
                     <h2 className="text-xs font-semibold text-neutral-400 uppercase tracking-widest">Accounts</h2>
                     <span className="text-xs text-neutral-400">Sorted by risk</span>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <motion.div
+                    className="grid grid-cols-1 sm:grid-cols-2 gap-3"
+                    initial="hidden"
+                    animate="show"
+                    variants={{ hidden: {}, show: { transition: { staggerChildren: 0.07 } } }}
+                  >
                     {sortedAccounts.map((account) => (
-                      <AccountCard
+                      <motion.div
                         key={account.id}
-                        account={account}
-                        onDelete={() => setDeletingId(account.id)}
-                        confirmingDelete={deletingId === account.id}
-                        onConfirmDelete={() => handleDelete(account.id)}
-                        onCancelDelete={() => setDeletingId(null)}
-                      />
+                        variants={{
+                          hidden: { y: 12, opacity: 0 },
+                          show: { y: 0, opacity: 1, transition: { duration: 0.3, ease: [0.16, 1, 0.3, 1] } },
+                        }}
+                      >
+                        <AccountCard
+                          account={account}
+                          onDelete={() => setDeletingId(account.id)}
+                          confirmingDelete={deletingId === account.id}
+                          onConfirmDelete={() => handleDelete(account.id)}
+                          onCancelDelete={() => setDeletingId(null)}
+                        />
+                      </motion.div>
                     ))}
-                  </div>
+                  </motion.div>
                 </div>
 
                 {/* Cross-account patterns — compact, max 3, link to board */}
@@ -535,22 +547,6 @@ export default function ConceptPage() {
           </>
         )}
       </main>
-
-      {/* Mobile bottom nav */}
-      <nav className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 z-10 flex">
-        <Link href="/concept" className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-neutral-900">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-          <span className="text-[10px] font-semibold">Accounts</span>
-        </Link>
-        <Link href="/concept/board" className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-neutral-400">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>
-          <span className="text-[10px] font-medium">Signals</span>
-        </Link>
-        <Link href="/concept/workspace" className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-neutral-400">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
-          <span className="text-[10px] font-medium">Workspace</span>
-        </Link>
-      </nav>
 
       {showConnect && (
         <ConnectModal

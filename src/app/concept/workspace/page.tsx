@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
-import LogoIcon from "@/components/logo-icon"
+import ConceptNav from "@/components/concept-nav"
 import { useAuth } from "@/contexts/auth-context"
 import { getWorkspace, saveWorkspace, type WorkspaceContext } from "@/lib/concept-firestore"
 
@@ -98,6 +97,7 @@ export default function WorkspacePage() {
     featureAreas: "",
     roadmapFocus: "",
     knownIssues: "",
+    notificationEmail: "",
   })
   const [workspaceUpdatedAt, setWorkspaceUpdatedAt] = useState<string | undefined>()
   const [loading, setLoading] = useState(true)
@@ -119,6 +119,7 @@ export default function WorkspacePage() {
         featureAreas: ws.featureAreas ?? "",
         roadmapFocus: ws.roadmapFocus ?? "",
         knownIssues: ws.knownIssues ?? "",
+        notificationEmail: ws.notificationEmail ?? "",
       }
       setForm(loaded)
       latestForm.current = loaded
@@ -203,54 +204,12 @@ export default function WorkspacePage() {
 
   return (
     <div className="min-h-screen bg-neutral-50">
-      <nav className="bg-white border-b border-neutral-200 px-4 sm:px-6 h-12 flex items-center justify-between sticky top-0 z-10">
-        <div className="flex items-center gap-3 sm:gap-4">
-          <Link href="/" className="flex items-center gap-2 hover:opacity-70 transition-opacity">
-            <LogoIcon size={20} />
-            <span className="text-sm font-semibold text-neutral-900">Nectic</span>
-          </Link>
-          <span className="text-neutral-200 hidden sm:inline">·</span>
-          <div className="hidden sm:flex items-center gap-3 text-xs">
-            <Link href="/concept" className="text-neutral-400 hover:text-neutral-700 transition-colors">Accounts</Link>
-            <Link href="/concept/board" className="text-neutral-400 hover:text-neutral-700 transition-colors">Signal board</Link>
-            <span className="text-neutral-900 font-semibold border-b-2 border-neutral-900 pb-0.5">Workspace</span>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          {saveStatus === "saving" && (
-            <span className="text-xs text-neutral-400 flex items-center gap-1.5">
-              <span className="w-3 h-3 border border-neutral-300 border-t-neutral-600 rounded-full animate-spin" />
-              Saving…
-            </span>
-          )}
-          {saveStatus === "saved" && (
-            <span className="text-xs text-emerald-600 flex items-center gap-1.5 transition-opacity">
-              <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><polyline points="2 8 6 12 14 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              Saved
-            </span>
-          )}
-          <div className="flex items-center gap-2 pl-3 border-l border-neutral-200 text-xs text-neutral-400">
-            <span className="hidden sm:block">{user.displayName ?? user.email}</span>
-            <button onClick={() => signOut()} className="hover:text-neutral-700 transition-colors">Sign out</button>
-          </div>
-        </div>
-      </nav>
-
-      {/* Mobile bottom nav */}
-      <nav className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 z-10 flex">
-        <Link href="/concept" className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-neutral-400">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-          <span className="text-[10px] font-medium">Accounts</span>
-        </Link>
-        <Link href="/concept/board" className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-neutral-400">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>
-          <span className="text-[10px] font-medium">Signals</span>
-        </Link>
-        <Link href="/concept/workspace" className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-neutral-900">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
-          <span className="text-[10px] font-semibold">Workspace</span>
-        </Link>
-      </nav>
+      <ConceptNav
+        active="workspace"
+        userLabel={user.displayName ?? user.email ?? undefined}
+        saveStatus={saveStatus}
+        onSignOut={() => signOut()}
+      />
 
       <main className="max-w-2xl mx-auto px-4 sm:px-6 py-8 pb-24 sm:pb-12">
 
@@ -408,6 +367,43 @@ export default function WorkspacePage() {
                 </div>
               )
             })}
+
+            {/* Notification email */}
+            <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
+              <div className="flex items-center gap-3 px-5 pt-4 pb-3 border-b border-neutral-100">
+                <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors ${form.notificationEmail?.trim() ? "bg-neutral-900 text-white" : "bg-neutral-100 text-neutral-400"}`}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+                    <path d="M22 17H2a3 3 0 003-3V9a7 7 0 0114 0v5a3 3 0 003 3z"/>
+                    <path d="M13.73 21a2 2 0 01-3.46 0"/>
+                  </svg>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-neutral-400 uppercase tracking-wide">5 · Notifications</span>
+                    {form.notificationEmail?.trim() && (
+                      <svg width="12" height="12" viewBox="0 0 16 16" fill="none" className="text-emerald-500 shrink-0"><polyline points="2 8 6 12 14 4" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    )}
+                  </div>
+                  <p className="text-sm font-semibold text-neutral-800 leading-tight">Signal alert email</p>
+                </div>
+                <div className="shrink-0 hidden sm:flex items-center gap-1 text-[10px] text-neutral-400 bg-neutral-50 border border-neutral-100 px-2 py-1 rounded-md">
+                  <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M8 1l2 5h5l-4 3 1.5 5L8 11l-4.5 3L5 9 1 6h5z" fill="currentColor" opacity="0.5"/></svg>
+                  <span>Critical &amp; high risk alerts</span>
+                </div>
+              </div>
+              <div className="px-5 pt-3 pb-4">
+                <p className="text-xs text-neutral-400 mb-2 leading-relaxed">
+                  Nectic sends an email when a critical or high-risk signal is detected after analysis.
+                </p>
+                <input
+                  type="email"
+                  value={form.notificationEmail ?? ""}
+                  onChange={(e) => handleChange("notificationEmail" as keyof WorkspaceContext, e.target.value)}
+                  placeholder="you@yourcompany.com"
+                  className="w-full text-sm border border-neutral-200 rounded-lg px-4 py-2.5 text-neutral-700 placeholder:text-neutral-300 focus:outline-none focus:border-neutral-400 bg-neutral-50 transition-colors"
+                />
+              </div>
+            </div>
 
             <p className="text-xs text-neutral-400 text-center pt-2">
               Changes save automatically · context applies to all future analyses
