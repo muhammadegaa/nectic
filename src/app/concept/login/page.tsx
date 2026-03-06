@@ -5,6 +5,12 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import LogoIcon from "@/components/logo-icon"
 import { useAuth } from "@/contexts/auth-context"
+import { isOnboardingComplete } from "@/lib/concept-firestore"
+
+async function getPostLoginRoute(uid: string): Promise<string> {
+  const done = await isOnboardingComplete(uid)
+  return done ? "/concept" : "/concept/onboarding"
+}
 
 export default function ConceptLoginPage() {
   const { user, loading, signInWithGoogle } = useAuth()
@@ -13,7 +19,9 @@ export default function ConceptLoginPage() {
   const [error, setError] = useState("")
 
   useEffect(() => {
-    if (!loading && user) router.replace("/concept")
+    if (!loading && user) {
+      getPostLoginRoute(user.uid).then((route) => router.replace(route))
+    }
   }, [user, loading, router])
 
   const handleGoogle = async () => {
@@ -21,7 +29,7 @@ export default function ConceptLoginPage() {
     setError("")
     try {
       await signInWithGoogle()
-      // Browser navigates away to Google — no code runs after this
+      // Redirect handled by useEffect when user state updates
     } catch {
       setError("Sign-in failed. Please try again.")
       setSigningIn(false)
