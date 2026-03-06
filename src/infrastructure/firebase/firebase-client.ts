@@ -56,12 +56,17 @@ setPersistence(auth, browserLocalPersistence)
     // Don't throw - persistence might already be set or there might be an active user
   })
 
-// Auth functions
 export const signInWithGoogle = async () => {
   try {
-    const result = await signInWithPopup(auth, googleProvider)
-    return result
-  } catch (error) {
+    return await signInWithPopup(auth, googleProvider)
+  } catch (error: unknown) {
+    const code = (error as { code?: string })?.code
+    // COOP on Google's OAuth page blocks window.closed polling — Firebase
+    // throws popup-closed-by-user even when auth succeeded via postMessage.
+    // If currentUser is already set the sign-in actually completed.
+    if (code === 'auth/popup-closed-by-user' && auth.currentUser) {
+      return { user: auth.currentUser }
+    }
     throw error
   }
 }
