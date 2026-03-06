@@ -84,10 +84,18 @@ const USER_PROMPT = (
   "sentimentTrend": "improving" | "stable" | "declining",
   "riskSignals": [
     {
+      "title": "<5 words max — a scannable label, e.g. 'delayed delivery causing frustration'>",
       "quote": "<exact quote from a customer-side participant>",
-      "explanation": "<why this is a risk signal>",
+      "explanation": "<why this is a risk signal — 1-2 sentences>",
       "severity": "low" | "medium" | "high",
-      "date": "<date from conversation>"
+      "date": "<date from conversation>",
+      "suggestedActions": [
+        {
+          "step": "<specific, executable action — not vague, e.g. 'Schedule a 15-min CS call to acknowledge the delay and set a new ETA'>",
+          "owner": "CS" | "PM" | "Engineering" | "Sales",
+          "timeline": "24h" | "this_week" | "this_month"
+        }
+      ]
     }
   ],
   "productSignals": [
@@ -97,7 +105,14 @@ const USER_PROMPT = (
       "problemStatement": "<the underlying customer problem in one sentence, not the feature request itself>",
       "quote": "<exact quote from a customer-side participant>",
       "priority": "low" | "medium" | "high",
-      "pmAction": "<what the PM should do with this>"
+      "pmAction": "<what the PM should do with this>",
+      "suggestedActions": [
+        {
+          "step": "<specific, executable action — e.g. 'Check if this feature request appears in 2+ other accounts before scoping'>",
+          "owner": "CS" | "PM" | "Engineering" | "Sales",
+          "timeline": "24h" | "this_week" | "this_month"
+        }
+      ]
     }
   ],
   "relationshipSignals": [
@@ -125,10 +140,18 @@ const USER_PROMPT = (
   }
 }
 
+For suggestedActions: generate 2–3 steps per signal. Each step must be a specific, executable task (not generic like "review the issue" or "follow up"). Owner must match the action (CS for relationship/communication tasks, PM for product decisions, Engineering for technical fixes, Sales for commercial ones). Timeline must match severity/urgency.
+
 Confidence rules: high = 50+ messages with clear customer voice; medium = 20-49 messages OR ambiguous signals OR uncertain participant roles; low = under 20 messages OR mostly vendor-side OR very short date range.
 
 CONVERSATION:
 ${conversation}`
+}
+
+export interface SuggestedAction {
+  step: string
+  owner: "CS" | "PM" | "Engineering" | "Sales"
+  timeline: "24h" | "this_week" | "this_month"
 }
 
 export interface AnalysisResult {
@@ -137,8 +160,8 @@ export interface AnalysisResult {
   riskLevel: "low" | "medium" | "high" | "critical"
   summary: string
   sentimentTrend: "improving" | "stable" | "declining"
-  riskSignals: { quote: string; explanation: string; severity: string; date: string }[]
-  productSignals: { type: string; title: string; problemStatement?: string; quote: string; priority: string; pmAction: string }[]
+  riskSignals: { title?: string; quote: string; explanation: string; severity: string; date: string; suggestedActions?: SuggestedAction[] }[]
+  productSignals: { type: string; title: string; problemStatement?: string; quote: string; priority: string; pmAction: string; suggestedActions?: SuggestedAction[] }[]
   relationshipSignals: { observation: string; implication: string }[]
   competitorMentions: string[]
   recommendedAction: { what: string; owner: string; urgency: string }

@@ -76,7 +76,7 @@ const USER_PROMPT = (
 ${JSON.stringify(prior, null, 2)}
 ${actionsBlock}${contextBlock}${messagesBlock}
 
-Produce a fully updated analysis using the same JSON structure as the previous analysis, adjusting confidence, health score, risk signals, caveats, and data gaps wherever the new context changes your assessment. Also add a "changesSince" field:
+Produce a fully updated analysis using the same JSON structure as the previous analysis, adjusting confidence, health score, risk signals, caveats, and data gaps wherever the new context changes your assessment. For every riskSignal and productSignal include a "title" (5 words max, scannable label) and "suggestedActions" array with 2–3 specific executable steps (each with "step", "owner": CS|PM|Engineering|Sales, "timeline": 24h|this_week|this_month). Also add a "changesSince" field:
 
 {
   "changesSince": {

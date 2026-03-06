@@ -13,6 +13,7 @@ import {
   type SignalAction,
   type SignalActionStatus,
 } from "@/lib/concept-firestore"
+import type { SuggestedAction } from "@/app/api/concept/analyze/route"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -23,14 +24,19 @@ interface BoardSignal {
   signalCategory: "risk" | "product"
   type: string
   title: string
+  explanation?: string
   priority: string
+  severity?: string
+  date?: string
   quote: string
   pmAction?: string
+  problemStatement?: string
+  suggestedActions?: SuggestedAction[]
   key: string
   action?: SignalAction
 }
 
-type FilterStatus = "needs_action" | "in_progress" | "done" | "all"
+type FilterStatus = "needs_action" | "in_progress" | "done" | "dismissed" | "all"
 
 const ACTION_OPTIONS: { value: SignalActionStatus; label: string; color: string; bg: string }[] = [
   { value: "open", label: "Open", color: "text-neutral-500", bg: "bg-neutral-100 border-neutral-200" },
@@ -48,17 +54,22 @@ function extractSignals(accounts: StoredAccount[]): BoardSignal[] {
     const r = account.result
     for (const s of r.riskSignals ?? []) {
       const sType = (s as { type?: string }).type ?? "risk"
-      const sTitle = s.explanation.slice(0, 80)
-      const key = signalKey(sType, sTitle)
+      const sDisplayTitle = (s as { title?: string }).title || s.explanation.slice(0, 80)
+      const sKeyTitle = s.explanation.slice(0, 80)
+      const key = signalKey(sType, sKeyTitle)
       signals.push({
         accountId: account.id,
         accountName: r.accountName,
         riskLevel: r.riskLevel,
         signalCategory: "risk",
         type: sType,
-        title: sTitle,
+        title: sDisplayTitle,
+        explanation: s.explanation,
         priority: s.severity ?? "medium",
+        severity: s.severity,
+        date: s.date,
         quote: s.quote,
+        suggestedActions: (s as { suggestedActions?: SuggestedAction[] }).suggestedActions,
         key,
         action: account.signalActions?.[key],
       })
@@ -75,6 +86,8 @@ function extractSignals(accounts: StoredAccount[]): BoardSignal[] {
         priority: s.priority,
         quote: s.quote,
         pmAction: s.pmAction,
+        problemStatement: s.problemStatement,
+        suggestedActions: s.suggestedActions,
         key,
         action: account.signalActions?.[key],
       })
@@ -129,13 +142,15 @@ export default function BoardPage() {
     const status = s.action?.status ?? "open"
     if (filter === "needs_action") return status === "open"
     if (filter === "in_progress") return status === "in_progress"
-    if (filter === "done") return status === "done" || status === "dismissed"
+    if (filter === "done") return status === "done"
+    if (filter === "dismissed") return status === "dismissed"
     return true
   })
 
   const openCount = signals.filter((s) => !s.action || s.action.status === "open").length
   const inProgressCount = signals.filter((s) => s.action?.status === "in_progress").length
-  const doneCount = signals.filter((s) => s.action?.status === "done" || s.action?.status === "dismissed").length
+  const doneCount = signals.filter((s) => s.action?.status === "done").length
+  const dismissedCount = signals.filter((s) => s.action?.status === "dismissed").length
 
   if (authLoading || !user) {
     return (
@@ -190,13 +205,14 @@ export default function BoardPage() {
           </div>
         </div>
 
-        {/* Stats + filter */}
-        <div className="flex items-center gap-3 mb-5 flex-wrap">
+        {/* Filter tabs */}
+        <div className="flex items-center gap-2 mb-5 flex-wrap">
           {(
             [
               { key: "needs_action", label: "Needs action", count: openCount, active: "bg-red-50 text-red-700 border-red-200" },
               { key: "in_progress", label: "In progress", count: inProgressCount, active: "bg-amber-50 text-amber-700 border-amber-200" },
               { key: "done", label: "Done", count: doneCount, active: "bg-green-50 text-green-700 border-green-200" },
+              { key: "dismissed", label: "Dismissed", count: dismissedCount, active: "bg-neutral-200 text-neutral-600 border-neutral-300" },
               { key: "all", label: "All", count: signals.length, active: "bg-neutral-900 text-white border-neutral-900" },
             ] as { key: FilterStatus; label: string; count: number; active: string }[]
           ).map((f) => (
@@ -239,6 +255,7 @@ export default function BoardPage() {
                   key={`${s.accountId}-${s.key}`}
                   signal={s}
                   onUpdate={(action) => updateSignalAction(s.accountId, s.key, action)}
+                  onBrief={() => router.push(`/concept/account/${s.accountId}?brief=${s.key}`)}
                 />
               ))}
             </div>
@@ -251,16 +268,32 @@ export default function BoardPage() {
 
 // ─── Signal row ───────────────────────────────────────────────────────────────
 
+const timelineLabel: Record<string, string> = {
+  "24h": "24h",
+  this_week: "this week",
+  this_month: "this month",
+}
+
+const ownerColor: Record<string, string> = {
+  CS: "bg-blue-50 text-blue-700",
+  PM: "bg-purple-50 text-purple-700",
+  Engineering: "bg-slate-50 text-slate-700",
+  Sales: "bg-orange-50 text-orange-700",
+}
+
 function BoardSignalRow({
   signal,
   onUpdate,
+  onBrief,
 }: {
   signal: BoardSignal
   onUpdate: (action: SignalAction) => void
+  onBrief: () => void
 }) {
   const [status, setStatus] = useState<SignalActionStatus>(signal.action?.status ?? "open")
   const [note, setNote] = useState(signal.action?.note ?? "")
   const [expanded, setExpanded] = useState(false)
+  const [adoptedIdx, setAdoptedIdx] = useState<number | null>(null)
 
   useEffect(() => {
     setStatus(signal.action?.status ?? "open")
@@ -287,7 +320,11 @@ function BoardSignalRow({
     confusion: "bg-amber-50 text-amber-700 border-amber-200",
     risk: "bg-red-50 text-red-600 border-red-200",
   }
-  const currentAction = ACTION_OPTIONS.find((o) => o.value === status)!
+  const severityColor: Record<string, string> = {
+    high: "bg-red-100 text-red-700",
+    medium: "bg-amber-100 text-amber-700",
+    low: "bg-neutral-100 text-neutral-500",
+  }
 
   const handleStatus = (next: SignalActionStatus) => {
     setStatus(next)
@@ -299,16 +336,29 @@ function BoardSignalRow({
     onUpdate({ status, note: note || undefined, updatedAt: new Date().toISOString() })
   }
 
+  const handleAdoptAction = (idx: number, action: SuggestedAction) => {
+    const newNote = `${action.owner}: ${action.step}`
+    setNote(newNote)
+    setStatus("in_progress")
+    setAdoptedIdx(idx)
+    setExpanded(true)
+    onUpdate({ status: "in_progress", note: newNote, updatedAt: new Date().toISOString() })
+    setTimeout(() => setAdoptedIdx(null), 2000)
+  }
+
+  const isClosedOut = status === "done" || status === "dismissed"
+  const canGenerateBrief = signal.signalCategory === "product" && (signal.type === "complaint" || signal.type === "feature_request") && signal.priority !== "low"
+
   return (
-    <div className={`px-4 sm:px-5 py-4 transition-colors hover:bg-neutral-50/50 ${status === "done" || status === "dismissed" ? "opacity-50" : ""}`}>
+    <div className={`px-4 sm:px-5 py-4 transition-colors hover:bg-neutral-50/50 ${isClosedOut ? "opacity-50" : ""}`}>
       <div className="flex items-start gap-3">
         {/* Account risk dot */}
         <div className="flex-shrink-0 mt-1.5">
-          <div className={`w-2 h-2 rounded-full ${riskColors[signal.riskLevel] ?? "bg-neutral-300"}`} title={signal.riskLevel} />
+          <div className={`w-2 h-2 rounded-full ${riskColors[signal.riskLevel] ?? "bg-neutral-300"}`} title={`Account: ${signal.riskLevel} risk`} />
         </div>
 
-        {/* Signal content + actions stacked */}
         <div className="flex-1 min-w-0">
+          {/* Header row */}
           <div className="flex items-center gap-2 flex-wrap mb-1">
             <Link
               href={`/concept/account/${signal.accountId}`}
@@ -320,39 +370,121 @@ function BoardSignalRow({
             <span className={`text-xs font-medium px-2 py-0.5 border rounded-full ${typeColor[signal.type] ?? typeColor.risk}`}>
               {typeLabel[signal.type] ?? signal.type}
             </span>
-            <span className={`text-xs font-semibold ${signal.priority === "high" ? "text-red-500" : signal.priority === "medium" ? "text-amber-500" : "text-neutral-400"}`}>
-              {signal.priority}
-            </span>
+            {signal.signalCategory === "risk" && signal.severity && (
+              <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded ${severityColor[signal.severity] ?? ""}`}>
+                {signal.severity}
+              </span>
+            )}
+            {signal.signalCategory === "product" && (
+              <span className={`text-xs font-semibold ${signal.priority === "high" ? "text-red-500" : signal.priority === "medium" ? "text-amber-500" : "text-neutral-400"}`}>
+                {signal.priority}
+              </span>
+            )}
+            {signal.date && signal.signalCategory === "risk" && (
+              <span className="text-[11px] text-neutral-400 ml-auto">{signal.date}</span>
+            )}
           </div>
-          <p className={`text-sm text-neutral-800 font-medium mb-1 ${status === "done" ? "line-through text-neutral-400" : ""}`}>
+
+          {/* Signal title */}
+          <p className={`text-sm text-neutral-800 font-medium mb-1.5 ${status === "done" ? "line-through text-neutral-400" : ""}`}>
             {signal.title}
           </p>
-          <p className="text-xs text-neutral-400 italic leading-relaxed line-clamp-2">&ldquo;{signal.quote}&rdquo;</p>
 
-          {/* Saved note display */}
-          {signal.action?.note && !expanded && (
-            <p className="text-xs text-neutral-500 mt-1.5 bg-neutral-50 border border-neutral-100 rounded px-2 py-1">
+          {/* Quote */}
+          <p className={`text-xs text-neutral-400 italic leading-relaxed ${expanded ? "" : "line-clamp-2"}`}>
+            &ldquo;{signal.quote}&rdquo;
+          </p>
+
+          {/* Expanded details */}
+          {expanded && (
+            <div className="mt-3 space-y-3">
+              {/* Risk: full explanation */}
+              {signal.signalCategory === "risk" && signal.explanation && (
+                <div className="text-xs text-neutral-600 leading-relaxed bg-neutral-50 rounded-lg px-3 py-2.5 border border-neutral-100">
+                  <span className="font-semibold text-neutral-500 uppercase tracking-wide text-[10px] block mb-1">Why this matters</span>
+                  {signal.explanation}
+                </div>
+              )}
+
+              {/* Product: problem statement + pmAction */}
+              {signal.signalCategory === "product" && (
+                <>
+                  {signal.problemStatement && (
+                    <div className="text-xs text-neutral-600 leading-relaxed bg-neutral-50 rounded-lg px-3 py-2.5 border border-neutral-100">
+                      <span className="font-semibold text-neutral-500 uppercase tracking-wide text-[10px] block mb-1">Customer problem</span>
+                      {signal.problemStatement}
+                    </div>
+                  )}
+                  {signal.pmAction && (
+                    <div className="text-xs text-neutral-600 leading-relaxed bg-neutral-50 rounded-lg px-3 py-2.5 border border-neutral-100">
+                      <span className="font-semibold text-neutral-500 uppercase tracking-wide text-[10px] block mb-1">AI suggestion</span>
+                      {signal.pmAction}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Suggested action steps */}
+              {signal.suggestedActions && signal.suggestedActions.length > 0 && (
+                <div>
+                  <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wide mb-2">Suggested next steps</p>
+                  <div className="space-y-1.5">
+                    {signal.suggestedActions.map((a, i) => (
+                      <button
+                        key={i}
+                        onClick={() => handleAdoptAction(i, a)}
+                        disabled={adoptedIdx === i || status === "in_progress"}
+                        className={`w-full text-left flex items-start gap-2.5 px-3 py-2 rounded-lg border text-xs transition-all group ${
+                          adoptedIdx === i
+                            ? "border-green-300 bg-green-50 text-green-700"
+                            : status === "in_progress" && note.startsWith(`${a.owner}: ${a.step.slice(0, 20)}`)
+                            ? "border-amber-200 bg-amber-50 text-amber-700 cursor-default"
+                            : "border-neutral-200 bg-white hover:border-neutral-300 hover:bg-neutral-50 text-neutral-700 cursor-pointer"
+                        }`}
+                      >
+                        <span className="shrink-0 mt-0.5">
+                          {adoptedIdx === i ? (
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><polyline points="2 6 5 9 10 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                          ) : (
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="text-neutral-300 group-hover:text-neutral-500 transition-colors"><path d="M2.5 6h7M7 3.5L9.5 6 7 8.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                          )}
+                        </span>
+                        <span className="flex-1 leading-snug">{a.step}</span>
+                        <div className="shrink-0 flex items-center gap-1.5 ml-2">
+                          <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${ownerColor[a.owner] ?? "bg-neutral-100 text-neutral-500"}`}>
+                            {a.owner}
+                          </span>
+                          <span className="text-[10px] text-neutral-400 whitespace-nowrap">{timelineLabel[a.timeline] ?? a.timeline}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Note input */}
+              <div>
+                <input
+                  type="text"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  onBlur={handleNoteSave}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleNoteSave(); setExpanded(false) } }}
+                  placeholder="Add a note — what was decided or done…"
+                  className="w-full text-xs border border-neutral-200 rounded-lg px-3 py-1.5 text-neutral-700 focus:outline-none focus:border-neutral-400 bg-white"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Saved note (collapsed state) */}
+          {!expanded && signal.action?.note && (
+            <p className="text-xs text-neutral-500 mt-1.5 bg-neutral-50 border border-neutral-100 rounded px-2 py-1 truncate">
               {signal.action.note}
             </p>
           )}
 
-          {/* Note input when expanded */}
-          {expanded && (
-            <div className="mt-2">
-              <input
-                type="text"
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                onBlur={handleNoteSave}
-                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleNoteSave(); setExpanded(false) } }}
-                placeholder="What was decided or done…"
-                autoFocus
-                className="w-full text-xs border border-neutral-200 rounded-lg px-3 py-1.5 text-neutral-700 focus:outline-none focus:border-neutral-400 bg-white"
-              />
-            </div>
-          )}
-
-          {/* Status controls — always below content, wraps naturally on mobile */}
+          {/* Bottom controls */}
           <div className="mt-2.5 flex items-center gap-2 flex-wrap">
             <div className="flex items-center gap-0.5 p-0.5 bg-neutral-100 rounded-lg border border-neutral-200">
               {ACTION_OPTIONS.map((opt) => (
@@ -370,12 +502,20 @@ function BoardSignalRow({
                 </button>
               ))}
             </div>
-            {status !== "open" && (
+
+            <button
+              onClick={() => setExpanded(!expanded)}
+              className="text-xs text-neutral-400 hover:text-neutral-600 transition-colors"
+            >
+              {expanded ? "Collapse" : signal.suggestedActions?.length ? `${signal.suggestedActions.length} steps →` : "Details →"}
+            </button>
+
+            {canGenerateBrief && (
               <button
-                onClick={() => setExpanded(!expanded)}
-                className="text-xs text-neutral-400 hover:text-neutral-600 transition-colors"
+                onClick={onBrief}
+                className="text-xs text-neutral-400 hover:text-neutral-700 transition-colors ml-auto"
               >
-                {expanded ? "hide note" : note ? "edit note" : "+ add note"}
+                Generate brief →
               </button>
             )}
           </div>

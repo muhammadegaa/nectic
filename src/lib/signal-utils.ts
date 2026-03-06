@@ -15,7 +15,7 @@ export function signalKey(type: string, title: string): string {
 export function buildSignalActionsBlock(
   signalActions: Record<string, SignalAction> | undefined,
   result: {
-    riskSignals?: { explanation: string; type?: string }[]
+    riskSignals?: { title?: string; explanation: string; type?: string }[]
     productSignals?: { type: string; title: string }[]
   }
 ): string {
@@ -23,7 +23,8 @@ export function buildSignalActionsBlock(
   const allSignals = [
     ...(result.riskSignals ?? []).map((s) => ({
       type: s.type ?? "risk",
-      title: s.explanation.slice(0, 80),
+      // Use dedicated title when available (new analyses), fall back to explanation slice for old records
+      title: s.title || s.explanation.slice(0, 80),
     })),
     ...(result.productSignals ?? []).map((s) => ({
       type: s.type,

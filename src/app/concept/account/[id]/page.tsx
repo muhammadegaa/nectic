@@ -11,7 +11,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { getAccount, deleteAccount, updateAccount, prefillFromContactBook, mergeContactBook, saveSignalAction, signalKey, getWorkspace, type StoredAccount, type ParticipantRole, type ParticipantRoles, type SignalAction, type SignalActionStatus, type WorkspaceContext } from "@/lib/concept-firestore"
 import { trackEvent } from "@/lib/posthog"
 import { parseWhatsAppFile, formatForPrompt, type WaParsed } from "@/lib/whatsapp-parser"
-import type { AnalysisResult } from "@/app/api/concept/analyze/route"
+import type { AnalysisResult, SuggestedAction } from "@/app/api/concept/analyze/route"
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
@@ -671,6 +671,9 @@ function AnalysisReport({
                     {s.date && <span className="ml-2 text-xs text-neutral-400 not-italic">{s.date}</span>}
                   </div>
                   <p className="text-xs text-neutral-600 leading-relaxed mb-3">{s.explanation}</p>
+                  {(s as { suggestedActions?: SuggestedAction[] }).suggestedActions?.length ? (
+                    <SuggestedActionsList actions={(s as { suggestedActions?: SuggestedAction[] }).suggestedActions!} />
+                  ) : null}
                   <SignalActionControl
                     signalKey={key}
                     action={account.signalActions?.[key]}
@@ -720,6 +723,9 @@ function AnalysisReport({
                   <p className="text-xs text-neutral-500 mb-3">
                     <span className="font-medium text-neutral-600">Suggested action:</span> {s.pmAction}
                   </p>
+                  {s.suggestedActions?.length ? (
+                    <SuggestedActionsList actions={s.suggestedActions} />
+                  ) : null}
                   <SignalActionControl
                     signalKey={key}
                     action={account.signalActions?.[key]}
@@ -896,6 +902,43 @@ function AnalysisQualityBanner({
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// ─── Suggested actions list ───────────────────────────────────────────────────
+
+const ownerColor: Record<string, string> = {
+  CS: "bg-blue-50 text-blue-700",
+  PM: "bg-purple-50 text-purple-700",
+  Engineering: "bg-slate-50 text-slate-700",
+  Sales: "bg-orange-50 text-orange-700",
+}
+
+const timelineLabel: Record<string, string> = {
+  "24h": "24h",
+  this_week: "this week",
+  this_month: "this month",
+}
+
+function SuggestedActionsList({ actions }: { actions: SuggestedAction[] }) {
+  return (
+    <div className="mb-3">
+      <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wide mb-2">Suggested next steps</p>
+      <div className="space-y-1.5">
+        {actions.map((a, i) => (
+          <div key={i} className="flex items-start gap-2.5 px-3 py-2 rounded-lg border border-neutral-100 bg-neutral-50 text-xs text-neutral-600">
+            <span className="shrink-0 mt-0.5 text-neutral-300">→</span>
+            <span className="flex-1 leading-snug">{a.step}</span>
+            <div className="shrink-0 flex items-center gap-1.5 ml-2">
+              <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${ownerColor[a.owner] ?? "bg-neutral-100 text-neutral-500"}`}>
+                {a.owner}
+              </span>
+              <span className="text-[10px] text-neutral-400 whitespace-nowrap">{timelineLabel[a.timeline] ?? a.timeline}</span>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
