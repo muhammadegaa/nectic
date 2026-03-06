@@ -13,7 +13,7 @@ async function getPostLoginRoute(uid: string): Promise<string> {
 }
 
 export default function ConceptLoginPage() {
-  const { user, loading, signInWithGoogle } = useAuth()
+  const { user, loading, redirectError, signInWithGoogle } = useAuth()
   const router = useRouter()
   const [signingIn, setSigningIn] = useState(false)
   const [error, setError] = useState("")
@@ -82,8 +82,10 @@ export default function ConceptLoginPage() {
             {signingIn ? "Signing in…" : "Continue with Google"}
           </button>
 
-          {error && (
-            <p className="mt-3 text-xs text-red-600 text-center">{error}</p>
+          {(error || redirectError) && (
+            <p className="mt-3 text-xs text-red-600 text-center font-mono">
+              {error || `Auth error: ${redirectError}`}
+            </p>
           )}
 
           <p className="mt-6 text-xs text-neutral-400 text-center leading-relaxed">
