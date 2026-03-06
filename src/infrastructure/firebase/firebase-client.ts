@@ -9,7 +9,8 @@ import { initializeApp, getApps, FirebaseApp } from 'firebase/app'
 import {
   getAuth,
   GoogleAuthProvider,
-  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
@@ -24,16 +25,9 @@ import {
   serverTimestamp
 } from 'firebase/firestore'
 
-// Use app domain as authDomain so auth flows through our domain (via Next.js rewrite proxy).
-// This avoids COOP popup blocking and third-party cookie issues on Vercel.
-function getAuthDomain(): string {
-  if (typeof window !== "undefined") return window.location.host
-  return process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || process.env.NEXT_PUBLIC_VERCEL_URL || "localhost"
-}
-
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: getAuthDomain(),
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
@@ -65,9 +59,10 @@ setPersistence(auth, browserLocalPersistence)
 
 // Auth functions
 export const signInWithGoogle = async () => {
-  const result = await signInWithPopup(auth, googleProvider)
-  return result
+  await signInWithRedirect(auth, googleProvider)
 }
+
+export const getGoogleRedirectResult = () => getRedirectResult(auth)
 
 export const signUpWithEmail = async (email: string, password: string) => {
   try {

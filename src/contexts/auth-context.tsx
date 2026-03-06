@@ -8,6 +8,7 @@ import {
   signInWithEmail,
   signOutUser,
   onAuthStateChangedHelper,
+  getGoogleRedirectResult,
 } from "@/infrastructure/firebase/firebase-client"
 
 interface AuthContextType {
@@ -27,15 +28,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let isMounted = true
-    const unsubscribe = onAuthStateChangedHelper((user) => {
-      if (isMounted) {
-        setUser(user)
-        setLoading(false)
-      }
-    })
+    let unsubscribe: (() => void) | null = null
+    getGoogleRedirectResult()
+      .catch(() => {})
+      .finally(() => {
+        if (!isMounted) return
+        unsubscribe = onAuthStateChangedHelper((user) => {
+          if (isMounted) {
+            setUser(user)
+            setLoading(false)
+          }
+        })
+      })
     return () => {
       isMounted = false
-      unsubscribe()
+      unsubscribe?.()
     }
   }, [])
 
