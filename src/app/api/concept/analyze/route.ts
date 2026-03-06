@@ -252,24 +252,42 @@ export async function POST(req: NextRequest) {
     if (messageCount) result.stats.messageCount = messageCount
     if (participantCount) result.stats.participantCount = participantCount
 
-    // Fire notification for critical/high risk — best-effort, never blocks response
-    if (
-      (result.riskLevel === "critical" || result.riskLevel === "high") &&
-      workspace?.notificationEmail
-    ) {
+    if (workspace?.notificationEmail) {
       const notifyUrl = new URL(req.url)
       notifyUrl.pathname = "/api/concept/notify"
-      fetch(notifyUrl.toString(), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          accountName: result.accountName,
-          riskLevel: result.riskLevel,
-          signalCount: (result.riskSignals?.length ?? 0) + (result.productSignals?.length ?? 0),
-          topSignalTitle: result.riskSignals?.[0]?.title ?? result.riskSignals?.[0]?.explanation?.slice(0, 80),
-          email: workspace.notificationEmail,
-        }),
-      }).catch(() => {})
+
+      // Fire risk alert for critical/high accounts
+      if (result.riskLevel === "critical" || result.riskLevel === "high") {
+        fetch(notifyUrl.toString(), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            accountName: result.accountName,
+            riskLevel: result.riskLevel,
+            signalCount: (result.riskSignals?.length ?? 0) + (result.productSignals?.length ?? 0),
+            topSignalTitle: result.riskSignals?.[0]?.title ?? result.riskSignals?.[0]?.explanation?.slice(0, 80),
+            topSignalQuote: result.riskSignals?.[0]?.quote,
+            email: workspace.notificationEmail,
+          }),
+        }).catch(() => {})
+      }
+
+      // Fire competitor alert — independent of riskLevel
+      if (result.competitorMentions?.length > 0) {
+        fetch(notifyUrl.toString(), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            accountName: result.accountName,
+            riskLevel: result.riskLevel,
+            signalCount: (result.riskSignals?.length ?? 0) + (result.productSignals?.length ?? 0),
+            topSignalQuote: result.riskSignals?.[0]?.quote,
+            competitorNames: result.competitorMentions,
+            isCompetitorAlert: true,
+            email: workspace.notificationEmail,
+          }),
+        }).catch(() => {})
+      }
     }
 
     return NextResponse.json({ result }, { status: 200 })

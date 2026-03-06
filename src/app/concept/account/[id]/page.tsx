@@ -191,6 +191,7 @@ export default function AccountPage() {
   const [reanalyzeFile, setReanalyzeFile] = useState<File | null>(null)
   const [reanalyzeRunning, setReanalyzeRunning] = useState(false)
   const reanalyzeInputRef = useRef<HTMLInputElement>(null)
+  const [copilotPrefill, setCopilotPrefill] = useState("")
 
   useEffect(() => {
     if (!authLoading && !user) router.replace("/concept/login")
@@ -481,6 +482,10 @@ export default function AccountPage() {
             analyzedAt={account.analyzedAt}
             onGenerateBrief={setBriefSignal}
             account={account}
+            onCopilotFill={(prompt) => {
+              setCopilotPrefill(prompt)
+              setMobileTab("chat")
+            }}
             onSignalAction={async (key, action) => {
               if (!user) return
               try {
@@ -525,7 +530,7 @@ export default function AccountPage() {
 
         {/* Chat co-pilot — sticky right column, hidden on mobile when report tab active */}
         <div className={`xl:col-span-2 mt-8 xl:mt-0 xl:sticky xl:top-20 ${mobileTab === "report" ? "hidden xl:block" : ""}`}>
-          <ChatPanel account={account} workspace={workspace} />
+          <ChatPanel account={account} workspace={workspace} initialInput={copilotPrefill} onPrefillConsumed={() => setCopilotPrefill("")} />
         </div>
       </div>
 
@@ -553,6 +558,7 @@ function AnalysisReport({
   onSignalAction,
   onSaveContext,
   onReanalyzeWithContext,
+  onCopilotFill,
 }: {
   result: AnalysisResult
   fileName: string
@@ -562,6 +568,7 @@ function AnalysisReport({
   onSignalAction: (key: string, action: SignalAction) => Promise<void>
   onSaveContext: (ctx: string) => Promise<void>
   onReanalyzeWithContext: (ctx: string) => Promise<void>
+  onCopilotFill?: (prompt: string) => void
 }) {
   const risk = riskConfig[result.riskLevel] ?? riskConfig.medium
   const urgency = urgencyConfig[result.recommendedAction.urgency as keyof typeof urgencyConfig] ?? urgencyConfig.this_month
@@ -650,6 +657,45 @@ function AnalysisReport({
           </div>
         </div>
       </div>
+
+      {/* Competitor alert banner */}
+      {result.competitorMentions?.length > 0 && (() => {
+        const competitors = result.competitorMentions
+        const competitorQuote = result.riskSignals?.find((s) =>
+          competitors.some((c) => s.explanation?.toLowerCase().includes(c.toLowerCase()))
+        )?.quote ?? result.riskSignals?.[0]?.quote
+        const renewalMonth = account.context?.renewalMonth
+
+        return (
+          <div className="bg-orange-50 border border-orange-200 rounded-xl p-5">
+            <div className="flex items-start gap-3 mb-3">
+              <div className="w-7 h-7 bg-orange-100 border border-orange-200 rounded-lg flex items-center justify-center shrink-0 text-orange-700 text-sm font-bold">⚡</div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <p className="text-sm font-semibold text-orange-900">Competitor mentioned</p>
+                  {competitors.map((c) => (
+                    <span key={c} className="text-xs font-semibold bg-orange-200 text-orange-900 px-2 py-0.5 rounded-full">{c}</span>
+                  ))}
+                </div>
+                {renewalMonth && (
+                  <p className="text-xs text-orange-700 font-medium">Renewal: {renewalMonth} — act before the evaluation goes further</p>
+                )}
+              </div>
+            </div>
+            {competitorQuote && (
+              <blockquote className="text-sm text-orange-900 italic border-l-4 border-orange-300 pl-3 py-1 bg-orange-100/60 rounded-r-lg mb-3 leading-relaxed">
+                &ldquo;{competitorQuote}&rdquo;
+              </blockquote>
+            )}
+            <button
+              onClick={() => onCopilotFill?.(`Competitor ${competitors.join(", ")} was mentioned. Draft a WhatsApp retention response addressing their specific concerns and our switching cost.`)}
+              className="text-xs font-semibold text-orange-700 border border-orange-300 bg-white hover:bg-orange-50 px-4 py-2 rounded-lg transition-colors"
+            >
+              Draft retention response →
+            </button>
+          </div>
+        )
+      })()}
 
       {/* Risk signals */}
       {result.riskSignals?.length > 0 && (
@@ -1038,7 +1084,12 @@ function SignalActionControl({
 
 // ─── Chat panel ───────────────────────────────────────────────────────────────
 
-function ChatPanel({ account, workspace }: { account: StoredAccount; workspace: WorkspaceContext }) {
+function ChatPanel({ account, workspace, initialInput, onPrefillConsumed }: {
+  account: StoredAccount
+  workspace: WorkspaceContext
+  initialInput?: string
+  onPrefillConsumed?: () => void
+}) {
   const analysis = account.result
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState("")
@@ -1050,6 +1101,15 @@ function ChatPanel({ account, workspace }: { account: StoredAccount; workspace: 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
+
+  useEffect(() => {
+    if (initialInput) {
+      setInput(initialInput)
+      onPrefillConsumed?.()
+      textareaRef.current?.focus()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialInput])
 
   const dynamicPrompts = getDynamicPrompts(account)
 

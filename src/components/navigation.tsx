@@ -28,19 +28,19 @@ export default function Navigation() {
             <span className="text-base font-medium text-neutral-900 tracking-tight">Nectic</span>
           </Link>
 
-          <div className="hidden lg:flex items-center gap-8">
+          <div className="hidden lg:flex items-center gap-6">
             <a href="#how-it-works" className="text-sm text-neutral-500 hover:text-neutral-900 transition-colors">
               How it works
             </a>
-            <Link href="/demo" className="text-sm text-neutral-500 hover:text-neutral-900 transition-colors">
-              See demo
+            <Link href="/concept/login" className="text-sm text-neutral-500 hover:text-neutral-900 transition-colors">
+              Sign in
             </Link>
-            <a
-              href="#early-access"
-              className="text-sm font-medium text-neutral-900 border border-neutral-200 px-4 py-1.5 hover:bg-neutral-50 transition-colors"
+            <Link
+              href="/concept/login"
+              className="text-sm font-semibold text-white bg-neutral-900 px-4 py-2 rounded-lg hover:bg-neutral-700 transition-colors"
             >
-              Request access
-            </a>
+              Start for free →
+            </Link>
           </div>
 
           <button
@@ -57,12 +57,16 @@ export default function Navigation() {
             <a href="#how-it-works" onClick={() => setIsOpen(false)} className="block text-sm text-neutral-500 hover:text-neutral-900 transition-colors">
               How it works
             </a>
-            <Link href="/demo" onClick={() => setIsOpen(false)} className="block text-sm text-neutral-500 hover:text-neutral-900 transition-colors">
-              See demo
+            <Link href="/concept/login" onClick={() => setIsOpen(false)} className="block text-sm text-neutral-500 hover:text-neutral-900 transition-colors">
+              Sign in
             </Link>
-            <a href="#early-access" onClick={() => setIsOpen(false)} className="block text-sm font-medium text-neutral-900">
-              Request access
-            </a>
+            <Link
+              href="/concept/login"
+              onClick={() => setIsOpen(false)}
+              className="block text-sm font-semibold text-neutral-900"
+            >
+              Start for free →
+            </Link>
           </div>
         )}
       </div>

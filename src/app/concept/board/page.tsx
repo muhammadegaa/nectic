@@ -96,56 +96,73 @@ const timelineLabel: Record<string, string> = {
   this_month: "this month",
 }
 
-function extractSignals(accounts: StoredAccount[]): BoardSignal[] {
+function extractSignalsForAccount(account: StoredAccount): BoardSignal[] {
   const signals: BoardSignal[] = []
-  for (const account of accounts) {
-    const r = account.result
-    for (const s of r.riskSignals ?? []) {
-      const sType = (s as { type?: string }).type ?? "risk"
-      const sDisplayTitle = (s as { title?: string }).title || s.explanation.slice(0, 80)
-      const sKeyTitle = s.explanation.slice(0, 80)
-      const key = signalKey(sType, sKeyTitle)
-      signals.push({
-        accountId: account.id,
-        accountName: r.accountName,
-        riskLevel: r.riskLevel,
-        signalCategory: "risk",
-        type: sType,
-        title: sDisplayTitle,
-        explanation: s.explanation,
-        priority: s.severity ?? "medium",
-        severity: s.severity,
-        date: s.date,
-        quote: s.quote,
-        suggestedActions: (s as { suggestedActions?: SuggestedAction[] }).suggestedActions,
-        key,
-        action: account.signalActions?.[key],
-      })
-    }
-    for (const s of r.productSignals ?? []) {
-      const key = signalKey(s.type, s.title)
-      signals.push({
-        accountId: account.id,
-        accountName: r.accountName,
-        riskLevel: r.riskLevel,
-        signalCategory: "product",
-        type: s.type,
-        title: s.title,
-        priority: s.priority,
-        quote: s.quote,
-        pmAction: s.pmAction,
-        problemStatement: s.problemStatement,
-        suggestedActions: s.suggestedActions,
-        key,
-        action: account.signalActions?.[key],
-      })
-    }
+  const r = account.result
+  for (const s of r.riskSignals ?? []) {
+    const sType = (s as { type?: string }).type ?? "risk"
+    const sDisplayTitle = (s as { title?: string }).title || s.explanation.slice(0, 80)
+    const sKeyTitle = s.explanation.slice(0, 80)
+    const key = signalKey(sType, sKeyTitle)
+    signals.push({
+      accountId: account.id,
+      accountName: r.accountName,
+      riskLevel: r.riskLevel,
+      signalCategory: "risk",
+      type: sType,
+      title: sDisplayTitle,
+      explanation: s.explanation,
+      priority: s.severity ?? "medium",
+      severity: s.severity,
+      date: s.date,
+      quote: s.quote,
+      suggestedActions: (s as { suggestedActions?: SuggestedAction[] }).suggestedActions,
+      key,
+      action: account.signalActions?.[key],
+    })
   }
-  return signals.sort((a, b) => {
-    const riskDiff = (riskOrder[a.riskLevel] ?? 3) - (riskOrder[b.riskLevel] ?? 3)
-    if (riskDiff !== 0) return riskDiff
-    return (prioOrder[a.priority] ?? 2) - (prioOrder[b.priority] ?? 2)
+  for (const s of r.productSignals ?? []) {
+    const key = signalKey(s.type, s.title)
+    signals.push({
+      accountId: account.id,
+      accountName: r.accountName,
+      riskLevel: r.riskLevel,
+      signalCategory: "product",
+      type: s.type,
+      title: s.title,
+      priority: s.priority,
+      quote: s.quote,
+      pmAction: s.pmAction,
+      problemStatement: s.problemStatement,
+      suggestedActions: s.suggestedActions,
+      key,
+      action: account.signalActions?.[key],
+    })
+  }
+  return signals.sort((a, b) => (prioOrder[a.priority] ?? 2) - (prioOrder[b.priority] ?? 2))
+}
+
+interface AccountGroup {
+  account: StoredAccount
+  signals: BoardSignal[]
+  worstRisk: string
+  openCount: number
+}
+
+function groupSignalsByAccount(accounts: StoredAccount[]): AccountGroup[] {
+  const groups: AccountGroup[] = accounts.map((account) => {
+    const signals = extractSignalsForAccount(account)
+    const worstRisk = account.result.riskLevel
+    const openCount = signals.filter((s) => !s.action || s.action.status === "open").length
+    return { account, signals, worstRisk, openCount }
   })
+  return groups
+    .filter((g) => g.signals.length > 0)
+    .sort((a, b) => (riskOrder[a.worstRisk] ?? 3) - (riskOrder[b.worstRisk] ?? 3))
+}
+
+function getAllSignals(groups: AccountGroup[]): BoardSignal[] {
+  return groups.flatMap((g) => g.signals)
 }
 
 // ─── Page ───────────────────────────────────────────────────────────────────────
@@ -157,7 +174,7 @@ export default function ActionQueuePage() {
   const [workspace, setWorkspace] = useState<WorkspaceContext>({})
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<FilterStatus>("needs_action")
-  const [signals, setSignals] = useState<BoardSignal[]>([])
+  const [groups, setGroups] = useState<AccountGroup[]>([])
 
   useEffect(() => {
     if (!authLoading && !user) router.replace("/concept/login")
@@ -170,7 +187,7 @@ export default function ActionQueuePage() {
       getWorkspace(user.uid),
     ]).then(([accs, ws]) => {
       setAccounts(accs)
-      setSignals(extractSignals(accs))
+      setGroups(groupSignalsByAccount(accs))
       setWorkspace(ws)
     }).finally(() => setLoading(false))
   }, [user])
@@ -195,19 +212,25 @@ export default function ActionQueuePage() {
           ? { ...a, signalActions: { ...a.signalActions, [key]: action } }
           : a
       )
-      setSignals(extractSignals(updated))
+      setGroups(groupSignalsByAccount(updated))
       return updated
     })
   }, [user, accounts])
 
-  const filtered = signals.filter((s) => {
+  const signals = getAllSignals(groups)
+
+  const signalMatchesFilter = (s: BoardSignal) => {
     const status = s.action?.status ?? "open"
     if (filter === "needs_action") return status === "open"
     if (filter === "in_progress") return status === "in_progress"
     if (filter === "done") return status === "done"
     if (filter === "dismissed") return status === "dismissed"
     return true
-  })
+  }
+
+  const filteredGroups = groups
+    .map((g) => ({ ...g, signals: g.signals.filter(signalMatchesFilter) }))
+    .filter((g) => g.signals.length > 0)
 
   const openCount = signals.filter((s) => !s.action || s.action.status === "open").length
   const inProgressCount = signals.filter((s) => s.action?.status === "in_progress").length
@@ -315,7 +338,7 @@ export default function ActionQueuePage() {
               <div key={i} className="bg-white border border-neutral-200 rounded-xl h-24 animate-pulse" style={{ animationDelay: `${i * 120}ms` }} />
             ))}
           </div>
-        ) : filtered.length === 0 ? (
+        ) : filteredGroups.length === 0 ? (
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
@@ -339,23 +362,113 @@ export default function ActionQueuePage() {
           <motion.div
             initial="hidden"
             animate="show"
-            variants={{ hidden: {}, show: { transition: { staggerChildren: 0.06 } } }}
-            className="space-y-2"
+            variants={{ hidden: {}, show: { transition: { staggerChildren: 0.08 } } }}
+            className="space-y-4"
           >
-            {filtered.map((s) => (
-              <ActionCard
-                key={`${s.accountId}-${s.key}`}
-                signal={s}
+            {filteredGroups.map((group) => (
+              <AccountSignalGroup
+                key={group.account.id}
+                group={group}
                 workspace={workspace}
                 userId={user.uid}
-                onUpdate={(action) => updateSignalAction(s.accountId, s.key, action)}
-                onBrief={() => router.push(`/concept/account/${s.accountId}?brief=${s.key}`)}
+                onUpdate={(key, action) => updateSignalAction(group.account.id, key, action)}
+                onBrief={(key) => router.push(`/concept/account/${group.account.id}?brief=${key}`)}
               />
             ))}
           </motion.div>
         )}
       </main>
     </div>
+  )
+}
+
+// ─── Account Signal Group ────────────────────────────────────────────────────────
+
+function AccountSignalGroup({
+  group,
+  workspace,
+  userId,
+  onUpdate,
+  onBrief,
+}: {
+  group: AccountGroup
+  workspace: WorkspaceContext
+  userId: string
+  onUpdate: (key: string, action: SignalAction) => void
+  onBrief: (key: string) => void
+}) {
+  const { account, signals } = group
+  const [collapsed, setCollapsed] = useState(false)
+  const risk = account.result.riskLevel
+  const healthScore = account.result.healthScore ?? 0
+
+  return (
+    <motion.div
+      variants={{
+        hidden: { y: 16, opacity: 0 },
+        show: { y: 0, opacity: 1, transition: { duration: 0.35, ease: [0.16, 1, 0.3, 1] } },
+      }}
+      className="bg-white border border-neutral-200 rounded-xl overflow-hidden shadow-sm"
+    >
+      {/* Group header */}
+      <div
+        className="flex items-center gap-3 px-4 sm:px-5 py-3.5 border-b border-neutral-100 bg-neutral-50 cursor-pointer select-none"
+        onClick={() => setCollapsed((v) => !v)}
+      >
+        <div className={`w-2 h-2 rounded-full shrink-0 ${riskDot[risk] ?? "bg-neutral-300"} ${risk === "critical" ? "animate-pulse" : ""}`} />
+        <Link
+          href={`/concept/account/${account.id}`}
+          className="text-sm font-semibold text-neutral-900 hover:underline flex-1 min-w-0 truncate"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {account.result.accountName}
+        </Link>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className={`text-xs font-semibold px-2 py-0.5 border rounded-full ${riskBadge[risk] ?? ""}`}>
+            {risk}
+          </span>
+          <span className="text-xs text-neutral-400 tabular-nums hidden sm:inline">
+            {healthScore}/10
+          </span>
+          <span className="text-xs font-semibold text-neutral-500 bg-neutral-200 rounded-full px-2 py-0.5 tabular-nums">
+            {signals.length}
+          </span>
+          <svg
+            width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+            className={`text-neutral-400 transition-transform duration-200 ${collapsed ? "-rotate-90" : ""}`}
+          >
+            <path d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
+      </div>
+
+      {/* Signals */}
+      <AnimatePresence initial={false}>
+        {!collapsed && (
+          <motion.div
+            initial={{ height: 0 }}
+            animate={{ height: "auto" }}
+            exit={{ height: 0 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="overflow-hidden"
+          >
+            <div className="divide-y divide-neutral-100">
+              {signals.map((s) => (
+                <ActionCard
+                  key={`${s.accountId}-${s.key}`}
+                  signal={s}
+                  workspace={workspace}
+                  userId={userId}
+                  onUpdate={(action) => onUpdate(s.key, action)}
+                  onBrief={() => onBrief(s.key)}
+                  isNested
+                />
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   )
 }
 
@@ -366,12 +479,14 @@ function ActionCard({
   workspace,
   onUpdate,
   onBrief,
+  isNested = false,
 }: {
   signal: BoardSignal
   workspace: WorkspaceContext
   userId: string
   onUpdate: (action: SignalAction) => void
   onBrief: () => void
+  isNested?: boolean
 }) {
   const [status, setStatus] = useState<SignalActionStatus>(signal.action?.status ?? "open")
   const [note, setNote] = useState(signal.action?.note ?? "")
@@ -452,13 +567,14 @@ function ActionCard({
   return (
     <motion.div
       layout
-      variants={{
+      variants={isNested ? {} : {
         hidden: { y: 16, opacity: 0 },
         show: { y: 0, opacity: 1, transition: { duration: 0.3, ease: [0.16, 1, 0.3, 1] } },
       }}
-      className={`bg-white border rounded-xl overflow-hidden transition-all duration-200 ${
-        isClosedOut ? "border-neutral-100 opacity-50" : "border-neutral-200 hover:border-neutral-300 hover:shadow-sm"
-      }`}
+      className={isNested
+        ? `bg-white transition-all duration-200 ${isClosedOut ? "opacity-50" : ""}`
+        : `bg-white border rounded-xl overflow-hidden transition-all duration-200 ${isClosedOut ? "border-neutral-100 opacity-50" : "border-neutral-200 hover:border-neutral-300 hover:shadow-sm"}`
+      }
     >
       <div className="px-4 sm:px-5 py-4">
         {/* Header row */}
@@ -471,19 +587,25 @@ function ActionCard({
           <div className="flex-1 min-w-0">
             {/* Meta row */}
             <div className="flex items-center gap-2 flex-wrap mb-1.5">
-              <Link
-                href={`/concept/account/${signal.accountId}`}
-                className="text-xs font-semibold text-neutral-700 hover:text-neutral-900 hover:underline transition-colors"
-              >
-                {signal.accountName}
-              </Link>
-              <span className="text-neutral-200">·</span>
+              {!isNested && (
+                <>
+                  <Link
+                    href={`/concept/account/${signal.accountId}`}
+                    className="text-xs font-semibold text-neutral-700 hover:text-neutral-900 hover:underline transition-colors"
+                  >
+                    {signal.accountName}
+                  </Link>
+                  <span className="text-neutral-200">·</span>
+                </>
+              )}
               <span className={`text-xs font-medium px-2 py-0.5 border rounded-full ${typeBadge[signal.type] ?? typeBadge.risk}`}>
                 {typeLabel[signal.type] ?? signal.type}
               </span>
-              <span className={`text-xs font-medium px-2 py-0.5 border rounded-full ${riskBadge[signal.riskLevel] ?? ""}`}>
-                {signal.riskLevel}
-              </span>
+              {!isNested && (
+                <span className={`text-xs font-medium px-2 py-0.5 border rounded-full ${riskBadge[signal.riskLevel] ?? ""}`}>
+                  {signal.riskLevel}
+                </span>
+              )}
               {signal.signalCategory === "risk" && signal.severity && signal.severity !== signal.riskLevel && (
                 <span className="text-[11px] font-semibold text-neutral-400">{signal.severity} severity</span>
               )}

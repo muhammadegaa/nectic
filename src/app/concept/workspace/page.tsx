@@ -313,95 +313,128 @@ export default function WorkspacePage() {
             <div className="w-5 h-5 border-2 border-neutral-300 border-t-neutral-900 rounded-full animate-spin" />
           </div>
         ) : (
-          <div className="space-y-4">
-            {FIELDS.map((field, i) => {
-              const isFilled = !!(form[field.key] as string)?.trim()
-              return (
-                <div
-                  key={field.key}
-                  className={`bg-white border rounded-xl overflow-hidden transition-all duration-200 ${isFilled ? "border-neutral-200 shadow-sm" : "border-neutral-200"}`}
-                >
-                  {/* Field header */}
-                  <div className="flex items-center gap-3 px-5 pt-4 pb-3 border-b border-neutral-100">
-                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors ${isFilled ? "bg-neutral-900 text-white" : "bg-neutral-100 text-neutral-400"}`}>
-                      {field.icon}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-medium text-neutral-400 uppercase tracking-wide">{i + 1} · {field.sublabel}</span>
-                        {isFilled && (
-                          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" className="text-emerald-500 shrink-0"><polyline points="2 8 6 12 14 4" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                        )}
-                      </div>
-                      <p className="text-sm font-semibold text-neutral-800 leading-tight">{field.label}</p>
-                    </div>
-                    <div className="shrink-0 hidden sm:flex items-center gap-1 text-[10px] text-neutral-400 bg-neutral-50 border border-neutral-100 px-2 py-1 rounded-md max-w-[160px]">
-                      <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M8 1l2 5h5l-4 3 1.5 5L8 11l-4.5 3L5 9 1 6h5z" fill="currentColor" opacity="0.5"/></svg>
-                      <span className="truncate">{field.unlocks}</span>
-                    </div>
-                  </div>
+          <div className="space-y-6">
 
-                  {/* Staleness nudge for roadmapFocus */}
-                  {field.key === "roadmapFocus" && isFilled && isRoadmapStale(workspaceUpdatedAt) && (
-                    <div className="mx-5 mt-0 mb-0 mt-3">
-                      <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-amber-500 mt-0.5 shrink-0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                        <p className="text-xs text-amber-800 leading-relaxed">
-                          Last updated in <span className="font-semibold">{getQuarterLabel(new Date(workspaceUpdatedAt!))}</span>. A new quarter has started — is this roadmap still current?
-                        </p>
-                      </div>
+            {/* ── Alerts & digest section ────────────────────────────────── */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <h2 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Alerts &amp; Digest</h2>
+                <div className="flex-1 h-px bg-neutral-200" />
+              </div>
+
+              <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
+                <div className="flex items-center gap-3 px-5 pt-4 pb-3 border-b border-neutral-100">
+                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors ${form.notificationEmail?.trim() ? "bg-neutral-900 text-white" : "bg-neutral-100 text-neutral-400"}`}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+                      <path d="M22 17H2a3 3 0 003-3V9a7 7 0 0114 0v5a3 3 0 003 3z"/>
+                      <path d="M13.73 21a2 2 0 01-3.46 0"/>
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-medium text-neutral-400 uppercase tracking-wide">Alert email</span>
+                      {form.notificationEmail?.trim() && (
+                        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" className="text-emerald-500 shrink-0"><polyline points="2 8 6 12 14 4" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      )}
+                    </div>
+                    <p className="text-sm font-semibold text-neutral-800 leading-tight">Signal alert &amp; weekly digest</p>
+                  </div>
+                  <div className="shrink-0 hidden sm:flex items-center gap-1 text-[10px] text-neutral-400 bg-neutral-50 border border-neutral-100 px-2 py-1 rounded-md">
+                    <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M8 1l2 5h5l-4 3 1.5 5L8 11l-4.5 3L5 9 1 6h5z" fill="currentColor" opacity="0.5"/></svg>
+                    <span>Critical, high risk &amp; competitor alerts</span>
+                  </div>
+                </div>
+                <div className="px-5 pt-3 pb-4 space-y-3">
+                  <p className="text-xs text-neutral-400 leading-relaxed">
+                    Nectic emails you when a critical or high-risk signal is detected, when a competitor is mentioned, and sends a weekly portfolio digest every Monday.
+                  </p>
+                  <input
+                    type="email"
+                    value={form.notificationEmail ?? ""}
+                    onChange={(e) => handleChange("notificationEmail" as keyof WorkspaceContext, e.target.value)}
+                    placeholder="you@yourcompany.com"
+                    className="w-full text-sm border border-neutral-200 rounded-lg px-4 py-2.5 text-neutral-700 placeholder:text-neutral-300 focus:outline-none focus:border-neutral-400 bg-neutral-50 transition-colors"
+                  />
+                  {form.notificationEmail?.trim() && (
+                    <div className="flex items-center gap-2 pt-1">
+                      <button
+                        onClick={() => {
+                          if (!user) return
+                          fetch("/api/concept/weekly-digest", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ uid: user.uid, email: form.notificationEmail }),
+                          }).catch(() => {})
+                        }}
+                        className="text-xs font-medium px-3 py-1.5 border border-neutral-200 rounded-lg text-neutral-600 hover:bg-neutral-50 transition-colors"
+                      >
+                        Send test digest
+                      </button>
+                      <span className="text-[11px] text-neutral-400">Sends a sample digest to this address</span>
                     </div>
                   )}
-
-                  {/* Textarea */}
-                  <div className="px-5 pt-3 pb-4">
-                    <p className="text-xs text-neutral-400 mb-2 leading-relaxed">{field.hint}</p>
-                    <textarea
-                      value={(form[field.key] as string) ?? ""}
-                      onChange={(e) => handleChange(field.key, e.target.value)}
-                      placeholder={field.placeholder}
-                      rows={field.rows}
-                      className="w-full text-sm border border-neutral-200 rounded-lg px-4 py-3 text-neutral-700 placeholder:text-neutral-300 focus:outline-none focus:border-neutral-400 bg-neutral-50 resize-none leading-relaxed transition-colors"
-                    />
-                  </div>
-                </div>
-              )
-            })}
-
-            {/* Notification email */}
-            <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
-              <div className="flex items-center gap-3 px-5 pt-4 pb-3 border-b border-neutral-100">
-                <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors ${form.notificationEmail?.trim() ? "bg-neutral-900 text-white" : "bg-neutral-100 text-neutral-400"}`}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-                    <path d="M22 17H2a3 3 0 003-3V9a7 7 0 0114 0v5a3 3 0 003 3z"/>
-                    <path d="M13.73 21a2 2 0 01-3.46 0"/>
-                  </svg>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-neutral-400 uppercase tracking-wide">5 · Notifications</span>
-                    {form.notificationEmail?.trim() && (
-                      <svg width="12" height="12" viewBox="0 0 16 16" fill="none" className="text-emerald-500 shrink-0"><polyline points="2 8 6 12 14 4" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    )}
-                  </div>
-                  <p className="text-sm font-semibold text-neutral-800 leading-tight">Signal alert email</p>
-                </div>
-                <div className="shrink-0 hidden sm:flex items-center gap-1 text-[10px] text-neutral-400 bg-neutral-50 border border-neutral-100 px-2 py-1 rounded-md">
-                  <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M8 1l2 5h5l-4 3 1.5 5L8 11l-4.5 3L5 9 1 6h5z" fill="currentColor" opacity="0.5"/></svg>
-                  <span>Critical &amp; high risk alerts</span>
                 </div>
               </div>
-              <div className="px-5 pt-3 pb-4">
-                <p className="text-xs text-neutral-400 mb-2 leading-relaxed">
-                  Nectic sends an email when a critical or high-risk signal is detected after analysis.
-                </p>
-                <input
-                  type="email"
-                  value={form.notificationEmail ?? ""}
-                  onChange={(e) => handleChange("notificationEmail" as keyof WorkspaceContext, e.target.value)}
-                  placeholder="you@yourcompany.com"
-                  className="w-full text-sm border border-neutral-200 rounded-lg px-4 py-2.5 text-neutral-700 placeholder:text-neutral-300 focus:outline-none focus:border-neutral-400 bg-neutral-50 transition-colors"
-                />
+            </div>
+
+            {/* ── Product intelligence section ──────────────────────────── */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <h2 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Product Intelligence</h2>
+                <div className="flex-1 h-px bg-neutral-200" />
+              </div>
+
+              <div className="space-y-4">
+                {FIELDS.map((field, i) => {
+                  const isFilled = !!(form[field.key] as string)?.trim()
+                  return (
+                    <div
+                      key={field.key}
+                      className={`bg-white border rounded-xl overflow-hidden transition-all duration-200 ${isFilled ? "border-neutral-200 shadow-sm" : "border-neutral-200"}`}
+                    >
+                      <div className="flex items-center gap-3 px-5 pt-4 pb-3 border-b border-neutral-100">
+                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors ${isFilled ? "bg-neutral-900 text-white" : "bg-neutral-100 text-neutral-400"}`}>
+                          {field.icon}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-medium text-neutral-400 uppercase tracking-wide">{i + 1} · {field.sublabel}</span>
+                            {isFilled && (
+                              <svg width="12" height="12" viewBox="0 0 16 16" fill="none" className="text-emerald-500 shrink-0"><polyline points="2 8 6 12 14 4" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                            )}
+                          </div>
+                          <p className="text-sm font-semibold text-neutral-800 leading-tight">{field.label}</p>
+                        </div>
+                        <div className="shrink-0 hidden sm:flex items-center gap-1 text-[10px] text-neutral-400 bg-neutral-50 border border-neutral-100 px-2 py-1 rounded-md max-w-[160px]">
+                          <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M8 1l2 5h5l-4 3 1.5 5L8 11l-4.5 3L5 9 1 6h5z" fill="currentColor" opacity="0.5"/></svg>
+                          <span className="truncate">{field.unlocks}</span>
+                        </div>
+                      </div>
+
+                      {field.key === "roadmapFocus" && isFilled && isRoadmapStale(workspaceUpdatedAt) && (
+                        <div className="mx-5 mt-3">
+                          <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-amber-500 mt-0.5 shrink-0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                            <p className="text-xs text-amber-800 leading-relaxed">
+                              Last updated in <span className="font-semibold">{getQuarterLabel(new Date(workspaceUpdatedAt!))}</span>. A new quarter has started — is this roadmap still current?
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="px-5 pt-3 pb-4">
+                        <p className="text-xs text-neutral-400 mb-2 leading-relaxed">{field.hint}</p>
+                        <textarea
+                          value={(form[field.key] as string) ?? ""}
+                          onChange={(e) => handleChange(field.key, e.target.value)}
+                          placeholder={field.placeholder}
+                          rows={field.rows}
+                          className="w-full text-sm border border-neutral-200 rounded-lg px-4 py-3 text-neutral-700 placeholder:text-neutral-300 focus:outline-none focus:border-neutral-400 bg-neutral-50 resize-none leading-relaxed transition-colors"
+                        />
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             </div>
 

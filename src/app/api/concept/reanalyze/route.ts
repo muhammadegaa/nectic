@@ -24,6 +24,7 @@ interface WorkspaceContext {
   featureAreas?: string
   roadmapFocus?: string
   knownIssues?: string
+  notificationEmail?: string
 }
 
 function buildWorkspaceBlock(ws?: WorkspaceContext): string {
@@ -161,6 +162,45 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Re-analysis could not be completed. Please try again." }, { status: 502 })
     }
     if (messageCount) result.stats.messageCount = messageCount
+
+    // Fire notifications — best-effort, never blocks response
+    if (workspace?.notificationEmail) {
+      const notifyUrl = new URL(req.url)
+      notifyUrl.pathname = "/api/concept/notify"
+
+      // Risk alert for critical/high
+      if (result.riskLevel === "critical" || result.riskLevel === "high") {
+        fetch(notifyUrl.toString(), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            accountName: result.accountName,
+            riskLevel: result.riskLevel,
+            signalCount: (result.riskSignals?.length ?? 0) + (result.productSignals?.length ?? 0),
+            topSignalTitle: result.riskSignals?.[0]?.title ?? result.riskSignals?.[0]?.explanation?.slice(0, 80),
+            topSignalQuote: result.riskSignals?.[0]?.quote,
+            email: workspace.notificationEmail,
+          }),
+        }).catch(() => {})
+      }
+
+      // Competitor alert — fires regardless of riskLevel
+      if (result.competitorMentions?.length > 0) {
+        fetch(notifyUrl.toString(), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            accountName: result.accountName,
+            riskLevel: result.riskLevel,
+            signalCount: (result.riskSignals?.length ?? 0) + (result.productSignals?.length ?? 0),
+            topSignalQuote: result.riskSignals?.[0]?.quote,
+            competitorNames: result.competitorMentions,
+            isCompetitorAlert: true,
+            email: workspace.notificationEmail,
+          }),
+        }).catch(() => {})
+      }
+    }
 
     return NextResponse.json({ result }, { status: 200 })
   } catch (err: unknown) {

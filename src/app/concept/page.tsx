@@ -395,6 +395,15 @@ export default function ConceptPage() {
     return sum + Math.max(0, openSignals - resolvedSignals)
   }, 0)
 
+  const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000
+  const savedThisMonth = accounts.filter((a) => {
+    const delta = a.result.changesSince?.healthDelta ?? 0
+    const updatedRecently = new Date(a.updatedAt ?? a.analyzedAt).getTime() > thirtyDaysAgo
+    const wasAtRisk = delta > 2
+    const nowHealthy = a.result.riskLevel === "low" || a.result.riskLevel === "medium"
+    return updatedRecently && wasAtRisk && nowHealthy
+  }).length
+
   return (
     <div className="min-h-screen bg-neutral-50">
       <ConceptNav
@@ -454,10 +463,17 @@ export default function ConceptPage() {
                       <span className="text-xs text-blue-600">cross-account pattern{sharedPatterns.length !== 1 ? "s" : ""}</span>
                     </div>
                   )}
+                  {savedThisMonth > 0 && (
+                    <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+                      <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><polyline points="2 8 6 12 14 4" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      <span className="text-base font-semibold text-emerald-700 tabular-nums">{savedThisMonth}</span>
+                      <span className="text-xs text-emerald-600">saved this month</span>
+                    </div>
+                  )}
                 </motion.div>
 
                 {/* Revenue at Risk — shown when accounts are at risk */}
-                {atRisk > 0 && <RevenueAtRisk atRiskCount={atRisk} topAccountId={sortedAccounts[0]?.id} topAccountName={sortedAccounts[0]?.result.accountName} />}
+                {atRisk > 0 && <RevenueAtRisk atRiskCount={atRisk} savedCount={savedThisMonth} topAccountId={sortedAccounts[0]?.id} topAccountName={sortedAccounts[0]?.result.accountName} />}
 
                 {/* Workspace setup nudge */}
                 {!hasWorkspace && (
@@ -1375,11 +1391,16 @@ function AccountCard({ account, onDelete, confirmingDelete, onConfirmDelete, onC
   const risk = riskConfig[account.result.riskLevel] ?? riskConfig.medium
   const topRisk = account.result.riskSignals?.[0]
   const topProduct = account.result.productSignals?.[0]
-  const hasChanges = !!account.result.changesSince
+  const changesSince = account.result.changesSince
+  const competitors = account.result.competitorMentions ?? []
   const isCritical = account.result.riskLevel === "critical"
   const isHigh = account.result.riskLevel === "high"
   const score = account.result.healthScore ?? 0
   const scoreBarColor = isCritical ? "bg-red-500" : isHigh ? "bg-orange-400" : account.result.riskLevel === "medium" ? "bg-amber-400" : "bg-emerald-500"
+
+  const healthDelta = changesSince?.healthDelta ?? 0
+  const deltaPositive = healthDelta > 0
+  const deltaNegative = healthDelta < 0
 
   return (
     <div className={`bg-white border rounded-xl overflow-hidden transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md ${confirmingDelete ? "border-red-300" : "border-neutral-200"}`}>
@@ -1394,17 +1415,22 @@ function AccountCard({ account, onDelete, confirmingDelete, onConfirmDelete, onC
                 <span className={`w-1.5 h-1.5 rounded-full ${risk.dot} ${(isCritical || isHigh) ? "animate-pulse" : ""}`} />
                 {risk.label}
               </span>
-              {hasChanges && (
-                <span className="text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">Updated</span>
+              {competitors.length > 0 && (
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-orange-50 text-orange-700 border border-orange-200">
+                  ⚡ {competitors[0]}
+                </span>
               )}
             </div>
             <p className="text-sm font-semibold text-neutral-900 truncate">{account.result.accountName}</p>
-            {topRisk && (
+            {changesSince ? (
+              <p className={`mt-1.5 text-xs line-clamp-1 leading-relaxed font-medium ${deltaPositive ? "text-emerald-600" : deltaNegative ? "text-red-600" : "text-neutral-400"}`}>
+                {deltaPositive ? "↑ " : deltaNegative ? "↓ " : ""}{changesSince.summary}
+              </p>
+            ) : topRisk ? (
               <p className="mt-1.5 text-xs text-neutral-400 line-clamp-1 italic leading-relaxed">&ldquo;{topRisk.quote}&rdquo;</p>
-            )}
-            {!topRisk && topProduct && (
+            ) : topProduct ? (
               <p className="mt-1.5 text-xs text-neutral-400 line-clamp-1">{topProduct.title}</p>
-            )}
+            ) : null}
           </div>
 
           {/* Health score with mini bar */}
@@ -1509,8 +1535,9 @@ const ACV_PRESETS = [
   { label: "$50k", value: 50000 },
 ]
 
-function RevenueAtRisk({ atRiskCount, topAccountId, topAccountName }: {
+function RevenueAtRisk({ atRiskCount, savedCount, topAccountId, topAccountName }: {
   atRiskCount: number
+  savedCount: number
   topAccountId?: string
   topAccountName?: string
 }) {
@@ -1525,6 +1552,7 @@ function RevenueAtRisk({ atRiskCount, topAccountId, topAccountName }: {
   const opportunityCost = earlyRecovery - reactiveRecovery
   const earlyPct = Math.round((earlyRecovery / atRiskArr) * 100)
   const reactivePct = Math.round((reactiveRecovery / atRiskArr) * 100)
+  const arrProtected = savedCount * effectiveAcv
 
   return (
     <div className="rounded-xl border border-neutral-200 bg-white overflow-hidden shadow-sm">
@@ -1638,7 +1666,14 @@ function RevenueAtRisk({ atRiskCount, topAccountId, topAccountName }: {
           </div>
         </div>
 
-        <p className="text-xs text-neutral-400 leading-relaxed">
+        {arrProtected > 0 && (
+          <div className="mt-3 pt-3 border-t border-neutral-100 flex items-center justify-between">
+            <span className="text-xs text-neutral-500">ARR protected this month</span>
+            <span className="text-sm font-semibold text-emerald-600 tabular-nums">${arrProtected.toLocaleString()}</span>
+          </div>
+        )}
+
+        <p className="text-xs text-neutral-400 leading-relaxed mt-3">
           Based on industry benchmarks: early signal detection recovers ~40% of at-risk ARR; reactive saves ~10%.
         </p>
       </div>

@@ -27,11 +27,13 @@ export default function OnboardingPage() {
 
   const [checking, setChecking] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [step, setStep] = useState<1 | 2>(1)
 
   const [productDescription, setProductDescription] = useState("")
   const [featureAreas, setFeatureAreas] = useState("")
   const [roadmapFocus, setRoadmapFocus] = useState("")
   const [knownIssues, setKnownIssues] = useState("")
+  const [notificationEmail, setNotificationEmail] = useState("")
 
   const [autofillUrl, setAutofillUrl] = useState("")
   const [autofill, setAutofill] = useState<AutofillState>({ phase: "idle" })
@@ -77,18 +79,23 @@ export default function OnboardingPage() {
     setAutofillUrl("")
   }
 
+  const handleStep1Next = () => {
+    setStep(2)
+  }
+
   const handleComplete = async (skip = false) => {
     if (!user) return
     setSaving(true)
     try {
+      const ctx: WorkspaceContext = {}
       if (!skip) {
-        const ctx: WorkspaceContext = {}
         if (productDescription.trim()) ctx.productDescription = productDescription.trim()
         if (featureAreas.trim()) ctx.featureAreas = featureAreas.trim()
         if (roadmapFocus.trim()) ctx.roadmapFocus = roadmapFocus.trim()
         if (knownIssues.trim()) ctx.knownIssues = knownIssues.trim()
-        if (Object.keys(ctx).length > 0) await saveWorkspace(user.uid, ctx)
       }
+      if (notificationEmail.trim()) ctx.notificationEmail = notificationEmail.trim()
+      if (Object.keys(ctx).length > 0) await saveWorkspace(user.uid, ctx)
       await markOnboardingComplete(user.uid)
       router.replace("/concept")
     } finally {
@@ -114,14 +121,15 @@ export default function OnboardingPage() {
         <div className="flex items-center gap-2">
           <div className="flex gap-1">
             {[0, 1].map((i) => (
-              <div key={i} className={`h-1 rounded-full transition-all ${i === 0 ? "w-6 bg-neutral-900" : "w-6 bg-neutral-200"}`} />
+              <div key={i} className={`h-1 rounded-full transition-all ${i < step ? "w-6 bg-neutral-900" : "w-6 bg-neutral-200"}`} />
             ))}
           </div>
-          <span className="text-xs text-neutral-400 ml-1">Step 1 of 2</span>
+          <span className="text-xs text-neutral-400 ml-1">Step {step} of 2</span>
         </div>
       </header>
 
       <main className="flex-1 max-w-2xl mx-auto w-full px-4 sm:px-6 py-10 pb-24">
+        {step === 2 ? null : (
         <div className="mb-8">
           <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-2">Workspace setup</p>
           <h1 className="text-2xl font-semibold text-neutral-900 tracking-tight">Tell Nectic about your product</h1>
@@ -130,6 +138,10 @@ export default function OnboardingPage() {
             You can update this anytime in Workspace settings.
           </p>
         </div>
+        )}
+
+        {/* Step 1 content */}
+        {step === 1 && (<>
 
         {/* Autofill from URL */}
         <div className="bg-white border border-neutral-200 rounded-xl p-5 mb-6">
@@ -241,26 +253,78 @@ export default function OnboardingPage() {
           </div>
         )}
 
+        {/* End step 1 wrapper */}
+        </>)}
+
         {/* Actions */}
-        <div className="mt-8 flex items-center justify-between">
-          <button
-            onClick={() => handleComplete(true)}
-            disabled={saving}
-            className="text-sm text-neutral-400 hover:text-neutral-700 transition-colors disabled:opacity-40"
-          >
-            Skip for now
-          </button>
-          <button
-            onClick={() => handleComplete(false)}
-            disabled={saving || filledCount === 0}
-            className="flex items-center gap-2 bg-neutral-900 text-white text-sm font-semibold px-6 py-2.5 rounded-lg hover:bg-neutral-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            {saving ? (
-              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : null}
-            {saving ? "Saving…" : "Start using Nectic →"}
-          </button>
-        </div>
+        {step === 1 ? (
+          <div className="mt-8 flex items-center justify-between">
+            <button
+              onClick={() => handleStep1Next()}
+              className="text-sm text-neutral-400 hover:text-neutral-700 transition-colors"
+            >
+              Skip for now
+            </button>
+            <button
+              onClick={handleStep1Next}
+              disabled={filledCount === 0}
+              className="flex items-center gap-2 bg-neutral-900 text-white text-sm font-semibold px-6 py-2.5 rounded-lg hover:bg-neutral-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Next →
+            </button>
+          </div>
+        ) : (
+          // Step 2 is rendered in a separate section below
+          null
+        )}
+
+        {/* Step 2 — notifications */}
+        {step === 2 && (
+          <div className="mt-0">
+            <div className="mb-8">
+              <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-2">Almost there</p>
+              <h1 className="text-2xl font-semibold text-neutral-900 tracking-tight">Where should we send your weekly digest?</h1>
+              <p className="mt-2 text-sm text-neutral-500 leading-relaxed">
+                Nectic emails you every Monday with your portfolio health, accounts that changed, and competitor mentions — with exact customer quotes.
+              </p>
+            </div>
+
+            <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden mb-6">
+              <div className="px-5 pt-4 pb-2 border-b border-neutral-100">
+                <p className="text-sm font-semibold text-neutral-800">Digest &amp; alert email</p>
+                <p className="text-xs text-neutral-400 mt-0.5">Weekly portfolio digest + critical risk &amp; competitor alerts</p>
+              </div>
+              <div className="px-5 py-4">
+                <input
+                  type="email"
+                  value={notificationEmail}
+                  onChange={(e) => setNotificationEmail(e.target.value)}
+                  placeholder="you@yourcompany.com"
+                  autoFocus
+                  className="w-full text-sm border border-neutral-200 rounded-lg px-4 py-2.5 text-neutral-700 placeholder:text-neutral-300 focus:outline-none focus:border-neutral-400 bg-neutral-50"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between mt-8">
+              <button
+                onClick={() => handleComplete(false)}
+                disabled={saving}
+                className="text-sm text-neutral-400 hover:text-neutral-700 transition-colors disabled:opacity-40"
+              >
+                Skip — set up later
+              </button>
+              <button
+                onClick={() => handleComplete(false)}
+                disabled={saving}
+                className="flex items-center gap-2 bg-neutral-900 text-white text-sm font-semibold px-6 py-2.5 rounded-lg hover:bg-neutral-700 transition-colors disabled:opacity-40"
+              >
+                {saving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : null}
+                {saving ? "Saving…" : "Start using Nectic →"}
+              </button>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   )
