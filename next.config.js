@@ -43,12 +43,12 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.vercel.app https://vercel.live https://js.stripe.com https://app.posthog.com https://eu.posthog.com https://us-assets.i.posthog.com",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.vercel.app https://vercel.live https://js.stripe.com https://app.posthog.com https://eu.posthog.com https://us-assets.i.posthog.com https://apis.google.com https://accounts.google.com",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
               "img-src 'self' data: blob: https:",
               "connect-src 'self' https://*.firebaseio.com https://*.googleapis.com https://openrouter.ai https://api.stripe.com https://app.posthog.com https://eu.posthog.com https://us.i.posthog.com https://us-assets.i.posthog.com https://eu-app-api.wati.io wss://*.firebaseio.com",
-              "frame-src https://js.stripe.com https://hooks.stripe.com",
+              "frame-src https://js.stripe.com https://hooks.stripe.com https://accounts.google.com",
               "worker-src 'self' blob:",
             ].join('; ')
           }
