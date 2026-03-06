@@ -24,7 +24,7 @@ import {
 import type { AnalysisResult } from "@/app/api/concept/analyze/route"
 import { trackEvent, identifyUser } from "@/lib/posthog"
 
-type ConnectStage = "method" | "instructions" | "upload" | "ready" | "analyzing" | "error" | "wa"
+type ConnectStage = "method" | "instructions" | "upload" | "ready" | "analyzing" | "error" | "wa" | "qr"
 
 interface WaContact { id: string; wAid: string; fullName?: string; firstName?: string; lastName?: string; phone: string; lastUpdated?: string }
 
@@ -77,6 +77,7 @@ export default function ConceptPage() {
   const [loadingAccounts, setLoadingAccounts] = useState(true)
   const [workspace, setWorkspace] = useState<WorkspaceContext>({})
   const [showConnect, setShowConnect] = useState(false)
+  const [showWelcome, setShowWelcome] = useState(false)
   const [connectStage, setConnectStage] = useState<ConnectStage>("instructions")
   const [parsed, setParsed] = useState<WaParsed | null>(null)
   const [fileName, setFileName] = useState("")
@@ -102,6 +103,11 @@ export default function ConceptPage() {
       .catch(console.error)
       .finally(() => setLoadingAccounts(false))
     getWorkspace(user.uid).then(setWorkspace).catch(() => {})
+    // Show founder welcome once per browser
+    if (typeof window !== "undefined" && !localStorage.getItem("nectic_welcome_seen")) {
+      const t = setTimeout(() => setShowWelcome(true), 1200)
+      return () => clearTimeout(t)
+    }
   }, [user])
 
   const refreshAccounts = async () => {
@@ -336,6 +342,24 @@ export default function ConceptPage() {
     }
   }
 
+  const handleQrContactAnalyze = async ({
+    conversation,
+    participantRoles: roles,
+    messageCount,
+    contactName,
+  }: { conversation: string; participantRoles: Record<string, "vendor" | "customer">; messageCount: number; contactName: string }) => {
+    setConnectStage("analyzing")
+    setFileName(`WA: ${contactName}`)
+    try {
+      await analyzeFromWati(conversation, roles, messageCount, contactName)
+      closeConnect()
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Something went wrong"
+      setUploadError(message)
+      setConnectStage("error")
+    }
+  }
+
   const handleDelete = async (id: string) => {
     if (!user) return
     await deleteAccount(user.uid, id)
@@ -536,9 +560,11 @@ export default function ConceptPage() {
           classifying={classifying}
           context={context}
           workspace={workspace}
+          uid={user?.uid ?? ""}
           onClose={closeConnect}
           onSelectMethodFile={() => setConnectStage("instructions")}
           onSelectMethodWa={() => setConnectStage("wa")}
+          onSelectMethodQr={() => setConnectStage("qr")}
           onContinueToUpload={() => setConnectStage("upload")}
           onBackToInstructions={() => setConnectStage("instructions")}
           onBackToMethod={() => setConnectStage("method")}
@@ -553,7 +579,16 @@ export default function ConceptPage() {
           onRetry={() => { setConnectStage("upload"); setUploadError(""); if (inputRef.current) inputRef.current.value = "" }}
           onSaveWaCredentials={saveWaCredentials}
           onWaContactAnalyze={handleWaContactAnalyze}
+          onQrContactAnalyze={handleQrContactAnalyze}
         />
+      )}
+
+      {/* Founder welcome — one-time, slide in from bottom-right */}
+      {showWelcome && (
+        <FounderWelcome onDismiss={() => {
+          setShowWelcome(false)
+          if (typeof window !== "undefined") localStorage.setItem("nectic_welcome_seen", "1")
+        }} />
       )}
     </div>
   )
@@ -616,11 +651,11 @@ function ConsentFooter({ onAnalyze, onRetry }: { onAnalyze: () => void; onRetry:
 
 function ConnectModal({
   stage, parsed, fileName, error, dragging, inputRef,
-  participantRoles, aiSuggestedRoles, classifying, context, workspace,
-  onClose, onSelectMethodFile, onSelectMethodWa, onContinueToUpload, onBackToInstructions, onBackToMethod,
+  participantRoles, aiSuggestedRoles, classifying, context, workspace, uid,
+  onClose, onSelectMethodFile, onSelectMethodWa, onSelectMethodQr, onContinueToUpload, onBackToInstructions, onBackToMethod,
   onDrop, onDragOver, onDragLeave, onFileSelect, onInputChange,
   onSetRole, onContextChange, onAnalyze, onRetry,
-  onSaveWaCredentials, onWaContactAnalyze,
+  onSaveWaCredentials, onWaContactAnalyze, onQrContactAnalyze,
 }: {
   stage: ConnectStage
   parsed: WaParsed | null
@@ -633,9 +668,11 @@ function ConnectModal({
   classifying: boolean
   context: AccountContext
   workspace: WorkspaceContext
+  uid: string
   onClose: () => void
   onSelectMethodFile: () => void
   onSelectMethodWa: () => void
+  onSelectMethodQr: () => void
   onContinueToUpload: () => void
   onBackToInstructions: () => void
   onBackToMethod: () => void
@@ -650,6 +687,7 @@ function ConnectModal({
   onRetry: () => void
   onSaveWaCredentials: (endpoint: string, token: string) => Promise<void>
   onWaContactAnalyze: (contact: WaContact) => Promise<void>
+  onQrContactAnalyze: (data: { conversation: string; participantRoles: Record<string, "vendor" | "customer">; messageCount: number; contactName: string }) => Promise<void>
 }) {
   // WA subflow state (managed locally inside ConnectModal)
   const [waSubStage, setWaSubStage] = useState<"credentials" | "loading" | "contacts">(
@@ -719,6 +757,130 @@ function ConnectModal({
     return name.toLowerCase().includes(q) || (c.phone ?? "").includes(q) || (c.wAid ?? "").includes(q)
   })
 
+  // ─── QR bridge state ─────────────────────────────────────────────────────────
+  type QrStatus = "idle" | "starting" | "pending" | "connected" | "error"
+  interface QrContact { id: string; name: string; isGroup: boolean; participantCount?: number }
+  const [qrStatus, setQrStatus] = useState<QrStatus>("idle")
+  const [qrImage, setQrImage] = useState<string | null>(null)
+  const [qrContacts, setQrContacts] = useState<QrContact[]>([])
+  const [qrSearch, setQrSearch] = useState("")
+  const [qrError, setQrError] = useState("")
+  const qrPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const callBridge = async (body: Record<string, unknown>) => {
+    const res = await fetch("/api/wa-bridge", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...body, uid }),
+    })
+    return res.json()
+  }
+
+  const loadQrContacts = async () => {
+    const data = await callBridge({ action: "contacts" })
+    setQrContacts(data.contacts ?? [])
+  }
+
+  const startQrSession = async () => {
+    setQrStatus("starting")
+    setQrError("")
+    setQrImage(null)
+    try {
+      const data = await callBridge({ action: "start" })
+      if (data.status === "connected") {
+        setQrStatus("connected")
+        await loadQrContacts()
+      } else if (data.qr) {
+        setQrImage(data.qr)
+        setQrStatus("pending")
+      }
+    } catch {
+      setQrError("Could not reach the WhatsApp bridge service.")
+      setQrStatus("error")
+    }
+  }
+
+  // Poll status while QR is pending
+  useEffect(() => {
+    if (stage !== "qr") {
+      if (qrPollRef.current) { clearInterval(qrPollRef.current); qrPollRef.current = null }
+      return
+    }
+    if (qrStatus === "idle") startQrSession()
+    if (qrStatus === "pending") {
+      qrPollRef.current = setInterval(async () => {
+        try {
+          const data = await callBridge({ action: "status" })
+          if (data.status === "connected") {
+            clearInterval(qrPollRef.current!)
+            qrPollRef.current = null
+            setQrStatus("connected")
+            setQrImage(null)
+            await loadQrContacts()
+          } else if (data.qr && data.qr !== qrImage) {
+            setQrImage(data.qr)
+          }
+        } catch {}
+      }, 2500)
+    }
+    return () => { if (qrPollRef.current) { clearInterval(qrPollRef.current); qrPollRef.current = null } }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stage, qrStatus])
+
+  const handleQrContactSelect = async (contact: QrContact) => {
+    const contactName = contact.name
+    setQrError("")
+    try {
+      const data = await callBridge({ action: "messages", waid: contact.id, limit: 200 })
+      if (!data.messages || data.messages.length === 0) {
+        setQrError("No messages found for this contact.")
+        return
+      }
+      // Format Baileys proto messages into WhatsApp export style
+      const lines: string[] = []
+      const vendorNames = new Set<string>()
+      const customerNames = new Set<string>()
+      const sorted = [...data.messages].sort(
+        (a: Record<string, unknown>, b: Record<string, unknown>) =>
+          Number(a.messageTimestamp ?? 0) - Number(b.messageTimestamp ?? 0)
+      )
+      for (const msg of sorted) {
+        const ts = Number((msg as Record<string, unknown>).messageTimestamp ?? 0)
+        const d = new Date(ts * 1000)
+        const dateStr = d.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" })
+        const timeStr = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+        const key = (msg as Record<string, unknown>).key as Record<string, unknown>
+        const fromMe = key?.fromMe as boolean
+        const msgBody = (msg as Record<string, unknown>).message as Record<string, unknown>
+        const text = (
+          (msgBody?.conversation as string) ||
+          ((msgBody?.extendedTextMessage as Record<string, unknown>)?.text as string) ||
+          ((msgBody?.imageMessage as Record<string, unknown>)?.caption as string) || ""
+        )
+        if (!text?.trim()) continue
+        const senderName = fromMe ? "Support Team" : (((msg as Record<string, unknown>).pushName as string) || contactName)
+        if (fromMe) vendorNames.add(senderName)
+        else customerNames.add(senderName)
+        lines.push(`[${dateStr}, ${timeStr}] ${senderName}: ${text}`)
+      }
+      const participantRolesMap: Record<string, "vendor" | "customer"> = {}
+      vendorNames.forEach((n) => { participantRolesMap[n] = "vendor" })
+      customerNames.forEach((n) => { participantRolesMap[n] = "customer" })
+      await onQrContactAnalyze({
+        conversation: lines.join("\n"),
+        participantRoles: participantRolesMap,
+        messageCount: lines.length,
+        contactName,
+      })
+    } catch (err) {
+      setQrError(err instanceof Error ? err.message : "Failed to load messages")
+    }
+  }
+
+  const qrFiltered = qrContacts.filter((c) =>
+    c.name.toLowerCase().includes(qrSearch.toLowerCase())
+  )
+
   return (
     <>
       <div className="fixed inset-0 bg-black/30 z-40 backdrop-blur-sm" onClick={stage === "analyzing" ? undefined : onClose} />
@@ -740,6 +902,7 @@ function ConnectModal({
                   {stage === "analyzing" && "Analysing…"}
                   {stage === "error" && "Something went wrong"}
                   {stage === "wa" && (waSubStage === "credentials" ? "Enter your API credentials" : waSubStage === "loading" ? "Connecting…" : "Select a contact")}
+                  {stage === "qr" && (qrStatus === "pending" ? "Scan with your phone" : qrStatus === "connected" ? "Select a contact or group" : qrStatus === "starting" ? "Starting…" : "Connect via WhatsApp")}
                 </p>
               </div>
             </div>
@@ -754,19 +917,26 @@ function ConnectModal({
             {stage === "method" && (
               <div className="space-y-3">
                 <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-4">How do you want to connect?</p>
+
+                {/* Primary: QR scan */}
                 <button
-                  onClick={onSelectMethodWa}
-                  className="w-full flex items-center gap-4 border border-neutral-200 rounded-xl p-4 hover:border-[#25D366] hover:bg-green-50/40 transition-all text-left group"
+                  onClick={onSelectMethodQr}
+                  className="w-full flex items-center gap-4 border-2 border-[#25D366] rounded-xl p-4 hover:bg-green-50/40 transition-all text-left group relative"
                 >
                   <div className="w-10 h-10 bg-[#25D366] rounded-xl flex items-center justify-center shrink-0">
-                    <WhatsAppIcon size={20} className="text-white" />
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h2v2h-2zM18 14h2M14 18h2M18 18h2M16 16h2"/></svg>
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-semibold text-neutral-900">Connect WhatsApp</p>
-                    <p className="text-xs text-neutral-400 mt-0.5">Pull conversations directly — no manual export needed</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold text-neutral-900">Scan QR code</p>
+                      <span className="text-[10px] font-semibold bg-[#25D366] text-white px-1.5 py-0.5 rounded-full">Recommended</span>
+                    </div>
+                    <p className="text-xs text-neutral-400 mt-0.5">Any WhatsApp number — personal or business. Groups supported.</p>
                   </div>
-                  <svg className="text-neutral-300 group-hover:text-[#25D366] shrink-0 transition-colors" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
+                  <svg className="text-[#25D366] shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
                 </button>
+
+                {/* Secondary: File upload */}
                 <button
                   onClick={onSelectMethodFile}
                   className="w-full flex items-center gap-4 border border-neutral-200 rounded-xl p-4 hover:border-neutral-400 hover:bg-neutral-50 transition-all text-left group"
@@ -776,9 +946,18 @@ function ConnectModal({
                   </div>
                   <div className="flex-1">
                     <p className="text-sm font-semibold text-neutral-900">Upload export</p>
-                    <p className="text-xs text-neutral-400 mt-0.5">WhatsApp .txt or .zip chat export file</p>
+                    <p className="text-xs text-neutral-400 mt-0.5">WhatsApp .txt or .zip chat export — includes group chats</p>
                   </div>
                   <svg className="text-neutral-300 group-hover:text-neutral-600 shrink-0 transition-colors" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
+                </button>
+
+                {/* Tertiary: WATI API */}
+                <button
+                  onClick={onSelectMethodWa}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-neutral-50 rounded-lg transition-colors group"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-neutral-400 shrink-0"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+                  <p className="text-xs text-neutral-400 group-hover:text-neutral-700 transition-colors">Have WATI API credentials? Connect via API →</p>
                 </button>
               </div>
             )}
@@ -901,6 +1080,89 @@ function ConnectModal({
                         Change credentials
                       </button>
                     </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {stage === "qr" && (
+              <div>
+                {(qrStatus === "idle" || qrStatus === "starting") && (
+                  <div className="flex flex-col items-center justify-center py-16 gap-3">
+                    <div className="w-5 h-5 border-2 border-neutral-200 border-t-[#25D366] rounded-full animate-spin" />
+                    <p className="text-sm text-neutral-500">Starting session…</p>
+                  </div>
+                )}
+
+                {qrStatus === "pending" && qrImage && (
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="bg-white border border-neutral-200 rounded-xl p-4">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={qrImage} alt="WhatsApp QR code" width={220} height={220} className="rounded-lg" />
+                    </div>
+                    <div className="text-center space-y-1">
+                      <p className="text-sm font-semibold text-neutral-800">Open WhatsApp on your phone</p>
+                      <p className="text-xs text-neutral-400">Settings → Linked Devices → Link a Device → scan this code</p>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                      <p className="text-xs text-neutral-400">Waiting for scan…</p>
+                    </div>
+                    <button onClick={onBackToMethod} className="text-xs text-neutral-400 hover:text-neutral-600 transition-colors">← Back</button>
+                  </div>
+                )}
+
+                {qrStatus === "connected" && (
+                  <div>
+                    {qrError && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-3">{qrError}</p>}
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                      <p className="text-xs font-semibold text-green-700">Connected</p>
+                    </div>
+                    <input
+                      type="text"
+                      value={qrSearch}
+                      onChange={(e) => setQrSearch(e.target.value)}
+                      placeholder="Search contacts and groups…"
+                      className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 mb-3 focus:outline-none focus:border-neutral-400"
+                    />
+                    {qrFiltered.length === 0 && (
+                      <p className="text-xs text-neutral-400 text-center py-8">{qrSearch ? "No matches." : "No conversations found."}</p>
+                    )}
+                    <div className="divide-y divide-neutral-100">
+                      {qrFiltered.map((contact) => (
+                        <button
+                          key={contact.id}
+                          onClick={() => handleQrContactSelect(contact)}
+                          className="w-full flex items-center gap-3 px-2 py-3 hover:bg-neutral-50 transition-colors text-left rounded-lg"
+                        >
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${contact.isGroup ? "bg-[#25D366]/10 text-[#25D366]" : "bg-neutral-100 text-neutral-600"}`}>
+                            {contact.isGroup ? (
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                            ) : (
+                              contact.name.charAt(0).toUpperCase()
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-neutral-800 truncate">{contact.name}</p>
+                            <p className="text-xs text-neutral-400">{contact.isGroup ? `Group · ${contact.participantCount ?? "?"} members` : "1:1 conversation"}</p>
+                          </div>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-neutral-300 shrink-0"><path d="M9 18l6-6-6-6"/></svg>
+                        </button>
+                      ))}
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-neutral-100 flex justify-between">
+                      <p className="text-xs text-neutral-400">{qrFiltered.length} conversation{qrFiltered.length !== 1 ? "s" : ""}</p>
+                      <button onClick={onBackToMethod} className="text-xs text-neutral-400 hover:text-neutral-600 transition-colors">← Back</button>
+                    </div>
+                  </div>
+                )}
+
+                {qrStatus === "error" && (
+                  <div className="text-center py-10 space-y-4">
+                    <p className="text-sm text-neutral-700">Bridge not available</p>
+                    <p className="text-xs text-neutral-400 leading-relaxed max-w-xs mx-auto">{qrError || "The WhatsApp bridge service is not running. Use file upload or WATI API instead."}</p>
+                    <button onClick={onBackToMethod} className="text-sm text-neutral-600 hover:text-neutral-900 transition-colors border border-neutral-200 rounded-lg px-4 py-2">← Try another method</button>
                   </div>
                 )}
               </div>
@@ -1379,6 +1641,46 @@ function RevenueAtRisk({ atRiskCount, topAccountId, topAccountName }: {
           Based on industry benchmarks: early signal detection recovers ~40% of at-risk ARR; reactive saves ~10%.
         </p>
       </div>
+    </div>
+  )
+}
+
+// ─── Founder welcome ──────────────────────────────────────────────────────────
+
+function FounderWelcome({ onDismiss }: { onDismiss: () => void }) {
+  useEffect(() => {
+    const t = setTimeout(onDismiss, 9000)
+    return () => clearTimeout(t)
+  }, [onDismiss])
+
+  return (
+    <div className="fixed bottom-6 right-6 z-50 w-80 animate-in slide-in-from-bottom-4 fade-in duration-500">
+      <div className="bg-neutral-900 text-white rounded-xl shadow-2xl px-5 py-4 relative">
+        <button
+          onClick={onDismiss}
+          className="absolute top-3 right-3 text-neutral-500 hover:text-neutral-300 transition-colors"
+          aria-label="Dismiss"
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          </svg>
+        </button>
+        <div className="flex items-center gap-2.5 mb-3">
+          <div className="w-7 h-7 rounded-full bg-amber-400 flex items-center justify-center flex-shrink-0 text-neutral-900 font-bold text-xs">M</div>
+          <div>
+            <p className="text-xs font-semibold text-white leading-none">Muhammad</p>
+            <p className="text-[11px] text-neutral-400 mt-0.5">Founder, Nectic</p>
+          </div>
+        </div>
+        <p className="text-sm text-neutral-200 leading-relaxed">
+          Most teams find their first real churn signal in the first account they analyze — something their sales rep never escalated. I built Nectic so that signal reaches you before it&apos;s too late.
+        </p>
+        <p className="text-xs text-neutral-500 mt-2.5">Start by connecting your first WhatsApp account below.</p>
+        <div className="mt-3 h-0.5 bg-neutral-800 rounded-full overflow-hidden">
+          <div className="h-full bg-amber-400 rounded-full" style={{ animation: "shrink 9s linear forwards" }} />
+        </div>
+      </div>
+      <style>{`@keyframes shrink { from { width: 100% } to { width: 0% } }`}</style>
     </div>
   )
 }

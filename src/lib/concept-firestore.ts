@@ -167,6 +167,18 @@ export async function saveWorkspace(uid: string, ctx: WorkspaceContext): Promise
   await setDoc(doc(db, "users", uid), { workspace: { ...ctx, updatedAt: new Date().toISOString() } }, { merge: true })
 }
 
+// ─── Onboarding state ─────────────────────────────────────────────────────────
+
+export async function isOnboardingComplete(uid: string): Promise<boolean> {
+  const snap = await getDoc(doc(db, "users", uid))
+  if (!snap.exists()) return false
+  return (snap.data().onboardingComplete as boolean) ?? false
+}
+
+export async function markOnboardingComplete(uid: string): Promise<void> {
+  await setDoc(doc(db, "users", uid), { onboardingComplete: true }, { merge: true })
+}
+
 // ─── Contact book ─────────────────────────────────────────────────────────────
 // Stored at users/{uid} document field `contactBook: Record<string, ParticipantRole>`
 // Keys are exact participant name strings as they appear in WhatsApp exports.
