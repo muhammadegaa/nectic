@@ -35,12 +35,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     })
     getGoogleRedirectResult().catch(() => {})
-    const t = setTimeout(() => {
+    const fallback = setTimeout(() => {
       if (isMounted) setLoading(false)
-    }, 3000)
+    }, 5000)
     return () => {
       isMounted = false
-      clearTimeout(t)
+      clearTimeout(fallback)
       unsubscribe()
     }
   }, [])

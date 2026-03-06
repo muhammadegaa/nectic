@@ -10,12 +10,7 @@ const nextConfig = {
   },
   async rewrites() {
     if (!projectId) return []
-    return [
-      {
-        source: "/__/auth/:path*",
-        destination: `https://${projectId}.firebaseapp.com/__/auth/:path*`,
-      },
-    ]
+    return [{ source: "/__/auth/:path*", destination: `https://${projectId}.firebaseapp.com/__/auth/:path*` }]
   },
   async headers() {
     return [

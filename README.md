@@ -57,7 +57,7 @@ WHATSAPP_PHONE_NUMBER_ID=
 RESEND_API_KEY=
 ```
 
-**Firebase Auth:** Add your app domain to Firebase Console → Authentication → Settings → Authorized domains (e.g. `nectic.vercel.app`, `localhost` for dev). Auth is proxied through your domain to avoid COOP and third-party cookie issues.
+**Google Sign-In:** See [docs/FIREBASE_AUTH_SETUP.md](docs/FIREBASE_AUTH_SETUP.md) — you must add the redirect URI in Google Cloud Console or sign-in will fail.
 
 ---
 
