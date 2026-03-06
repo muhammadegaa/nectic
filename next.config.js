@@ -32,10 +32,6 @@ const nextConfig = {
             value: '1; mode=block'
           },
           {
-            key: 'Cross-Origin-Opener-Policy',
-            value: 'same-origin-allow-popups'
-          },
-          {
             key: 'Referrer-Policy',
             value: 'origin-when-cross-origin'
           },

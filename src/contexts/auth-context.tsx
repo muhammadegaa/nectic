@@ -8,6 +8,7 @@ import {
   signInWithEmail,
   signOutUser,
   onAuthStateChangedHelper,
+  processRedirectResult,
 } from "@/infrastructure/firebase/firebase-client"
 
 interface AuthContextType {
@@ -27,18 +28,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let isMounted = true
-    const unsubscribe = onAuthStateChangedHelper((user) => {
+
+    // 1. Set up the listener immediately so existing sessions restore fast.
+    const unsubscribe = onAuthStateChangedHelper((authUser) => {
       if (isMounted) {
-        setUser(user)
+        setUser(authUser)
         setLoading(false)
       }
     })
-    const fallback = setTimeout(() => {
-      if (isMounted) setLoading(false)
-    }, 3000)
+
+    // 2. Process any pending Google redirect result in parallel.
+    //    When this resolves, Firebase updates auth state and the listener above fires.
+    processRedirectResult().catch(() => {})
+
     return () => {
       isMounted = false
-      clearTimeout(fallback)
       unsubscribe()
     }
   }, [])
