@@ -1,6 +1,6 @@
 # Nectic — Living Product Document
 
-> Last updated: March 2026
+> Last updated: March 2026 — agentic MVP complete (6 sprints)
 > Status: Pre-revenue MVP. Early access. Targeting first paying customers and Antler Indonesia pitch.
 >
 > **Rule for maintainers:** Only document what is built and working. Mark everything else as [PLANNED], [DEFERRED], or [NOT BUILT]. Do not mix aspiration with reality.
@@ -19,16 +19,20 @@ It reads WhatsApp conversations between your company and your customers, extract
 - Runs AI analysis against Claude Sonnet 4.6 to produce structured intelligence: health score, risk signals, product signals, relationship observations, competitor mentions, recommended action
 - Stores account analysis results per user in Firestore
 - Provides an in-context chat co-pilot (Claude Haiku 4.5) that knows the account, workspace context, and the PM's prior signal decisions
-- Aggregates signals across accounts on a Signal Board with per-signal action tracking
+- Aggregates signals across accounts on an **account-grouped** Signal Board with per-signal action tracking (grouped by account, sorted by worst risk)
 - Generates PM feature briefs from product signals (Claude Sonnet 4.6, streamed)
 - Allows re-analysis when new conversation data is available or context changes
 - Shares read-only analysis reports via unique token links
+- **Sends email alerts** (via Resend) for high-risk / critical accounts and competitor mentions, with exact customer quotes and renewal date
+- **Competitor alert banner** on account detail page — shows competitor names, triggering quote, and pre-fills chat co-pilot with a retention response prompt
+- **Dashboard outcome story** — `changesSince` delta line per card (green/red healthDelta), competitor badge, "X saved this month" chip, ARR protected metric
+- **Weekly digest email** — Monday briefing with deteriorated accounts, saved accounts, competitive threats, and ARR at risk / ARR protected (manual send via workspace; cron-ready)
+- **Two-step onboarding** — captures `notificationEmail` for alerts and digest on step 2
 
 **What it does NOT do today:**
 
 - No real-time WhatsApp monitoring
 - No group chat support via WATI (WhatsApp Business API limitation — groups are not supported)
-- No email notifications or alerts
 - No Jira/Notion/Slack integration
 - No billing / paywall active (routes exist, pricing not wired up)
 - No multi-user workspace (one workspace per Google account)
@@ -109,13 +113,13 @@ Limitations:
 ```
 1. User logs into /concept (persisted session via Firebase)
 2. Dashboard shows account cards sorted by risk (critical → high → medium → low)
-3. Stats row shows: account count, at-risk count (high+critical), cross-account pattern count
-4. If atRisk > 0: Revenue at Risk module shown (ARR calculator with ACV presets)
+3. Stats row shows: account count, at-risk count (high+critical), cross-account pattern count, **"X saved this month"** chip
+4. If atRisk > 0: Revenue at Risk module shown (ARR calculator with ACV presets, plus **ARR protected** metric for saved accounts)
 5. If workspace empty: amber nudge linking to /concept/workspace
-6. User clicks an account card with high/critical risk
+6. User clicks an account card — card shows `changesSince` delta line (green/red) and competitor badge if applicable
 7. Account detail page loads (/concept/account/{id}):
-   - Left column: AnalysisReport
-   - Right column: ChatPanel (Nectic co-pilot)
+   - Left column: AnalysisReport — **CompetitorAlert banner** above risk signals (shows competitor name, triggering quote, renewal month, CTA to pre-fill co-pilot)
+   - Right column: ChatPanel (Nectic co-pilot) — accepts `initialInput` pre-fill from competitor alert CTA
    - Mobile: tab switcher between "Analysis" and "Ask Nectic"
 8. User reviews risk signals, product signals, relationship observations
 9. User assigns status to signals via action controls (open → in_progress → done → dismissed)
@@ -132,10 +136,12 @@ Limitations:
     - POST /api/concept/brief (streaming, Claude Sonnet 4.6)
     - Brief output: JTBD problem, customer evidence, know/assume/don't-know, validation checklist, proposed solution, acceptance criteria, priority rationale
 12. User navigates to Signal Board (/concept/board)
-    - All signals from all accounts in one filtered view
-    - Filter tabs: Needs action / In progress / Done / All
+    - Signals grouped by **account** (AccountSignalGroup), sorted by worst risk
+    - Sticky group header: account name, risk badge, health score, open signal count
+    - Filter tabs: Needs action / In progress / Done / All — hide empty groups
     - Per-signal: status control + note field (saved to Firestore)
 13. User visits Workspace (/concept/workspace)
+    - **"Alerts & digest"** section at top: notification email field + "Send test digest" button
     - Fills in product context (auto-save, 900ms debounce)
     - Can auto-fill productDescription + featureAreas from website URL
     - Staleness nudge shown if roadmapFocus hasn't been updated since last quarter
@@ -208,7 +214,7 @@ Path B — Context-only update (no new messages):
 | Account chat co-pilot                            | ✅ Working        | Streaming, knows signal actions, workspace, account state                         |
 | Dynamic prompt suggestions                       | ✅ Working        | Context-driven, based on risk/signals/renewal                                     |
 | Follow-up suggestions                            | ✅ Working        | Generated from last AI response keywords                                          |
-| Signal board                                     | ✅ Working        | Cross-account, filter by status, note field                                       |
+| Signal board (account-grouped)                   | ✅ Working        | Grouped by account, sticky headers, sorted by worst risk, filter hides empty groups |
 | Signal actions (open/in_progress/done/dismissed) | ✅ Working        | Per-signal, stored in Firestore, injected into chat and reanalysis                |
 | Feature brief generation                         | ✅ Working        | JTBD framing, streaming, markdown output                                          |
 | Re-analysis (new messages)                       | ✅ Working        | Delta tracking (changesSince field)                                               |
@@ -220,10 +226,19 @@ Path B — Context-only update (no new messages):
 | Account sharing (read-only)                      | ✅ Working        | Tokenized public URLs                                                             |
 | Cross-account signal aggregation                 | ✅ Working        | Groups identical signals across accounts with account count                       |
 | Account delete                                   | ✅ Working        | Removes from Firestore + cleans up sharedAccounts                                 |
-| PostHog analytics                                | ✅ Working        | 12 events tracked                                                                 |
+| Dashboard delta line per card                    | ✅ Working        | `changesSince.summary` shown; green/red based on healthDelta                      |
+| Competitor badge on dashboard cards              | ✅ Working        | Orange badge when account has competitor mentions                                 |
+| "Saved this month" stat chip                     | ✅ Working        | Counts accounts that improved from high/critical risk in last 30 days             |
+| ARR protected metric                             | ✅ Working        | Shown alongside ARR at risk in Revenue module                                     |
+| CompetitorAlert banner (account detail)          | ✅ Working        | Above risk signals; shows names, quote, renewal month, co-pilot pre-fill CTA      |
+| Chat co-pilot pre-fill from competitor alert     | ✅ Working        | CTA sets `initialInput` in ChatPanel text area                                    |
+| Email alerts (risk + competitor mentions)        | ✅ Working        | Resend via `/api/concept/notify`; orange-header template for competitor alerts    |
+| Weekly digest email                              | ✅ Working        | `/api/concept/weekly-digest`; manual trigger from workspace; Firestore Admin SDK  |
+| Two-step onboarding                              | ✅ Working        | Step 2 captures `notificationEmail` for alerts and digest                         |
+| Workspace "Alerts & digest" section              | ✅ Working        | `notificationEmail` field + "Send test digest" button at top of workspace page    |
+| PostHog analytics                                | ⚠️ Disabled      | Removed to fix auth flow; re-enable after PMF validation                          |
 | Pricing page                                     | ⚠️ Exists        | UI exists at /pricing, Stripe routes exist but checkout not wired to active plans |
 | Billing / paywall                                | ❌ Not active     | No subscription enforcement                                                       |
-| Email notifications                              | ❌ Not built      |                                                                                   |
 | Jira / Notion / Slack integration                | ❌ Not built      |                                                                                   |
 | Multi-user workspace                             | ❌ Not built      | One workspace per Google account                                                  |
 | Proactive nudges (stale in-progress signals)     | ❌ Not built      | Design in "Agentic system design" section                                         |
@@ -317,6 +332,7 @@ Firestore
 │   │   ├── knownIssues?: string
 │   │   ├── watiEndpoint?: string       ← saved WATI credentials
 │   │   ├── watiToken?: string
+│   │   ├── notificationEmail?: string  ← for alerts and weekly digest
 │   │   └── updatedAt?: string          ← ISO timestamp, quarter staleness check
 │   └── contactBook: Record<string, "vendor"|"customer"|"partner"|"other">
 │       └── {participantName}: role     ← accumulated across all account analyses
@@ -365,6 +381,8 @@ All routes under `/api/`. All are POST. No authentication middleware — auth is
 | `/api/concept/classify-participants` | (unknown — check route) | —            | participants: [{name, messages[]}]                                               | { roles: Record<string, ParticipantRole> }                   |
 | `/api/wati/contacts`                 | —                       | —            | endpoint, token, pageSize?                                                       | { contacts: WatiContact[], totalCount }                      |
 | `/api/wati/messages`                 | —                       | —            | endpoint, token, phoneNumber, contactName, pageSize?                             | { conversation, participantRoles, messageCount, totalCount } |
+| `/api/concept/notify`                | —                       | —            | uid, accountId, accountName, riskLevel, topSignalQuote, competitorNames, isCompetitorAlert, renewalMonth | 200 OK — sends Resend email |
+| `/api/concept/weekly-digest`         | —                       | 15s          | uid, email                                                                       | { sent: true } — sends digest email via Resend               |
 | `/api/workspace/autofill`            | claude-haiku-4.5        | 30s          | url                                                                              | { productDescription, featureAreas, source }                 |
 | `/api/stripe/checkout`               | —                       | —            | plan, billing                                                                    | { url } (Stripe session)                                     |
 | `/api/stripe/webhook`                | —                       | —            | Stripe event                                                                     | 200 OK                                                       |
