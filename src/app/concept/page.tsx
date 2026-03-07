@@ -268,6 +268,8 @@ export default function ConceptPage() {
       })
     )
   }
+
+  const analyze = async () => {
     if (!parsed || !user) return
     setConnectStage("analyzing")
     setUploadError("")
