@@ -1,7 +1,7 @@
 # Nectic — Living Product Document
 
-> Last updated: March 2026 — agentic MVP complete (6 sprints)
-> Status: Pre-revenue MVP. Early access. Targeting first paying customers and Antler Indonesia pitch.
+> Last updated: March 2026 — agentic MVP complete (7 sprints)
+> Status: Pre-revenue MVP. QR-based live WhatsApp connection via wa-bridge (Railway). Targeting first paying customers and Antler Indonesia pitch.
 >
 > **Rule for maintainers:** Only document what is built and working. Mark everything else as [PLANNED], [DEFERRED], or [NOT BUILT]. Do not mix aspiration with reality.
 
@@ -11,7 +11,11 @@
 
 Nectic is an **autonomous account health and churn prevention system for CS teams at WhatsApp-first B2B SaaS companies in Southeast Asia**.
 
-**Primary buyer: Head of CS / CS Lead.** They own churn, manage accounts in WhatsApp, and spend 2–3 hrs/day reading conversations to figure out who needs attention. Nectic replaces that manual triage.
+**The core insight:** CS leads are currently allocating expensive human judgment to low-value detection work — reading 500 WhatsApp messages to figure out which accounts need attention. That is pattern recognition. Computers are better at it. Nectic reallocates that work to compute, and reserves human judgment for the one moment that actually requires it: approving the response before it reaches the customer.
+
+This is the "allocating intelligence" principle applied to CS operations. The CS lead doesn't read to investigate — they read to approve.
+
+**Primary buyer: Head of CS / CS Lead.** They own churn, manage accounts in WhatsApp, and spend 2–3 hrs/day reading conversations to figure out who needs attention. Nectic replaces that triage entirely.
 
 **Secondary beneficiary: PM.** Product signals from CS conversations automatically feed the PM's view. They don't request it — it just appears.
 
@@ -23,21 +27,25 @@ Nectic detects the churn signal (within 24hrs of analysis)
         ↓
 CS lead gets email alert: "Axara HR Tech — risk detected. Draft response ready."
         ↓
-CS opens Nectic, reads the draft, edits if needed, sends via WhatsApp in one click
+CS opens Nectic, reads the draft, edits if needed, approves in one click
         ↓
 Signal tracked as actioned. Account health score updated. ARR protected tracked.
         ↓
 Monday digest delivered: saved accounts, competitive threats, NRR impact
 ```
 
-It reads WhatsApp conversations between your company and your customers, extracts churn signals and product insights, drafts the response your CS team should send, and sends it directly via WhatsApp Business — your team approves, not investigates.
+It reads WhatsApp conversations, extracts churn signals and product insights, drafts the response, and delivers it ready-to-send. The CS team approves — they do not investigate.
+
+**Why this framing matters (Harvard Business School, Rem Koning 2026):**
+AI given to low-judgment operators makes outcomes worse — they can't filter good advice from bad. Nectic is not an advice machine. It is an action machine. The CS lead's judgment is applied only at the approval gate, where it belongs. This is the correct human-AI allocation for CS workflows.
 
 **What it does today:**
 
-- Parses WhatsApp exports (.txt / .zip) or pulls conversations via WATI API (1:1 contacts only)
+- Connects to live WhatsApp via QR scan (wa-bridge on Railway) — see all chats and groups, select one, analyse instantly
+- Parses WhatsApp exports (.txt / .zip) as fallback
 - Runs AI analysis against Claude Sonnet 4.6 to produce structured intelligence: health score, risk signals, product signals, relationship observations, competitor mentions, recommended action
 - Stores account analysis results per user in Firestore
-- Provides an in-context chat co-pilot (Claude Haiku 4.5) that knows the account, workspace context, and the PM's prior signal decisions
+- Provides an in-context chat co-pilot (Claude Haiku 4.5) that knows the account, workspace context, and the CS lead's prior signal decisions
 - Aggregates signals across accounts on an **account-grouped** Signal Board with per-signal action tracking (grouped by account, sorted by worst risk)
 - Generates PM feature briefs from product signals (Claude Sonnet 4.6, streamed)
 - Allows re-analysis when new conversation data is available or context changes
@@ -50,8 +58,9 @@ It reads WhatsApp conversations between your company and your customers, extract
 
 **What it does NOT do today:**
 
-- No real-time WhatsApp monitoring
-- No group chat support via WATI (WhatsApp Business API limitation — groups are not supported)
+- No real-time WhatsApp monitoring (analysis is triggered manually per account)
+- No direct WhatsApp message sending (QR bridge is read-only; WATI send exists but WATI not primary)
+- No group chat support via WATI (WhatsApp Business API limitation)
 - No Jira/Notion/Slack integration
 - No billing / paywall active (routes exist, pricing not wired up)
 - No multi-user workspace (one workspace per Google account)
@@ -97,7 +106,37 @@ It reads WhatsApp conversations between your company and your customers, extract
 20. User clicks account card → /concept/account/{id}
 ```
 
-### Flow 2: WATI 1:1 connection path (demo-ready)
+### Flow 2: QR scan live connection (primary demo path)
+
+```
+1. User is on dashboard, clicks "Connect account"
+2. ConnectModal opens at "method" stage
+3. User sees "Scan QR code" (recommended) and "Upload export" options
+4. User selects "Scan QR code"
+5. Bridge session starts at https://nectic-wa-bridge-production.up.railway.app
+   - POST /api/wa-bridge { action: "start", uid }
+   - Bridge spawns a Baileys WhatsApp Web socket for this uid
+6. QR code image displayed (base64 PNG)
+7. User opens WhatsApp → Settings → Linked Devices → Link a Device → scans QR
+8. Bridge detects connection ("open" event), session status → "connected"
+9. Nectic polls /api/wa-bridge { action: "status" } every 2.5s until connected
+10. Contact list shown — all chats (1:1 and groups) sorted by last activity
+    - Data comes from bridge's in-memory store (chats.set/upsert events)
+11. User searches and selects a contact or group
+12. Nectic fetches messages: POST /api/wa-bridge { action: "messages", waid, limit: 200 }
+    - Bridge returns pre-formatted messages: { id, created, text, owner, senderName }
+13. Messages formatted into WhatsApp-export-style conversation text
+14. POST /api/concept/analyze called (same as file upload path, step 15)
+15. Account saved, modal closes, card appears on dashboard
+
+Notes:
+- Bridge persists sessions to disk (./sessions/{uid}/) — survives restarts
+- Session stays connected across multiple analyses (no re-scan needed per session)
+- Groups ARE supported via QR bridge (unlike WATI)
+- Bridge runs on Railway: https://nectic-wa-bridge-production.up.railway.app
+```
+
+### Flow 3: WATI 1:1 connection path (fallback, requires WATI account)
 
 ```
 1. User is on dashboard, clicks "Connect account"
@@ -127,7 +166,7 @@ Limitations:
 - No pagination for contacts beyond first 100
 ```
 
-### Flow 3: Daily active user workflow
+### Flow 4: Daily active user workflow
 
 ```
 1. User logs into /concept (persisted session via Firebase)
@@ -166,7 +205,7 @@ Limitations:
     - Staleness nudge shown if roadmapFocus hasn't been updated since last quarter
 ```
 
-### Flow 4: Re-analysis
+### Flow 5: Re-analysis
 
 ```
 Trigger: new conversation data available OR PM has additional context to add
@@ -194,7 +233,7 @@ Path B — Context-only update (no new messages):
 3. AI updates analysis based on PM-provided context only
 ```
 
-### Flow 5: Sharing an account analysis
+### Flow 6: Sharing an account analysis
 
 ```
 1. User clicks "Share" button on account detail page
@@ -218,9 +257,10 @@ Path B — Context-only update (no new messages):
 | Google Sign-In                                   | ✅ Working        | Via Firebase Auth. Entry at /concept/login                                        |
 | Email/password auth                              | ⚠️ Exists        | At /auth/signup and /auth/login but not the primary product path                  |
 | File upload analysis (.txt, .zip)                | ✅ Working        | Client-side parsing, 1500 message cap                                             |
+| **QR scan live connection**                      | ✅ Working        | wa-bridge on Railway; groups + 1:1; session persists across analyses              |
 | WATI 1:1 contact analysis                        | ✅ Working        | V3 API (auto-falls back to V1); requires user WATI endpoint + token               |
 | WATI group chat                                  | ❌ Not possible   | WhatsApp Business API does not support group chats                                |
-| **Send WhatsApp response via WATI**              | ✅ Working        | `/api/wati/send` — CS approves draft, one click sends via WATI session message API |
+| Send WhatsApp response via WATI                  | ✅ Working        | `/api/wati/send` — CS approves draft, one click sends via WATI session message API |
 | AI participant role classification               | ✅ Working        | Runs on unknowns after file upload                                                |
 | Contact book (cross-session role memory)         | ✅ Working        | Stored in Firestore per user                                                      |
 | Account health score                             | ✅ Working        | AI-generated 1–10 integer                                                         |
@@ -471,7 +511,8 @@ All analysis prompts include explicit Bahasa Indonesia guidance:
 | Auth         | Firebase Auth           | Google Sign-In only at /concept/login                                     |
 | AI routing   | OpenRouter              | Key: OPENROUTER_API_KEY in Vercel env vars                                |
 | Analytics    | PostHog                 | Key: NEXT_PUBLIC_POSTHOG_KEY in Vercel env vars                           |
-| WhatsApp API | WATI                    | User-provided endpoint + token. No server-side key.                       |
+| WhatsApp bridge | Railway (always-on) | `https://nectic-wa-bridge-production.up.railway.app` — QR scan sessions  |
+| WhatsApp API | WATI                    | User-provided endpoint + token. No server-side key. Fallback only.        |
 | Payments     | Stripe                  | STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET in Vercel env vars. Not active. |
 | Framework    | Next.js 14 (App Router) | TypeScript, Tailwind CSS                                                  |
 
@@ -644,19 +685,19 @@ CURRENT ROADMAP (Q2 2026): [text]
 
 ### North Star
 
-**Time from customer signal to PM action.**
+**Time from customer signal to CS action.**
 
-Every feature should be answerable with: does this reduce the gap between a customer expressing a problem in WhatsApp and the PM making a decision about it?
+Every feature should answer: does this reduce the gap between a customer expressing a problem in WhatsApp and the CS lead taking action on it?
 
 ### The core thesis
 
-In SEA B2B SaaS, WhatsApp IS the CRM. Customer success, sales, and product feedback all happen in WhatsApp group chats. PMs and CS leads receive a filtered, delayed version of what customers actually said — because sales reps decide what gets escalated.
+In SEA B2B SaaS, WhatsApp IS the CRM. Customer success, sales, and product feedback all happen in WhatsApp group chats. CS leads receive a filtered, delayed version of what customers actually said — because triage is manual, slow, and error-prone.
 
 The result:
 
 - Churn signals surface weeks after the save window closes
+- CS teams waste 2–3 hours/day reading chat history to understand account health
 - Roadmap decisions are based on escalated anecdotes, not actual customer language
-- CS teams waste hours reading chat history to understand account health
 
 **Why this is worse in SEA:**
 
@@ -664,24 +705,40 @@ The result:
 - Monthly churn at Series A: 5.7% (vs. 3.5% global)
 - 91% of B2B customer communication in Indonesia happens on WhatsApp
 
+### The "allocating intelligence" thesis (Harvard Business School, 2026)
+
+Research by Rem Koning (HBS) on AI and entrepreneurship in emerging markets establishes a clear principle: AI amplifies judgment in those who already have it, and makes outcomes *worse* for those who don't. The reason: they can't filter good AI advice from bad.
+
+The implication for product design: **Nectic must not be an advice machine.** It must be an action machine.
+
+The correct human-AI allocation for CS workflows:
+- **AI does:** pattern recognition, signal detection, draft generation — tasks where volume and consistency matter
+- **Human does:** approval — the single moment requiring domain judgment and relationship context
+
+This is identical to how Gamma (the deck tool) works: AI generates the deck from two sentences, human approves. One drop of AI, in exactly the right place, unlocks the workflow entirely.
+
+Nectic's "one drop": WhatsApp conversation comes in → churn signal detected → draft response ready → one click approves and sends. Everything else (dashboard, digest, signal board) is supporting infrastructure for that loop.
+
 ### ICP
 
 **Primary (locked):**
 
-- Role: Head of CS, VP Product, or co-founder in a post-Series A B2B SaaS company in Indonesia or Singapore
-- Company: 50–500 customers, $1–20M ARR, customer relationships managed via WhatsApp group chats
-- Pain: Churn is high, escalation process is broken, product roadmap is driven by sales-filtered anecdotes
+- Role: Head of CS, VP CS, or CS lead at a post-Series A B2B SaaS company in Indonesia or Singapore
+- Company: 50–500 customers, $1–20M ARR, customer relationships managed via WhatsApp
+- Pain: Churn is high, triage is manual, save window is missed because signals surface too late
+- Fit signal: They already have strong account intuition — Nectic scales their judgment, doesn't replace it
 
 **Anti-ICP:**
 
 - SMB companies with <20 customers (analysis not worth it)
 - Companies that use Salesforce or HubSpot as the primary communication channel (not the SEA pattern)
 - Companies that don't use WhatsApp for customer communication
+- CS teams with weak domain knowledge (they'll approve bad drafts and blame the tool)
 
 ### What Nectic is NOT
 
 - Not a WhatsApp CRM (that is Qontak, Wati, Respond.io)
-- Not a chatbot platform
+- Not a chatbot ("ask Nectic about your accounts" is the wrong pattern — it produces advice to filter, not actions to approve)
 - Not a customer support ticketing tool
 - Not a general-purpose AI assistant
 - Not building for SMB volume at low ACV
