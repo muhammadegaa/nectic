@@ -19,6 +19,6 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error"
     console.error("WATI contacts error:", message)
-    return NextResponse.json({ error: message }, { status: 502 })
+    return NextResponse.json({ error: `Could not load contacts: ${message}` }, { status: 502 })
   }
 }

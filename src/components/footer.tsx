@@ -11,7 +11,7 @@ export default function Footer() {
           <div className="flex items-center gap-2">
             <LogoIcon size={20} />
             <span className="text-sm font-medium text-neutral-900">Nectic</span>
-            <span className="text-xs text-neutral-400 ml-1">— Account Health OS for WhatsApp-first B2B SaaS</span>
+            <span className="text-xs text-neutral-400 ml-1">— AI-native churn prevention for B2B SaaS in SEA</span>
           </div>
 
           <div className="flex items-center gap-6 flex-wrap">

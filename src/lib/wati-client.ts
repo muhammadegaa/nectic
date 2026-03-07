@@ -58,8 +58,10 @@ export async function watiGetContacts(
   pageNumber = 1
 ): Promise<WatiContactsResponse> {
   const base = normalizeEndpoint(endpoint)
-  // WATI EU API: GET /api/v1/contacts returns { ok: true, result: WatiContact[] }
-  const url = `${base}/api/v1/contacts?pageSize=${pageSize}&pageNumber=${pageNumber}`
+  // WATI API: GET /api/v1/getContacts
+  // Response shape A: { result: { items: WatiContact[], totalCount: number } }
+  // Response shape B: { result: WatiContact[] }  (older versions)
+  const url = `${base}/api/v1/getContacts?pageSize=${pageSize}&pageNumber=${pageNumber}`
 
   const res = await fetch(url, {
     method: "GET",
@@ -68,14 +70,24 @@ export async function watiGetContacts(
 
   if (!res.ok) {
     const body = await res.text()
-    throw new Error(`WATI contacts error ${res.status}: ${body.slice(0, 200)}`)
+    throw new Error(`${res.status}: ${body.slice(0, 300)}`)
   }
 
   const data = await res.json()
 
-  // Response: { ok: true, result: WatiContact[] }
-  const items: WatiContact[] = Array.isArray(data?.result) ? data.result : []
-  const totalCount: number = data?.totalCount ?? items.length
+  let items: WatiContact[] = []
+  let totalCount = 0
+
+  if (Array.isArray(data?.result?.items)) {
+    items = data.result.items
+    totalCount = data.result.totalCount ?? items.length
+  } else if (Array.isArray(data?.result)) {
+    items = data.result
+    totalCount = data.totalCount ?? items.length
+  } else if (Array.isArray(data?.contacts)) {
+    items = data.contacts
+    totalCount = data.totalCount ?? items.length
+  }
 
   return { contacts: items, totalCount }
 }
@@ -103,14 +115,30 @@ export async function watiGetMessages(
 
   const data = await res.json()
 
-  // WATI returns { result: false, info: "..." } when no conversation exists — treat as empty
+  // { result: false } means no conversation through WATI for this contact
   if (data?.result === false) {
     return { messages: [], totalCount: 0 }
   }
 
-  // Success: { result: true, messages: { items: [], totalCount: number } }
-  const items: WatiMessage[] = data?.messages?.items ?? data?.items ?? data?.messages ?? []
-  const totalCount: number = data?.messages?.totalCount ?? data?.totalCount ?? items.length
+  // Shape A: { messages: { items: [...], totalCount: N } }
+  // Shape B: { result: { messages: { items: [...] } } }
+  // Shape C: { items: [...] }
+  let items: WatiMessage[] = []
+  let totalCount = 0
+
+  if (Array.isArray(data?.messages?.items)) {
+    items = data.messages.items
+    totalCount = data.messages.totalCount ?? items.length
+  } else if (Array.isArray(data?.result?.messages?.items)) {
+    items = data.result.messages.items
+    totalCount = data.result.messages.totalCount ?? items.length
+  } else if (Array.isArray(data?.items)) {
+    items = data.items
+    totalCount = data.totalCount ?? items.length
+  } else if (Array.isArray(data?.messages)) {
+    items = data.messages
+    totalCount = data.totalCount ?? items.length
+  }
 
   return { messages: items, totalCount }
 }

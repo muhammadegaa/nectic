@@ -10,7 +10,7 @@ const steps = [
     number: "01",
     title: "Connect",
     description:
-      "Link your WATI Business account. Nectic reads your existing WhatsApp conversations in under 60 seconds. No new tools for your CS team, no IT ticket.",
+      "Connect your WhatsApp Business account. Nectic reads your existing customer conversations in under 60 seconds. No new tools for your CS team, no IT ticket.",
     detail:
       "Works with any 1:1 WhatsApp Business conversation. Customer onboarding, renewal, support — all of it.",
   },

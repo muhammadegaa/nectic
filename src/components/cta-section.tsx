@@ -51,16 +51,17 @@ export default function CtaSection() {
               Join the first teams using Nectic.
             </h2>
             <p className="text-neutral-400 text-base leading-relaxed mb-8">
-              We are working directly with CS leads and PMs at B2B SaaS companies in Indonesia
-              and Singapore. Drop your details and we will reach out.
+              We are working with CS leads and PMs at B2B SaaS companies in
+              Indonesia and Singapore. If your customers live in WhatsApp,
+              this is built for you.
             </p>
 
             <div className="space-y-3">
               {[
-                "WhatsApp Business account required",
-                "Works with WATI Business API",
-                "Setup takes under 5 minutes",
-                "Built for teams in Indonesia and Singapore",
+                "Works with your existing WhatsApp Business account",
+                "Setup in under 5 minutes",
+                "No CRM or existing tooling required",
+                "Built for teams managing customers in Indonesia and Singapore",
               ].map((item) => (
                 <div key={item} className="flex items-center gap-3">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />

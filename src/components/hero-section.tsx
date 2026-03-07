@@ -114,7 +114,7 @@ export default function HeroSection() {
               className="inline-flex items-center gap-2 text-xs font-medium text-neutral-400 uppercase tracking-widest"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              Account Health OS for WhatsApp-first B2B SaaS
+              AI-native churn prevention for B2B SaaS in Southeast Asia
             </motion.span>
 
             <motion.h1
@@ -129,16 +129,16 @@ export default function HeroSection() {
               variants={fadeUp}
               className="mt-7 text-lg text-neutral-500 max-w-md leading-relaxed"
             >
-              Nectic connects to WhatsApp Business, reads your customer conversations,
-              and surfaces churn signals 2 to 4 weeks before the account goes quiet.
+              Nectic reads your WhatsApp customer conversations and surfaces
+              churn signals 2 to 4 weeks early. Health scores, competitor
+              alerts, and a Monday briefing — without changing how your team works.
             </motion.p>
 
             <motion.p
               variants={fadeUp}
               className="mt-3 text-base text-neutral-400 max-w-md leading-relaxed"
             >
-              Health scores, competitor alerts, and a Monday briefing.
-              Built for CS leads and PMs in Indonesia and Singapore.
+              Built for CS leads at B2B SaaS companies in Indonesia and Singapore.
             </motion.p>
 
             <motion.div
@@ -149,7 +149,7 @@ export default function HeroSection() {
                 href="#early-access"
                 className="inline-flex items-center justify-center bg-neutral-900 text-white text-sm font-semibold px-6 py-3 rounded-lg hover:bg-neutral-700 transition-colors"
               >
-                Request early access
+                Get early access
               </Link>
               <a
                 href="#how-it-works"
@@ -163,7 +163,7 @@ export default function HeroSection() {
               variants={fadeUp}
               className="mt-5 text-xs text-neutral-400"
             >
-              Requires WhatsApp Business API via WATI. No CRM needed.
+              No CRM required. Works with your existing WhatsApp Business account.
             </motion.p>
           </motion.div>
 
