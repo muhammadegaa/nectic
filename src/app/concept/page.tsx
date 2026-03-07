@@ -80,7 +80,7 @@ export default function ConceptPage() {
   const [workspace, setWorkspace] = useState<WorkspaceContext>({})
   const [showConnect, setShowConnect] = useState(false)
   const [showWelcome, setShowWelcome] = useState(false)
-  const [connectStage, setConnectStage] = useState<ConnectStage>("method")
+  const [connectStage, setConnectStage] = useState<ConnectStage>("instructions")
   const [parsed, setParsed] = useState<WaParsed | null>(null)
   const [fileName, setFileName] = useState("")
   const [uploadError, setUploadError] = useState("")
@@ -153,7 +153,7 @@ export default function ConceptPage() {
   }
 
   const openConnect = () => {
-    setConnectStage("method")
+    setConnectStage("instructions")
     setParsed(null)
     setFileName("")
     setUploadError("")
@@ -1533,6 +1533,18 @@ function ConnectModal({
                       <option value="">Contract tier (optional)</option>
                       {CONTRACT_TIERS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
                     </select>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-neutral-400 pointer-events-none">$</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1000"
+                        value={context.annualValue ?? ""}
+                        onChange={(e) => onContextChange({ ...context, annualValue: e.target.value ? Number(e.target.value) : undefined })}
+                        placeholder="Annual contract value (optional)"
+                        className="w-full text-xs border border-neutral-200 rounded-lg pl-6 pr-3 py-2 text-neutral-700 placeholder:text-neutral-300 focus:outline-none focus:border-neutral-400 bg-white"
+                      />
+                    </div>
                     <input
                       type="month"
                       value={context.renewalMonth ?? ""}
@@ -1609,6 +1621,12 @@ function AccountCard({ account, onDelete, confirmingDelete, onConfirmDelete, onC
   const isCritical = account.result.riskLevel === "critical"
   const isHigh = account.result.riskLevel === "high"
   const score = account.result.healthScore ?? 0
+
+  const ARR_BY_TIER_CARD: Record<string, number> = { starter: 6000, growth: 24000, enterprise: 60000 }
+  const RISK_EXPOSURE_CARD: Record<string, number> = { critical: 1.0, high: 0.7, medium: 0.3, low: 0.05 }
+  const acv = account.context?.annualValue ?? ARR_BY_TIER_CARD[account.context?.contractTier ?? ""] ?? 12000
+  const arrAtRisk = Math.round(acv * (RISK_EXPOSURE_CARD[account.result.riskLevel] ?? 0.1))
+  const showArrAtRisk = isCritical || isHigh
   const scoreBarColor = isCritical ? "bg-red-500" : isHigh ? "bg-orange-400" : account.result.riskLevel === "medium" ? "bg-amber-400" : "bg-emerald-500"
 
   const healthDelta = changesSince?.healthDelta ?? 0
@@ -1636,9 +1654,14 @@ function AccountCard({ account, onDelete, confirmingDelete, onConfirmDelete, onC
             </div>
             <p className="text-sm font-semibold text-neutral-900 truncate">{account.result.accountName}</p>
             {changesSince ? (
-              <p className={`mt-1.5 text-xs line-clamp-1 leading-relaxed font-medium ${deltaPositive ? "text-emerald-600" : deltaNegative ? "text-red-600" : "text-neutral-400"}`}>
-                {deltaPositive ? "↑ " : deltaNegative ? "↓ " : ""}{changesSince.summary}
-              </p>
+              <div className="mt-1.5 flex items-center gap-1.5">
+                <span className={`text-xs font-bold px-1.5 py-0.5 rounded tabular-nums ${deltaPositive ? "bg-emerald-50 text-emerald-700" : deltaNegative ? "bg-red-50 text-red-600" : "bg-neutral-50 text-neutral-400"}`}>
+                  {deltaPositive ? `↑ +${healthDelta}` : deltaNegative ? `↓ ${healthDelta}` : "→ 0"}
+                </span>
+                <p className={`text-xs line-clamp-1 leading-relaxed ${deltaPositive ? "text-emerald-600" : deltaNegative ? "text-red-500" : "text-neutral-400"}`}>
+                  {changesSince.summary}
+                </p>
+              </div>
             ) : topRisk ? (
               <p className="mt-1.5 text-xs text-neutral-400 line-clamp-1 italic leading-relaxed">&ldquo;{topRisk.quote}&rdquo;</p>
             ) : topProduct ? (
@@ -1667,6 +1690,11 @@ function AccountCard({ account, onDelete, confirmingDelete, onConfirmDelete, onC
           <span>{timeAgo(account.updatedAt ?? account.analyzedAt)}</span>
           {account.context?.industry && (
             <><span className="text-neutral-200">·</span><span className="capitalize">{account.context.industry}</span></>
+          )}
+          {showArrAtRisk && (
+            <span className="ml-auto font-semibold text-red-500 tabular-nums">
+              {arrAtRisk >= 1000 ? `$${Math.round(arrAtRisk / 1000)}K` : `$${arrAtRisk}`} at risk
+            </span>
           )}
         </div>
       </Link>

@@ -179,6 +179,7 @@ const ARR_BY_TIER: Record<string, number> = {
 const DEFAULT_ARR = 12000 // fallback if no tier set
 
 function getAccountARR(account: StoredAccount): number {
+  if (account.context?.annualValue && account.context.annualValue > 0) return account.context.annualValue
   return ARR_BY_TIER[account.context?.contractTier ?? ""] ?? DEFAULT_ARR
 }
 

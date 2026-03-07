@@ -23,6 +23,7 @@ export type ParticipantRoles = Record<string, ParticipantRole>
 export interface AccountContext {
   industry?: string
   contractTier?: "starter" | "growth" | "enterprise"
+  annualValue?: number  // real ARR in USD — if set, overrides tier-based estimate
   renewalMonth?: string // "YYYY-MM"
   watiPhone?: string    // phone number for WATI-imported accounts (enables send-back)
 }

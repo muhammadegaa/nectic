@@ -192,6 +192,7 @@ export default function AccountPage() {
   const [reanalyzeRunning, setReanalyzeRunning] = useState(false)
   const reanalyzeInputRef = useRef<HTMLInputElement>(null)
   const [copilotPrefill, setCopilotPrefill] = useState("")
+  const [accountSavedBanner, setAccountSavedBanner] = useState(false)
 
   useEffect(() => {
     if (!authLoading && !user) router.replace("/concept/login")
@@ -456,6 +457,15 @@ export default function AccountPage() {
         </>
       )}
 
+      {/* Account saved banner */}
+      {accountSavedBanner && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-emerald-600 text-white text-sm font-semibold px-5 py-3.5 rounded-xl shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <svg width="18" height="18" viewBox="0 0 16 16" fill="none"><polyline points="2 8 6 12 14 4" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          Account saved — all risk signals resolved. ARR protected.
+          <button onClick={() => setAccountSavedBanner(false)} className="ml-2 text-emerald-200 hover:text-white transition-colors text-base leading-none">×</button>
+        </div>
+      )}
+
       {/* Mobile tab switcher — sticky, sits just below the nav */}
       <div className="xl:hidden sticky top-12 z-10 bg-white border-b border-neutral-200 flex">
         <button
@@ -490,7 +500,23 @@ export default function AccountPage() {
               if (!user) return
               try {
                 await saveSignalAction(user.uid, account.id, key, action)
-                setAccount((prev) => prev ? { ...prev, signalActions: { ...prev.signalActions, [key]: action } } : prev)
+                const updatedActions = { ...account.signalActions, [key]: action }
+                setAccount((prev) => prev ? { ...prev, signalActions: updatedActions } : prev)
+                // Check if all risk signals are now actioned (done or dismissed)
+                if (action.status === "done") {
+                  const riskKeys = (account.result.riskSignals ?? []).map((s) => {
+                    const slug = s.explanation?.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 60) ?? ""
+                    return `risk-${slug}`
+                  })
+                  const allDone = riskKeys.length > 0 && riskKeys.every((k) => {
+                    const a = k === key ? action : updatedActions?.[k]
+                    return a?.status === "done" || a?.status === "dismissed"
+                  })
+                  if (allDone) {
+                    setAccountSavedBanner(true)
+                    setTimeout(() => setAccountSavedBanner(false), 8000)
+                  }
+                }
               } catch (err) {
                 console.error("Failed to save signal action:", err)
               }

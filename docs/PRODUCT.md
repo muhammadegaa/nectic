@@ -1,7 +1,7 @@
 # Nectic — Living Product Document
 
-> Last updated: March 2026 — agentic MVP complete (7 sprints)
-> Status: Pre-revenue MVP. QR-based live WhatsApp connection via wa-bridge (Railway). Targeting first paying customers and Antler Indonesia pitch.
+> Last updated: March 2026 — agentic MVP complete (8 sprints)
+> Status: Pre-revenue MVP. File upload primary. QR-based live WhatsApp (wa-bridge) marked coming soon in UI. Targeting first paying customers and Antler Indonesia pitch.
 >
 > **Rule for maintainers:** Only document what is built and working. Mark everything else as [PLANNED], [DEFERRED], or [NOT BUILT]. Do not mix aspiration with reality.
 
@@ -41,20 +41,26 @@ AI given to low-judgment operators makes outcomes worse — they can't filter go
 
 **What it does today:**
 
-- Connects to live WhatsApp via QR scan (wa-bridge on Railway) — see all chats and groups, select one, analyse instantly
-- Parses WhatsApp exports (.txt / .zip) as fallback
+- Parses WhatsApp exports (.txt / .zip) — primary demo path, no friction
+- Live WhatsApp via QR scan (wa-bridge on Railway) — marked "Coming soon" in UI; technically operational but unreliable for groups
 - Runs AI analysis against Claude Sonnet 4.6 to produce structured intelligence: health score, risk signals, product signals, relationship observations, competitor mentions, recommended action
 - Stores account analysis results per user in Firestore
 - Provides an in-context chat co-pilot (Claude Haiku 4.5) that knows the account, workspace context, and the CS lead's prior signal decisions
 - Aggregates signals across accounts on an **account-grouped** Signal Board with per-signal action tracking (grouped by account, sorted by worst risk)
+- **Draft → approve → send loop** on every risk signal card: generates a WhatsApp draft response, CS lead edits/approves, one click sends via WATI (`/api/wati/send`) — signal auto-marked done
 - Generates PM feature briefs from product signals (Claude Sonnet 4.6, streamed)
 - Allows re-analysis when new conversation data is available or context changes
 - Shares read-only analysis reports via unique token links
 - **Sends email alerts** (via Resend) for high-risk / critical accounts and competitor mentions, with exact customer quotes and renewal date
 - **Competitor alert banner** on account detail page — shows competitor names, triggering quote, and pre-fills chat co-pilot with a retention response prompt
-- **Dashboard outcome story** — `changesSince` delta line per card (green/red healthDelta), competitor badge, "X saved this month" chip, ARR protected metric
-- **Weekly digest email** — Monday briefing with deteriorated accounts, saved accounts, competitive threats, and ARR at risk / ARR protected (manual send via workspace; cron-ready)
+- **Dashboard outcome story** — `changesSince` delta chip (coloured ↑/↓ badge + summary text) per card, ARR at risk shown on high/critical cards, competitor badge
+- **Weekly digest email** — Monday briefing with deteriorated accounts, saved accounts, competitive threats, and ARR at risk / ARR protected
+- **Vercel cron** — `/api/cron/weekly-digest` fires every Monday 8am UTC, sends digest to all users with `notificationEmail` set (secured with `CRON_SECRET`)
 - **Two-step onboarding** — captures `notificationEmail` for alerts and digest on step 2
+- **Outcomes page** (`/concept/outcomes`) — leadership view: ARR protected, ARR at risk, signals actioned, competitor threats, accounts saved, renewing this month, recent actions taken, NRR impact summary
+- **Real ACV input** — `annualValue` field on account context form; overrides tier-based estimate in all revenue calculations
+- **Account saved banner** — when the last risk signal on an account is marked done, a green "Account saved — ARR protected" toast appears
+- **Connect modal goes straight to upload** — no method selection screen; frictionless for demo
 
 **What it does NOT do today:**
 
@@ -286,7 +292,7 @@ Path B — Context-only update (no new messages):
 | Account sharing (read-only)                      | ✅ Working        | Tokenized public URLs                                                             |
 | Cross-account signal aggregation                 | ✅ Working        | Groups identical signals across accounts with account count                       |
 | Account delete                                   | ✅ Working        | Removes from Firestore + cleans up sharedAccounts                                 |
-| Dashboard delta line per card                    | ✅ Working        | `changesSince.summary` shown; green/red based on healthDelta                      |
+| Dashboard delta line per card                    | ✅ Working        | `changesSince.healthDelta` chip (↑/↓ badge) + summary; ARR at risk shown on high/critical cards |
 | Competitor badge on dashboard cards              | ✅ Working        | Orange badge when account has competitor mentions                                 |
 | "Saved this month" stat chip                     | ✅ Working        | Counts accounts that improved from high/critical risk in last 30 days             |
 | ARR protected metric                             | ✅ Working        | Shown alongside ARR at risk in Revenue module                                     |
@@ -294,8 +300,13 @@ Path B — Context-only update (no new messages):
 | Chat co-pilot pre-fill from competitor alert     | ✅ Working        | CTA sets `initialInput` in ChatPanel text area                                    |
 | Email alerts (risk + competitor mentions)        | ✅ Working        | Resend via `/api/concept/notify`; orange-header template for competitor alerts    |
 | Weekly digest email                              | ✅ Working        | `/api/concept/weekly-digest`; manual trigger from workspace; Firestore Admin SDK  |
+| Weekly digest — Vercel cron                      | ✅ Working        | `/api/cron/weekly-digest`; fires every Monday 8am UTC; requires `CRON_SECRET` env var |
 | Two-step onboarding                              | ✅ Working        | Step 2 captures `notificationEmail` for alerts and digest                         |
 | Workspace "Alerts & digest" section              | ✅ Working        | `notificationEmail` field + "Send test digest" button at top of workspace page    |
+| Outcomes page                                    | ✅ Working        | `/concept/outcomes`; ARR protected, at risk, signals actioned, competitor threats, accounts saved, renewing this month, NRR summary |
+| Real ACV input on account context                | ✅ Working        | `annualValue` field overrides tier-based ARR estimate in all calculations          |
+| Account saved banner                             | ✅ Working        | Green toast when last risk signal marked done; "ARR protected" message             |
+| Connect modal — no method screen                 | ✅ Working        | Opens directly to export instructions; frictionless for demo                      |
 | PostHog analytics                                | ⚠️ Disabled      | Removed to fix auth flow; re-enable after PMF validation                          |
 | Pricing page                                     | ⚠️ Exists        | UI exists at /pricing, Stripe routes exist but checkout not wired to active plans |
 | Billing / paywall                                | ❌ Not active     | No subscription enforcement                                                       |
@@ -406,6 +417,7 @@ Firestore
 │   ├── context: AccountContext
 │   │   ├── industry?: string
 │   │   ├── contractTier?: "starter"|"growth"|"enterprise"
+│   │   ├── annualValue?: number        ← real ACV in USD; overrides tier estimate
 │   │   └── renewalMonth?: string       ← "YYYY-MM"
 │   ├── shareToken: string              ← UUID for public sharing
 │   ├── supplementalContext?: string    ← freeform PM notes
@@ -443,6 +455,7 @@ All routes under `/api/`. All are POST. No authentication middleware — auth is
 | `/api/wati/messages`                 | —                       | —            | endpoint, token, phoneNumber, contactName, pageSize?                             | { conversation, participantRoles, messageCount, totalCount } |
 | `/api/concept/notify`                | —                       | —            | uid, accountId, accountName, riskLevel, topSignalQuote, competitorNames, isCompetitorAlert, renewalMonth | 200 OK — sends Resend email |
 | `/api/concept/weekly-digest`         | —                       | 15s          | uid, email                                                                       | { sent: true } — sends digest email via Resend               |
+| `/api/cron/weekly-digest`            | —                       | 60s          | GET (Vercel cron, Bearer CRON_SECRET)                                            | { sent, skipped } — sends digest to all users with notificationEmail |
 | `/api/workspace/autofill`            | claude-haiku-4.5        | 30s          | url                                                                              | { productDescription, featureAreas, source }                 |
 | `/api/stripe/checkout`               | —                       | —            | plan, billing                                                                    | { url } (Stripe session)                                     |
 | `/api/stripe/webhook`                | —                       | —            | Stripe event                                                                     | 200 OK                                                       |
