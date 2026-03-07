@@ -5,6 +5,7 @@ export const maxDuration = 30
 interface WorkspaceContext {
   productDescription?: string
   featureAreas?: string
+  productStory?: string
 }
 
 export async function POST(req: NextRequest) {
