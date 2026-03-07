@@ -870,18 +870,23 @@ function ConnectModal({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stage, qrStatus])
 
-  // Poll while syncing history
+  // Poll while syncing history — give up after 20s and show whatever we have
   useEffect(() => {
     if (qrStatus !== "syncing") return
+    const deadline = Date.now() + 20000
     const interval = setInterval(async () => {
       try {
         const data = await callBridge({ action: "status" })
-        if (data.historyReady) {
+        if (data.historyReady || Date.now() > deadline) {
           clearInterval(interval)
           setQrStatus("connected")
           await loadQrContacts()
         }
-      } catch {}
+      } catch {
+        clearInterval(interval)
+        setQrStatus("connected")
+        await loadQrContacts()
+      }
     }, 1500)
     return () => clearInterval(interval)
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1266,7 +1271,7 @@ function ConnectModal({
                   <div className="flex flex-col items-center justify-center py-16 gap-3">
                     <div className="w-5 h-5 border-2 border-[#25D366]/30 border-t-[#25D366] rounded-full animate-spin" />
                     <p className="text-sm font-semibold text-neutral-800">Connected</p>
-                    <p className="text-xs text-neutral-400 text-center max-w-xs">Syncing your chats — this takes a few seconds on first connect…</p>
+                    <p className="text-xs text-neutral-400 text-center max-w-xs">Syncing your chats — up to 20 seconds on first connect…</p>
                   </div>
                 )}
 
