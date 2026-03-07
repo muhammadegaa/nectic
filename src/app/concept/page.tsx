@@ -792,6 +792,7 @@ function ConnectModal({
   const [qrImage, setQrImage] = useState<string | null>(null)
   const [qrContacts, setQrContacts] = useState<QrContact[]>([])
   const [qrSearch, setQrSearch] = useState("")
+  const [qrLoadingId, setQrLoadingId] = useState<string | null>(null)
   const [qrError, setQrError] = useState("")
   const qrPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -895,17 +896,29 @@ function ConnectModal({
   const handleQrContactSelect = async (contact: QrContact) => {
     const contactName = contact.name
     setQrError("")
+    setQrLoadingId(contact.id)
     try {
-      const data = await callBridge({ action: "messages", waid: contact.id, limit: 200 })
-      if (!data.messages || data.messages.length === 0) {
-        setQrError("No messages yet — chats are still syncing. Wait a few seconds and tap again.")
+      // Retry up to 3 times with 3s gap if messages are empty (still syncing)
+      let messages: Array<{ created: string; text: string; owner: boolean; senderName: string }> = []
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const data = await callBridge({ action: "messages", waid: contact.id, limit: 200 })
+        if (data.messages && data.messages.length > 0) {
+          messages = data.messages
+          break
+        }
+        if (attempt < 2) await new Promise(r => setTimeout(r, 3000))
+      }
+      setQrLoadingId(null)
+
+      if (messages.length === 0) {
+        setQrError("No messages found. This chat may not have recent activity — try another.")
         return
       }
-      // Bridge now returns pre-formatted messages: { id, created, text, owner, senderName }
+
       const lines: string[] = []
       const vendorNames = new Set<string>()
       const customerNames = new Set<string>()
-      for (const msg of data.messages as Array<{ created: string; text: string; owner: boolean; senderName: string }>) {
+      for (const msg of messages) {
         if (!msg.text?.trim()) continue
         const d = new Date(msg.created)
         const dateStr = d.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" })
@@ -929,6 +942,7 @@ function ConnectModal({
         contactName,
       })
     } catch (err) {
+      setQrLoadingId(null)
       setQrError(err instanceof Error ? err.message : "Failed to load messages")
     }
   }
@@ -1268,10 +1282,18 @@ function ConnectModal({
                 )}
 
                 {qrStatus === "syncing" && (
-                  <div className="flex flex-col items-center justify-center py-16 gap-3">
-                    <div className="w-5 h-5 border-2 border-[#25D366]/30 border-t-[#25D366] rounded-full animate-spin" />
-                    <p className="text-sm font-semibold text-neutral-800">Connected</p>
-                    <p className="text-xs text-neutral-400 text-center max-w-xs">Syncing your chats — up to 20 seconds on first connect…</p>
+                  <div className="flex flex-col items-center justify-center py-14 gap-4">
+                    <div className="relative w-12 h-12">
+                      <div className="w-12 h-12 border-2 border-[#25D366]/20 rounded-full" />
+                      <div className="absolute inset-0 w-12 h-12 border-2 border-transparent border-t-[#25D366] rounded-full animate-spin" />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <WhatsAppIcon size={16} className="text-[#25D366]" />
+                      </div>
+                    </div>
+                    <div className="text-center space-y-1">
+                      <p className="text-sm font-semibold text-neutral-800">Importing your chats</p>
+                      <p className="text-xs text-neutral-400 max-w-[200px]">WhatsApp is sending your recent conversations…</p>
+                    </div>
                   </div>
                 )}
 
@@ -1293,11 +1315,15 @@ function ConnectModal({
                       <p className="text-xs text-neutral-400 text-center py-8">{qrSearch ? "No matches." : "No conversations found."}</p>
                     )}
                     <div className="divide-y divide-neutral-100">
-                      {qrFiltered.map((contact) => (
+                      {qrFiltered.map((contact) => {
+                        const isLoading = qrLoadingId === contact.id
+                        const isDisabled = qrLoadingId !== null && !isLoading
+                        return (
                         <button
                           key={contact.id}
-                          onClick={() => handleQrContactSelect(contact)}
-                          className="w-full flex items-center gap-3 px-2 py-3 hover:bg-neutral-50 transition-colors text-left rounded-lg"
+                          onClick={() => !qrLoadingId && handleQrContactSelect(contact)}
+                          disabled={isDisabled}
+                          className={`w-full flex items-center gap-3 px-2 py-3 transition-colors text-left rounded-lg ${isDisabled ? "opacity-40" : "hover:bg-neutral-50"} ${isLoading ? "bg-neutral-50" : ""}`}
                         >
                           <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${contact.isGroup ? "bg-[#25D366]/10 text-[#25D366]" : "bg-neutral-100 text-neutral-600"}`}>
                             {contact.isGroup ? (
@@ -1308,11 +1334,15 @@ function ConnectModal({
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-neutral-800 truncate">{contact.name}</p>
-                            <p className="text-xs text-neutral-400">{contact.isGroup ? `Group · ${contact.participantCount ?? "?"} members` : "1:1 conversation"}</p>
+                            <p className="text-xs text-neutral-400">{isLoading ? "Loading messages…" : contact.isGroup ? `Group · ${contact.participantCount ?? "?"} members` : "1:1 conversation"}</p>
                           </div>
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-neutral-300 shrink-0"><path d="M9 18l6-6-6-6"/></svg>
+                          {isLoading
+                            ? <span className="w-4 h-4 rounded-full border-2 border-neutral-300 border-t-neutral-600 animate-spin shrink-0" />
+                            : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-neutral-300 shrink-0"><path d="M9 18l6-6-6-6"/></svg>
+                          }
                         </button>
-                      ))}
+                        )
+                      })}
                     </div>
                     <div className="mt-3 pt-3 border-t border-neutral-100 flex justify-between">
                       <p className="text-xs text-neutral-400">{qrFiltered.length} conversation{qrFiltered.length !== 1 ? "s" : ""}</p>
