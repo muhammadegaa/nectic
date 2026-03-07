@@ -43,7 +43,7 @@ function AccountHealthCard() {
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-sm font-medium text-neutral-900">PT Mandiri Teknologi</p>
-            <p className="text-xs text-neutral-400 mt-0.5">Last message: 3 days ago</p>
+            <p className="text-xs text-neutral-400 mt-0.5">Growth plan · $24K ARR · Renewal Mar 2026</p>
           </div>
           <span className="inline-flex items-center gap-1.5 text-xs font-medium text-orange-700 bg-orange-50 border border-orange-200 px-2 py-1 rounded-md shrink-0">
             <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse" />
@@ -52,14 +52,14 @@ function AccountHealthCard() {
         </div>
       </div>
 
-      {/* Health score */}
+      {/* ARR at risk */}
       <div
         className={`px-5 py-4 border-b border-neutral-100 transition-all duration-500 ${stage >= 2 ? "opacity-100" : "opacity-0 translate-y-1"}`}
       >
         <div className="flex items-baseline gap-1.5 mb-2">
-          <span className="text-3xl font-light text-neutral-900 tabular-nums">4</span>
-          <span className="text-sm text-neutral-400">/10</span>
-          <span className="ml-auto text-xs text-red-500 font-medium tabular-nums">-3 this week</span>
+          <span className="text-3xl font-light text-red-600 tabular-nums">$16K</span>
+          <span className="text-sm text-neutral-400">ARR at risk</span>
+          <span className="ml-auto text-xs text-red-500 font-medium tabular-nums">health 4/10</span>
         </div>
         <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden">
           <div
@@ -94,7 +94,7 @@ function AccountHealthCard() {
           <span className="w-5 h-5 rounded bg-neutral-100 flex items-center justify-center text-neutral-400 shrink-0 text-[10px]">
             AI
           </span>
-          Draft retention response with co-pilot
+          Draft retention offer — save $16K ARR
           <span className="ml-auto text-neutral-300">→</span>
         </button>
       </div>
@@ -114,31 +114,29 @@ export default function HeroSection() {
               className="inline-flex items-center gap-2 text-xs font-medium text-neutral-400 uppercase tracking-widest"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              Autonomous churn prevention for CS teams in Southeast Asia
+              NRR protection for WhatsApp-first B2B SaaS in Southeast Asia
             </motion.span>
 
             <motion.h1
               variants={fadeUp}
               className="mt-6 text-4xl sm:text-5xl lg:text-[2.9rem] font-light text-neutral-900 leading-[1.1] tracking-tight"
             >
-              Your CS team reads 200 WhatsApp chats.<br />
-              <span className="text-neutral-400">Nectic reads them and acts.</span>
+              Every at-risk account.<br />
+              <span className="text-neutral-400">Caught before it costs you.</span>
             </motion.h1>
 
             <motion.p
               variants={fadeUp}
               className="mt-7 text-lg text-neutral-500 max-w-md leading-relaxed"
             >
-              Nectic monitors your customer WhatsApp conversations, detects churn
-              signals before they escalate, drafts the response, and sends it — your
-              team approves, not investigates.
+              Nectic reads every customer WhatsApp conversation, calculates ARR at risk in real time, and tells your CS team exactly which accounts to act on — and what to say.
             </motion.p>
 
             <motion.p
               variants={fadeUp}
               className="mt-3 text-base text-neutral-400 max-w-md leading-relaxed"
             >
-              Built for CS leads at B2B SaaS companies in Indonesia and Singapore whose customers live in WhatsApp.
+              Built for Heads of CS at B2B SaaS companies in Indonesia and Malaysia whose customers run on WhatsApp groups.
             </motion.p>
 
             <motion.div
@@ -149,7 +147,7 @@ export default function HeroSection() {
                 href="#early-access"
                 className="inline-flex items-center justify-center bg-neutral-900 text-white text-sm font-semibold px-6 py-3 rounded-lg hover:bg-neutral-700 transition-colors"
               >
-                Get early access
+                Protect your NRR →
               </Link>
               <a
                 href="#how-it-works"
@@ -163,7 +161,7 @@ export default function HeroSection() {
               variants={fadeUp}
               className="mt-5 text-xs text-neutral-400"
             >
-              Connects to WhatsApp Business. No CRM required. First response in under 60 seconds.
+              Upload any WhatsApp group export. ARR at risk calculated instantly. Live sync coming Q2 2026.
             </motion.p>
           </motion.div>
 
@@ -181,9 +179,9 @@ export default function HeroSection() {
           className="mt-14 pt-10 border-t border-neutral-100 grid grid-cols-1 sm:grid-cols-3 gap-8"
         >
           {[
-            { stat: "91%", label: "of B2B communication in Indonesia happens on WhatsApp" },
-            { stat: "2–3 hrs", label: "CS managers spend daily reading WhatsApp to triage accounts" },
-            { stat: "40%", label: "save rate when churn signals are actioned 3 weeks early" },
+            { stat: "91%", label: "of B2B customer conversations in Indonesia happen on WhatsApp — invisible to your CRM" },
+            { stat: "$240K", label: "average ARR at risk per CS team that relies on manual WhatsApp triage" },
+            { stat: "68%", label: "of churned customers showed warning signals 30+ days before cancelling" },
           ].map((item) => (
             <div key={item.stat}>
               <p className="text-3xl font-light text-neutral-900 tabular-nums">{item.stat}</p>

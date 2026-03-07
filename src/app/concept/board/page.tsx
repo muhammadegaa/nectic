@@ -169,6 +169,39 @@ function getAllSignals(groups: AccountGroup[]): BoardSignal[] {
   return groups.flatMap((g) => g.signals)
 }
 
+// ─── ARR helpers ────────────────────────────────────────────────────────────────
+
+const ARR_BY_TIER: Record<string, number> = {
+  starter: 6000,
+  growth: 24000,
+  enterprise: 60000,
+}
+const DEFAULT_ARR = 12000 // fallback if no tier set
+
+function getAccountARR(account: StoredAccount): number {
+  return ARR_BY_TIER[account.context?.contractTier ?? ""] ?? DEFAULT_ARR
+}
+
+// Fraction of ARR considered at risk by risk level
+const RISK_EXPOSURE: Record<string, number> = {
+  critical: 1.0,
+  high: 0.7,
+  medium: 0.3,
+  low: 0.05,
+}
+
+function formatARR(n: number): string {
+  if (n >= 1000000) return `$${(n / 1000000).toFixed(1)}M`
+  if (n >= 1000) return `$${Math.round(n / 1000)}K`
+  return `$${n}`
+}
+
+function getArrAtRisk(account: StoredAccount): number {
+  const arr = getAccountARR(account)
+  const exposure = RISK_EXPOSURE[account.result.riskLevel] ?? 0.1
+  return Math.round(arr * exposure)
+}
+
 // ─── Page ───────────────────────────────────────────────────────────────────────
 
 export default function ActionQueuePage() {
@@ -244,6 +277,20 @@ export default function ActionQueuePage() {
   const highCount = signals.filter((s) => s.riskLevel === "high" && (!s.action || s.action.status === "open")).length
   const urgentCount = criticalCount + highCount
 
+  // Revenue metrics
+  const totalArrAtRisk = accounts
+    .filter((a) => a.result.riskLevel === "critical" || a.result.riskLevel === "high")
+    .reduce((sum, a) => sum + getArrAtRisk(a), 0)
+  const arrProtected = accounts
+    .filter((a) => {
+      const sigs = extractSignalsForAccount(a)
+      return sigs.length > 0 && sigs.every((s) => s.action?.status === "done" || s.action?.status === "dismissed")
+    })
+    .reduce((sum, a) => sum + getAccountARR(a), 0)
+  const atRiskAccountCount = accounts.filter(
+    (a) => a.result.riskLevel === "critical" || a.result.riskLevel === "high"
+  ).length
+
   if (authLoading || !user) {
     return (
       <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
@@ -263,15 +310,34 @@ export default function ActionQueuePage() {
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8 pb-24 sm:pb-8">
 
-        {/* Hero header */}
+        {/* Revenue dashboard header */}
         <div className="mb-6">
+          {!loading && accounts.length > 0 && (
+            <div className="grid grid-cols-3 gap-3 mb-5">
+              <div className="bg-white border border-neutral-200 rounded-xl px-4 py-3.5 shadow-sm">
+                <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-1">ARR at risk</p>
+                <p className="text-2xl font-bold text-red-600 tabular-nums">{totalArrAtRisk > 0 ? formatARR(totalArrAtRisk) : "—"}</p>
+                <p className="text-[11px] text-neutral-400 mt-0.5">{atRiskAccountCount} account{atRiskAccountCount !== 1 ? "s" : ""} flagged</p>
+              </div>
+              <div className="bg-white border border-neutral-200 rounded-xl px-4 py-3.5 shadow-sm">
+                <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-1">ARR protected</p>
+                <p className="text-2xl font-bold text-emerald-600 tabular-nums">{arrProtected > 0 ? formatARR(arrProtected) : "—"}</p>
+                <p className="text-[11px] text-neutral-400 mt-0.5">{doneCount} action{doneCount !== 1 ? "s" : ""} completed</p>
+              </div>
+              <div className="bg-white border border-neutral-200 rounded-xl px-4 py-3.5 shadow-sm">
+                <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-1">Needs action</p>
+                <p className="text-2xl font-bold text-neutral-900 tabular-nums">{openCount}</p>
+                <p className="text-[11px] text-neutral-400 mt-0.5">{inProgressCount} in progress</p>
+              </div>
+            </div>
+          )}
           <div className="flex items-end justify-between gap-4">
             <div>
-              <h1 className="text-xl font-semibold text-neutral-900 tracking-tight">Action queue</h1>
+              <h1 className="text-xl font-semibold text-neutral-900 tracking-tight">Revenue protection queue</h1>
               <p className="text-sm text-neutral-500 mt-0.5">
-                {loading ? "Loading signals…" : openCount === 0
-                  ? "All signals addressed — great work."
-                  : `${openCount} signal${openCount !== 1 ? "s" : ""} need${openCount === 1 ? "s" : ""} your attention.`}
+                {loading ? "Loading accounts…" : openCount === 0
+                  ? "All signals addressed — no ARR at risk."
+                  : `${openCount} signal${openCount !== 1 ? "s" : ""} need${openCount === 1 ? "s" : ""} attention across ${atRiskAccountCount > 0 ? atRiskAccountCount : groups.length} account${groups.length !== 1 ? "s" : ""}.`}
               </p>
             </div>
             {!loading && openCount > 0 && (
@@ -294,12 +360,9 @@ export default function ActionQueuePage() {
                     className="flex items-center gap-1.5 bg-orange-50 border border-orange-200 rounded-lg px-3 py-1.5"
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-orange-400" />
-                    <span className="text-xs font-semibold text-orange-700">{highCount} high</span>
+                    <span className="text-xs font-semibold text-orange-700">{highCount} high risk</span>
                   </motion.div>
                 )}
-                <div className="flex items-center gap-1.5 bg-neutral-100 border border-neutral-200 rounded-lg px-3 py-1.5">
-                  <span className="text-xs text-neutral-500">~{Math.max(1, Math.round(openCount * 2.5))} min to clear</span>
-                </div>
               </div>
             )}
           </div>
@@ -405,6 +468,7 @@ function AccountSignalGroup({
   const [collapsed, setCollapsed] = useState(false)
   const risk = account.result.riskLevel
   const healthScore = account.result.healthScore ?? 0
+  const arrExposure = getArrAtRisk(account)
 
   return (
     <motion.div
@@ -428,6 +492,11 @@ function AccountSignalGroup({
           {account.result.accountName}
         </Link>
         <div className="flex items-center gap-2 shrink-0">
+          {(risk === "critical" || risk === "high") && (
+            <span className="text-xs font-semibold text-red-600 tabular-nums hidden sm:inline">
+              {formatARR(arrExposure)} at risk
+            </span>
+          )}
           <span className={`text-xs font-semibold px-2 py-0.5 border rounded-full ${riskBadge[risk] ?? ""}`}>
             {risk}
           </span>
