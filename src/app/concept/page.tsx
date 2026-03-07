@@ -815,11 +815,16 @@ function ConnectModal({
     setQrImage(null)
     try {
       const data = await callBridge({ action: "start" })
-      if (data.status === "connected") {
+      if (data.error) {
+        setQrError(data.error)
+        setQrStatus("error")
+      } else if (data.status === "connected") {
         setQrStatus("connected")
         await loadQrContacts()
       } else if (data.qr) {
         setQrImage(data.qr)
+        setQrStatus("pending")
+      } else {
         setQrStatus("pending")
       }
     } catch {
@@ -832,6 +837,7 @@ function ConnectModal({
   useEffect(() => {
     if (stage !== "qr") {
       if (qrPollRef.current) { clearInterval(qrPollRef.current); qrPollRef.current = null }
+      setQrStatus("idle")
       return
     }
     if (qrStatus === "idle") startQrSession()
