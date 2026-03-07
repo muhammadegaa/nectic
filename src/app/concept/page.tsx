@@ -80,7 +80,7 @@ export default function ConceptPage() {
   const [workspace, setWorkspace] = useState<WorkspaceContext>({})
   const [showConnect, setShowConnect] = useState(false)
   const [showWelcome, setShowWelcome] = useState(false)
-  const [connectStage, setConnectStage] = useState<ConnectStage>("instructions")
+  const [connectStage, setConnectStage] = useState<ConnectStage>("method")
   const [parsed, setParsed] = useState<WaParsed | null>(null)
   const [fileName, setFileName] = useState("")
   const [uploadError, setUploadError] = useState("")
@@ -1021,38 +1021,37 @@ function ConnectModal({
               <div className="space-y-3">
                 <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-4">How do you want to connect?</p>
 
-                {/* Primary: QR scan */}
+                {/* Primary: File upload */}
                 <button
-                  onClick={onSelectMethodQr}
-                  className="w-full flex items-center gap-4 border-2 border-[#25D366] rounded-xl p-4 hover:bg-[#25D366]/5 transition-all text-left group"
+                  onClick={onSelectMethodFile}
+                  className="w-full flex items-center gap-4 border-2 border-neutral-900 rounded-xl p-4 hover:bg-neutral-50 transition-all text-left group"
                 >
-                  <div className="w-10 h-10 bg-[#25D366] rounded-xl flex items-center justify-center shrink-0">
-                    <WhatsAppIcon size={20} className="text-white" />
+                  <div className="w-10 h-10 bg-neutral-900 rounded-xl flex items-center justify-center shrink-0">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-semibold text-neutral-900">Scan QR code</p>
-                      <span className="text-[10px] font-semibold bg-[#25D366] text-white px-1.5 py-0.5 rounded-full">Recommended</span>
+                      <p className="text-sm font-semibold text-neutral-900">Upload chat export</p>
+                      <span className="text-[10px] font-semibold bg-neutral-900 text-white px-1.5 py-0.5 rounded-full">Start here</span>
                     </div>
-                    <p className="text-xs text-neutral-400 mt-0.5">Connect your WhatsApp account — see all chats and groups instantly</p>
+                    <p className="text-xs text-neutral-400 mt-0.5">Export any chat from WhatsApp and drop it here — .txt or .zip</p>
                   </div>
                   <svg className="text-neutral-400 group-hover:text-neutral-900 shrink-0 transition-colors" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
                 </button>
 
-                {/* Secondary: File upload */}
-                <button
-                  onClick={onSelectMethodFile}
-                  className="w-full flex items-center gap-4 border border-neutral-200 rounded-xl p-4 hover:border-neutral-400 hover:bg-neutral-50 transition-all text-left group"
-                >
-                  <div className="w-10 h-10 bg-neutral-100 rounded-xl flex items-center justify-center shrink-0">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                {/* Coming soon: Live WA connection */}
+                <div className="w-full flex items-center gap-4 border border-neutral-100 rounded-xl p-4 opacity-50 cursor-not-allowed select-none">
+                  <div className="w-10 h-10 bg-[#25D366]/10 rounded-xl flex items-center justify-center shrink-0">
+                    <WhatsAppIcon size={20} className="text-[#25D366]" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-semibold text-neutral-900">Upload export</p>
-                    <p className="text-xs text-neutral-400 mt-0.5">WhatsApp .txt or .zip chat export</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold text-neutral-400">Live WhatsApp connection</p>
+                      <span className="text-[10px] font-semibold bg-neutral-100 text-neutral-400 px-1.5 py-0.5 rounded-full">Coming soon</span>
+                    </div>
+                    <p className="text-xs text-neutral-300 mt-0.5">Auto-sync all chats and groups in real time</p>
                   </div>
-                  <svg className="text-neutral-300 group-hover:text-neutral-600 shrink-0 transition-colors" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
-                </button>
+                </div>
               </div>
             )}
 
@@ -1951,7 +1950,7 @@ function EmptyState({ onConnect, userName }: { onConnect: () => void; userName: 
         <WhatsAppIcon size={14} className="text-white" />
         Connect first account
       </button>
-      <p className="mt-4 text-xs text-neutral-400">Connect WhatsApp live · or upload .txt and .zip exports · Bahasa Indonesia + English</p>
+      <p className="mt-4 text-xs text-neutral-400">Upload WhatsApp .txt or .zip exports · Bahasa Indonesia + English · Live sync coming soon</p>
     </div>
   )
 }
