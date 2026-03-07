@@ -935,46 +935,37 @@ function ConnectModal({
               <div className="space-y-3">
                 <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-4">How do you want to connect?</p>
 
-                {/* Primary: QR scan */}
+                {/* Primary: File upload */}
                 <button
-                  onClick={onSelectMethodQr}
-                  className="w-full flex items-center gap-4 border-2 border-[#25D366] rounded-xl p-4 hover:bg-green-50/40 transition-all text-left group relative"
+                  onClick={onSelectMethodFile}
+                  className="w-full flex items-center gap-4 border-2 border-neutral-900 rounded-xl p-4 hover:bg-neutral-50 transition-all text-left group"
                 >
-                  <div className="w-10 h-10 bg-[#25D366] rounded-xl flex items-center justify-center shrink-0">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h2v2h-2zM18 14h2M14 18h2M18 18h2M16 16h2"/></svg>
+                  <div className="w-10 h-10 bg-neutral-900 rounded-xl flex items-center justify-center shrink-0">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-semibold text-neutral-900">Scan QR code</p>
-                      <span className="text-[10px] font-semibold bg-[#25D366] text-white px-1.5 py-0.5 rounded-full">Recommended</span>
+                      <p className="text-sm font-semibold text-neutral-900">Upload export</p>
+                      <span className="text-[10px] font-semibold bg-neutral-900 text-white px-1.5 py-0.5 rounded-full">Recommended</span>
                     </div>
-                    <p className="text-xs text-neutral-400 mt-0.5">Any WhatsApp number — personal or business. Groups supported.</p>
-                  </div>
-                  <svg className="text-[#25D366] shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
-                </button>
-
-                {/* Secondary: File upload */}
-                <button
-                  onClick={onSelectMethodFile}
-                  className="w-full flex items-center gap-4 border border-neutral-200 rounded-xl p-4 hover:border-neutral-400 hover:bg-neutral-50 transition-all text-left group"
-                >
-                  <div className="w-10 h-10 bg-neutral-100 rounded-xl flex items-center justify-center shrink-0">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-neutral-500"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-neutral-900">Upload export</p>
                     <p className="text-xs text-neutral-400 mt-0.5">WhatsApp .txt or .zip chat export — includes group chats</p>
                   </div>
-                  <svg className="text-neutral-300 group-hover:text-neutral-600 shrink-0 transition-colors" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
+                  <svg className="text-neutral-400 group-hover:text-neutral-900 shrink-0 transition-colors" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
                 </button>
 
-                {/* Tertiary: WATI API */}
+                {/* Secondary: WATI API */}
                 <button
                   onClick={onSelectMethodWa}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-neutral-50 rounded-lg transition-colors group"
+                  className="w-full flex items-center gap-4 border border-neutral-200 rounded-xl p-4 hover:border-neutral-400 hover:bg-neutral-50 transition-all text-left group"
                 >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-neutral-400 shrink-0"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
-                  <p className="text-xs text-neutral-400 group-hover:text-neutral-700 transition-colors">Have WATI API credentials? Connect via API →</p>
+                  <div className="w-10 h-10 bg-[#25D366]/10 rounded-xl flex items-center justify-center shrink-0">
+                    <WhatsAppIcon size={20} className="text-[#25D366]" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-neutral-900">Connect WhatsApp Business</p>
+                    <p className="text-xs text-neutral-400 mt-0.5">Pull conversations live via WATI API — send responses directly from Nectic</p>
+                  </div>
+                  <svg className="text-neutral-300 group-hover:text-neutral-600 shrink-0 transition-colors" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
                 </button>
               </div>
             )}
