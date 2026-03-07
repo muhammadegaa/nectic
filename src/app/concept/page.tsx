@@ -898,7 +898,7 @@ function ConnectModal({
     try {
       const data = await callBridge({ action: "messages", waid: contact.id, limit: 200 })
       if (!data.messages || data.messages.length === 0) {
-        setQrError("No messages found for this contact. Try another conversation.")
+        setQrError("No messages yet — chats are still syncing. Wait a few seconds and tap again.")
         return
       }
       // Bridge now returns pre-formatted messages: { id, created, text, owner, senderName }
@@ -1287,7 +1287,7 @@ function ConnectModal({
                       value={qrSearch}
                       onChange={(e) => setQrSearch(e.target.value)}
                       placeholder="Search contacts and groups…"
-                      className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 mb-3 focus:outline-none focus:border-neutral-400"
+                      className="w-full text-sm text-neutral-900 bg-white border border-neutral-200 rounded-lg px-3 py-2 mb-3 focus:outline-none focus:border-neutral-400"
                     />
                     {qrFiltered.length === 0 && (
                       <p className="text-xs text-neutral-400 text-center py-8">{qrSearch ? "No matches." : "No conversations found."}</p>

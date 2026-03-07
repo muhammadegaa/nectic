@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 
+export const maxDuration = 60
+
 const BRIDGE_URL = process.env.WA_BRIDGE_URL
 const BRIDGE_SECRET = process.env.WA_BRIDGE_SECRET
 
