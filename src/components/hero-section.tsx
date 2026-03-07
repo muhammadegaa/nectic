@@ -122,8 +122,7 @@ export default function HeroSection() {
               className="mt-6 text-4xl sm:text-5xl lg:text-[3.2rem] font-light text-neutral-900 leading-[1.1] tracking-tight"
             >
               Your best accounts<br />
-              don&apos;t send a<br />
-              <span className="text-neutral-400">goodbye message.</span>
+              <span className="text-neutral-400">don&apos;t say goodbye.</span>
             </motion.h1>
 
             <motion.p
