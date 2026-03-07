@@ -281,7 +281,13 @@ export default function ConceptPage() {
         }),
       })
 
-      const data = await res.json()
+      const text = await res.text()
+      let data: { result?: AnalysisResult; error?: string }
+      try {
+        data = JSON.parse(text)
+      } catch {
+        throw new Error("Analysis timed out. Your chat may be too long — try exporting a shorter date range (1–2 months).")
+      }
       if (!res.ok) throw new Error(data.error || "Analysis failed")
 
       const shareToken = crypto.randomUUID()
