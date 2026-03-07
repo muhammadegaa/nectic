@@ -861,35 +861,26 @@ function ConnectModal({
     try {
       const data = await callBridge({ action: "messages", waid: contact.id, limit: 200 })
       if (!data.messages || data.messages.length === 0) {
-        setQrError("No messages found for this contact.")
+        setQrError("No messages found for this contact. Try another conversation.")
         return
       }
-      // Format Baileys proto messages into WhatsApp export style
+      // Bridge now returns pre-formatted messages: { id, created, text, owner, senderName }
       const lines: string[] = []
       const vendorNames = new Set<string>()
       const customerNames = new Set<string>()
-      const sorted = [...data.messages].sort(
-        (a: Record<string, unknown>, b: Record<string, unknown>) =>
-          Number(a.messageTimestamp ?? 0) - Number(b.messageTimestamp ?? 0)
-      )
-      for (const msg of sorted) {
-        const ts = Number((msg as Record<string, unknown>).messageTimestamp ?? 0)
-        const d = new Date(ts * 1000)
+      for (const msg of data.messages as Array<{ created: string; text: string; owner: boolean; senderName: string }>) {
+        if (!msg.text?.trim()) continue
+        const d = new Date(msg.created)
         const dateStr = d.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" })
         const timeStr = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
-        const key = (msg as Record<string, unknown>).key as Record<string, unknown>
-        const fromMe = key?.fromMe as boolean
-        const msgBody = (msg as Record<string, unknown>).message as Record<string, unknown>
-        const text = (
-          (msgBody?.conversation as string) ||
-          ((msgBody?.extendedTextMessage as Record<string, unknown>)?.text as string) ||
-          ((msgBody?.imageMessage as Record<string, unknown>)?.caption as string) || ""
-        )
-        if (!text?.trim()) continue
-        const senderName = fromMe ? "Support Team" : (((msg as Record<string, unknown>).pushName as string) || contactName)
-        if (fromMe) vendorNames.add(senderName)
+        const senderName = msg.owner ? "Support Team" : (msg.senderName || contactName)
+        if (msg.owner) vendorNames.add(senderName)
         else customerNames.add(senderName)
-        lines.push(`[${dateStr}, ${timeStr}] ${senderName}: ${text}`)
+        lines.push(`[${dateStr}, ${timeStr}] ${senderName}: ${msg.text}`)
+      }
+      if (lines.length === 0) {
+        setQrError("No text messages found for this contact.")
+        return
       }
       const participantRolesMap: Record<string, "vendor" | "customer"> = {}
       vendorNames.forEach((n) => { participantRolesMap[n] = "vendor" })
@@ -946,50 +937,35 @@ function ConnectModal({
               <div className="space-y-3">
                 <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-4">How do you want to connect?</p>
 
-                {/* Primary: File upload */}
+                {/* Primary: QR scan */}
                 <button
-                  onClick={onSelectMethodFile}
-                  className="w-full flex items-center gap-4 border-2 border-neutral-900 rounded-xl p-4 hover:bg-neutral-50 transition-all text-left group"
+                  onClick={onSelectMethodQr}
+                  className="w-full flex items-center gap-4 border-2 border-[#25D366] rounded-xl p-4 hover:bg-[#25D366]/5 transition-all text-left group"
                 >
-                  <div className="w-10 h-10 bg-neutral-900 rounded-xl flex items-center justify-center shrink-0">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                  <div className="w-10 h-10 bg-[#25D366] rounded-xl flex items-center justify-center shrink-0">
+                    <WhatsAppIcon size={20} className="text-white" />
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-semibold text-neutral-900">Upload export</p>
-                      <span className="text-[10px] font-semibold bg-neutral-900 text-white px-1.5 py-0.5 rounded-full">Recommended</span>
+                      <p className="text-sm font-semibold text-neutral-900">Scan QR code</p>
+                      <span className="text-[10px] font-semibold bg-[#25D366] text-white px-1.5 py-0.5 rounded-full">Recommended</span>
                     </div>
-                    <p className="text-xs text-neutral-400 mt-0.5">WhatsApp .txt or .zip chat export — includes group chats</p>
+                    <p className="text-xs text-neutral-400 mt-0.5">Connect your WhatsApp account — see all chats and groups instantly</p>
                   </div>
                   <svg className="text-neutral-400 group-hover:text-neutral-900 shrink-0 transition-colors" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
                 </button>
 
-                {/* Secondary: WATI API */}
+                {/* Secondary: File upload */}
                 <button
-                  onClick={onSelectMethodWa}
+                  onClick={onSelectMethodFile}
                   className="w-full flex items-center gap-4 border border-neutral-200 rounded-xl p-4 hover:border-neutral-400 hover:bg-neutral-50 transition-all text-left group"
                 >
-                  <div className="w-10 h-10 bg-[#25D366]/10 rounded-xl flex items-center justify-center shrink-0">
-                    <WhatsAppIcon size={20} className="text-[#25D366]" />
+                  <div className="w-10 h-10 bg-neutral-100 rounded-xl flex items-center justify-center shrink-0">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
                   </div>
                   <div className="flex-1">
-                    {workspace.watiEndpoint && workspace.watiToken ? (
-                      <>
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-semibold text-neutral-900">WhatsApp Business</p>
-                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-full">
-                            <span className="w-1 h-1 rounded-full bg-emerald-500" />
-                            Connected
-                          </span>
-                        </div>
-                        <p className="text-xs text-neutral-400 mt-0.5">Pull live conversations — send responses directly from Nectic</p>
-                      </>
-                    ) : (
-                      <>
-                        <p className="text-sm font-semibold text-neutral-900">Connect WhatsApp Business</p>
-                        <p className="text-xs text-neutral-400 mt-0.5">Pull live conversations via WATI — send responses directly from Nectic</p>
-                      </>
-                    )}
+                    <p className="text-sm font-semibold text-neutral-900">Upload export</p>
+                    <p className="text-xs text-neutral-400 mt-0.5">WhatsApp .txt or .zip chat export</p>
                   </div>
                   <svg className="text-neutral-300 group-hover:text-neutral-600 shrink-0 transition-colors" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
                 </button>
@@ -1303,7 +1279,7 @@ function ConnectModal({
                 {qrStatus === "error" && (
                   <div className="text-center py-10 space-y-4">
                     <p className="text-sm text-neutral-700">Bridge not available</p>
-                    <p className="text-xs text-neutral-400 leading-relaxed max-w-xs mx-auto">{qrError || "The WhatsApp bridge service is not running. Use file upload or WATI API instead."}</p>
+                    <p className="text-xs text-neutral-400 leading-relaxed max-w-xs mx-auto">{qrError || "The WhatsApp bridge service is not running. Try uploading a chat export instead."}</p>
                     <button onClick={onBackToMethod} className="text-sm text-neutral-600 hover:text-neutral-900 transition-colors border border-neutral-200 rounded-lg px-4 py-2">← Try another method</button>
                   </div>
                 )}
