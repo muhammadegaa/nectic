@@ -143,7 +143,7 @@ export default function ConceptPage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? "Failed to load messages")
-      await analyzeFromWati(data.conversation, data.participantRoles, data.messageCount, contactName)
+      await analyzeFromWati(data.conversation, data.participantRoles, data.messageCount, contactName, contact.wAid || contact.phone)
       closeConnect()
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Something went wrong"
@@ -310,7 +310,7 @@ export default function ConceptPage() {
     }
   }
 
-  const analyzeFromWati = async (conversation: string, participantRoles: ParticipantRoles, messageCount: number, contactName: string) => {
+  const analyzeFromWati = async (conversation: string, participantRoles: ParticipantRoles, messageCount: number, contactName: string, watiPhone?: string) => {
     if (!user) return
     trackEvent("wati_import_attempted", { contactName })
     try {
@@ -334,7 +334,7 @@ export default function ConceptPage() {
         analyzedAt: new Date().toISOString(),
         result: data.result as AnalysisResult,
         participantRoles,
-        context: { watiPhone: contact.wAid || contact.phone },
+        context: { watiPhone },
         shareToken,
       })
       await mergeContactBook(user.uid, participantRoles)
