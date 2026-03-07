@@ -106,7 +106,7 @@ export default function HeroSection() {
   return (
     <section className="min-h-[calc(100vh-64px)] flex items-center px-6 lg:px-8 bg-white">
       <div className="max-w-5xl mx-auto w-full pt-20 pb-12 lg:pb-16">
-        <div className="grid xl:grid-cols-[1fr_360px] gap-10 xl:gap-16 items-center">
+        <div className="grid lg:grid-cols-[1fr_340px] gap-10 lg:gap-14 items-center">
           {/* Left — copy */}
           <motion.div variants={container} initial="hidden" animate="visible">
             <motion.span
@@ -119,7 +119,7 @@ export default function HeroSection() {
 
             <motion.h1
               variants={fadeUp}
-              className="mt-6 text-4xl sm:text-5xl lg:text-[3.25rem] font-light text-neutral-900 leading-[1.1] tracking-tight"
+              className="mt-6 text-4xl sm:text-5xl lg:text-[2.9rem] font-light text-neutral-900 leading-[1.1] tracking-tight"
             >
               You find out a customer<br />
               <span className="text-neutral-400">is leaving after they stop replying.</span>
@@ -168,7 +168,7 @@ export default function HeroSection() {
           </motion.div>
 
           {/* Right — product card */}
-          <div className="hidden xl:block">
+          <div className="hidden lg:block">
             <AccountHealthCard />
           </div>
         </div>
