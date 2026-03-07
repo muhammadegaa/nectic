@@ -5,6 +5,8 @@ import { motion, useInView } from "framer-motion"
 import { collection, addDoc, serverTimestamp } from "firebase/firestore"
 import { db } from "@/infrastructure/firebase/firebase-client"
 
+const ease = [0.22, 1, 0.36, 1] as [number, number, number, number]
+
 export default function CtaSection() {
   const ref = useRef(null)
   const isInView = useInView(ref, { once: true, margin: "-80px" })
@@ -40,7 +42,7 @@ export default function CtaSection() {
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 0.55, ease }}
           >
             <p className="text-xs font-medium text-neutral-500 uppercase tracking-widest mb-5">
               Early access
@@ -72,7 +74,7 @@ export default function CtaSection() {
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.55, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 0.55, delay: 0.12, ease }}
           >
             {submitted ? (
               <div className="border border-neutral-700 rounded-xl px-6 py-7">

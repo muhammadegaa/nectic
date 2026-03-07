@@ -3,6 +3,8 @@
 import { useRef } from "react"
 import { motion, useInView } from "framer-motion"
 
+const ease = [0.22, 1, 0.36, 1] as [number, number, number, number]
+
 const tiles = [
   {
     label: "Customer in WhatsApp",
@@ -44,7 +46,7 @@ export default function GapSection() {
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.55, ease }}
           className="mb-10"
         >
           <p className="text-xs font-medium text-neutral-400 uppercase tracking-widest mb-4">
@@ -61,7 +63,7 @@ export default function GapSection() {
               key={tile.label}
               initial={{ opacity: 0, y: 20 }}
               animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.55, delay: 0.15 + i * 0.12, ease: [0.22, 1, 0.36, 1] }}
+              transition={{ duration: 0.55, delay: 0.15 + i * 0.12, ease }}
               className={`${tile.bg} px-6 py-7`}
             >
               <p className={`text-xs font-medium uppercase tracking-widest mb-5 ${tile.labelColor}`}>

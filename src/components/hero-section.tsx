@@ -4,13 +4,16 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { motion } from "framer-motion"
 
+const ease = [0.22, 1, 0.36, 1] as [number, number, number, number]
+
+const container = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.1 } },
+}
+
 const fadeUp = {
   hidden: { opacity: 0, y: 18 },
-  visible: (i = 0) => ({
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.6, delay: i * 0.1, ease: [0.22, 1, 0.36, 1] },
-  }),
+  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease } },
 }
 
 function AccountHealthCard() {
@@ -30,7 +33,7 @@ function AccountHealthCard() {
     <motion.div
       initial={{ opacity: 0, x: 32 }}
       animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.7, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: 0.7, delay: 0.5, ease }}
       className="bg-white border border-neutral-200 rounded-xl overflow-hidden shadow-[0_2px_24px_rgba(0,0,0,0.06)]"
     >
       {/* Header */}
@@ -105,12 +108,9 @@ export default function HeroSection() {
       <div className="max-w-5xl mx-auto w-full pt-20 pb-12 lg:pb-16">
         <div className="grid lg:grid-cols-[1fr_360px] gap-10 lg:gap-16 items-center">
           {/* Left — copy */}
-          <div>
+          <motion.div variants={container} initial="hidden" animate="visible">
             <motion.span
-              custom={0}
               variants={fadeUp}
-              initial="hidden"
-              animate="visible"
               className="inline-flex items-center gap-2 text-xs font-medium text-neutral-400 uppercase tracking-widest"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -118,10 +118,7 @@ export default function HeroSection() {
             </motion.span>
 
             <motion.h1
-              custom={1}
               variants={fadeUp}
-              initial="hidden"
-              animate="visible"
               className="mt-6 text-4xl sm:text-5xl lg:text-[3.2rem] font-light text-neutral-900 leading-[1.1] tracking-tight"
             >
               Your best accounts<br />
@@ -130,10 +127,7 @@ export default function HeroSection() {
             </motion.h1>
 
             <motion.p
-              custom={2}
               variants={fadeUp}
-              initial="hidden"
-              animate="visible"
               className="mt-7 text-lg text-neutral-500 max-w-md leading-relaxed"
             >
               Nectic connects to WhatsApp Business, reads your customer conversations,
@@ -141,10 +135,7 @@ export default function HeroSection() {
             </motion.p>
 
             <motion.p
-              custom={3}
               variants={fadeUp}
-              initial="hidden"
-              animate="visible"
               className="mt-3 text-base text-neutral-400 max-w-md leading-relaxed"
             >
               Health scores, competitor alerts, and a Monday briefing.
@@ -152,10 +143,7 @@ export default function HeroSection() {
             </motion.p>
 
             <motion.div
-              custom={4}
               variants={fadeUp}
-              initial="hidden"
-              animate="visible"
               className="mt-9 flex flex-col sm:flex-row gap-3"
             >
               <Link
@@ -173,15 +161,12 @@ export default function HeroSection() {
             </motion.div>
 
             <motion.p
-              custom={5}
               variants={fadeUp}
-              initial="hidden"
-              animate="visible"
               className="mt-5 text-xs text-neutral-400"
             >
               Requires WhatsApp Business API via WATI. No CRM needed.
             </motion.p>
-          </div>
+          </motion.div>
 
           {/* Right — product card */}
           <div className="hidden lg:block">
@@ -193,7 +178,7 @@ export default function HeroSection() {
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 1.4, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.6, delay: 1.4, ease }}
           className="mt-14 pt-10 border-t border-neutral-100 grid grid-cols-1 sm:grid-cols-3 gap-8"
         >
           {[

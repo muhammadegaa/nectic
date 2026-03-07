@@ -3,6 +3,8 @@
 import { useRef, useEffect, useState } from "react"
 import { motion, useInView } from "framer-motion"
 
+const ease = [0.22, 1, 0.36, 1] as [number, number, number, number]
+
 const urgentAccounts = [
   {
     name: "PT Mandiri Teknologi",
@@ -50,7 +52,7 @@ function DigestRow({
     <motion.div
       initial={{ opacity: 0, x: -8 }}
       animate={isInView ? { opacity: 1, x: 0 } : {}}
-      transition={{ duration: 0.45, delay: 0.5 + index * 0.15, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: 0.45, delay: 0.5 + index * 0.15, ease }}
       className="border-b border-neutral-100 last:border-0 px-5 py-4"
     >
       <div className="flex items-start justify-between gap-3 mb-2">
@@ -97,7 +99,7 @@ export default function WeeklyBrief() {
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 0.55, ease }}
             className="md:sticky md:top-24"
           >
             <p className="text-xs font-medium text-neutral-400 uppercase tracking-widest mb-4">
@@ -148,7 +150,7 @@ export default function WeeklyBrief() {
           <motion.div
             initial={{ opacity: 0, x: 24 }}
             animate={isInView ? { opacity: 1, x: 0 } : {}}
-            transition={{ duration: 0.6, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 0.6, delay: 0.15, ease }}
           >
             <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden shadow-sm">
               {/* Email header */}
@@ -194,7 +196,7 @@ export default function WeeklyBrief() {
                     transition={{
                       duration: 0.45,
                       delay: 0.5 + (urgentAccounts.length + i) * 0.15,
-                      ease: [0.22, 1, 0.36, 1],
+                      ease,
                     }}
                     className="px-5 py-4"
                   >

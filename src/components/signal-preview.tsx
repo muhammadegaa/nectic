@@ -3,6 +3,8 @@
 import { useRef } from "react"
 import { motion, useInView } from "framer-motion"
 
+const ease = [0.22, 1, 0.36, 1] as [number, number, number, number]
+
 function RiskBadge({ level }: { level: "critical" | "high" | "medium" | "low" }) {
   const styles = {
     critical: "bg-red-50 text-red-700 border-red-200",
@@ -213,7 +215,7 @@ function FeatureSection({ feature }: { feature: FeatureRow }) {
       <motion.div
         initial={{ opacity: 0, x: feature.reversed ? 24 : -24 }}
         animate={isInView ? { opacity: 1, x: 0 } : {}}
-        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+        transition={{ duration: 0.6, ease }}
       >
         <p className="text-xs font-medium text-neutral-400 uppercase tracking-widest mb-4">
           {feature.label}
@@ -226,7 +228,7 @@ function FeatureSection({ feature }: { feature: FeatureRow }) {
       <motion.div
         initial={{ opacity: 0, x: feature.reversed ? -24 : 24 }}
         animate={isInView ? { opacity: 1, x: 0 } : {}}
-        transition={{ duration: 0.6, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+        transition={{ duration: 0.6, delay: 0.1, ease }}
       >
         {feature.mockup}
       </motion.div>
