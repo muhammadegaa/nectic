@@ -786,7 +786,7 @@ function ConnectModal({
   })
 
   // ─── QR bridge state ─────────────────────────────────────────────────────────
-  type QrStatus = "idle" | "starting" | "pending" | "connected" | "error"
+  type QrStatus = "idle" | "starting" | "pending" | "syncing" | "connected" | "error"
   interface QrContact { id: string; name: string; isGroup: boolean; participantCount?: number }
   const [qrStatus, setQrStatus] = useState<QrStatus>("idle")
   const [qrImage, setQrImage] = useState<string | null>(null)
@@ -819,8 +819,13 @@ function ConnectModal({
         setQrError(data.error)
         setQrStatus("error")
       } else if (data.status === "connected") {
-        setQrStatus("connected")
-        await loadQrContacts()
+        setQrImage(null)
+        if (data.historyReady) {
+          setQrStatus("connected")
+          await loadQrContacts()
+        } else {
+          setQrStatus("syncing")
+        }
       } else if (data.qr) {
         setQrImage(data.qr)
         setQrStatus("pending")
@@ -848,9 +853,13 @@ function ConnectModal({
           if (data.status === "connected") {
             clearInterval(qrPollRef.current!)
             qrPollRef.current = null
-            setQrStatus("connected")
             setQrImage(null)
-            await loadQrContacts()
+            if (data.historyReady) {
+              setQrStatus("connected")
+              await loadQrContacts()
+            } else {
+              setQrStatus("syncing")
+            }
           } else if (data.qr && data.qr !== qrImage) {
             setQrImage(data.qr)
           }
@@ -860,6 +869,23 @@ function ConnectModal({
     return () => { if (qrPollRef.current) { clearInterval(qrPollRef.current); qrPollRef.current = null } }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stage, qrStatus])
+
+  // Poll while syncing history
+  useEffect(() => {
+    if (qrStatus !== "syncing") return
+    const interval = setInterval(async () => {
+      try {
+        const data = await callBridge({ action: "status" })
+        if (data.historyReady) {
+          clearInterval(interval)
+          setQrStatus("connected")
+          await loadQrContacts()
+        }
+      } catch {}
+    }, 1500)
+    return () => clearInterval(interval)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [qrStatus])
 
   const handleQrContactSelect = async (contact: QrContact) => {
     const contactName = contact.name
@@ -927,7 +953,7 @@ function ConnectModal({
                   {stage === "analyzing" && "Analysing…"}
                   {stage === "error" && "Something went wrong"}
                   {stage === "wa" && (waSubStage === "credentials" ? "Enter your API credentials" : waSubStage === "loading" ? "Connecting…" : waSubStage === "context" ? "Confirm account details" : "Select a contact")}
-                  {stage === "qr" && (qrStatus === "pending" ? "Scan with your phone" : qrStatus === "connected" ? "Select a contact or group" : qrStatus === "starting" ? "Starting…" : "Connect via WhatsApp")}
+                  {stage === "qr" && (qrStatus === "pending" ? "Scan with your phone" : qrStatus === "connected" ? "Select a contact or group" : qrStatus === "syncing" ? "Syncing chats…" : qrStatus === "starting" ? "Starting…" : "Connect via WhatsApp")}
                 </p>
               </div>
             </div>
@@ -1233,6 +1259,14 @@ function ConnectModal({
                       <p className="text-xs text-neutral-400">Waiting for scan…</p>
                     </div>
                     <button onClick={onBackToMethod} className="text-xs text-neutral-400 hover:text-neutral-600 transition-colors">← Back</button>
+                  </div>
+                )}
+
+                {qrStatus === "syncing" && (
+                  <div className="flex flex-col items-center justify-center py-16 gap-3">
+                    <div className="w-5 h-5 border-2 border-[#25D366]/30 border-t-[#25D366] rounded-full animate-spin" />
+                    <p className="text-sm font-semibold text-neutral-800">Connected</p>
+                    <p className="text-xs text-neutral-400 text-center max-w-xs">Syncing your chats — this takes a few seconds on first connect…</p>
                   </div>
                 )}
 
