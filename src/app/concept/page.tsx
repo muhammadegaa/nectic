@@ -180,8 +180,7 @@ export default function ConceptPage() {
   }
 
   const handleFile = useCallback(async (file: File) => {
-    const isValid = file.name.endsWith(".txt") || file.name.endsWith(".zip") ||
-      file.type === "text/plain" || file.type === "application/zip" || file.type === "application/x-zip-compressed"
+    const isValid = file.name.endsWith(".txt") || file.name.endsWith(".zip")
     if (!isValid) {
       setUploadError("Please upload a WhatsApp .txt export or .zip folder.")
       setConnectStage("error")
@@ -190,8 +189,8 @@ export default function ConceptPage() {
     setFileName(file.name)
     try {
       const p = await parseWhatsAppFile(file)
-      if (p.messages.length < 5) {
-        setUploadError("Couldn't parse this file. Make sure it's a WhatsApp chat export.")
+      if (p.messages.length < 1) {
+        setUploadError("Couldn't parse this file. Make sure it's a WhatsApp chat export (.txt or .zip).")
         setConnectStage("error")
         return
       }
