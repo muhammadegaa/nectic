@@ -396,6 +396,7 @@ export default function AccountPage() {
               console.error("Context re-analysis failed:", err)
             }
           }}
+        />
       </div>
 
     </div>
