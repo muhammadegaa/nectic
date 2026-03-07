@@ -34,7 +34,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "OPENROUTER_API_KEY not configured" }, { status: 503 })
     }
 
-    const productContext = workspace?.productDescription
+    const productContext = workspace?.productStory
+      ? `Company: ${workspace.productStory}`
+      : workspace?.productDescription
       ? `Your product: ${workspace.productDescription}`
       : ""
 

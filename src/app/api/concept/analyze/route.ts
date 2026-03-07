@@ -17,6 +17,7 @@ interface WorkspaceContext {
   roadmapFocus?: string
   knownIssues?: string
   notificationEmail?: string
+  productStory?: string
 }
 
 const SYSTEM_PROMPT = `You are a B2B SaaS customer intelligence analyst specialising in Southeast Asia markets.
@@ -51,6 +52,7 @@ function buildParticipantBlock(roles: ParticipantRoles): string {
 function buildWorkspaceBlock(ws?: WorkspaceContext): string {
   if (!ws) return ""
   const lines = [
+    ws.productStory && `Company story: ${ws.productStory}`,
     ws.productDescription && `Product: ${ws.productDescription}`,
     ws.featureAreas && `Feature areas: ${ws.featureAreas}`,
     ws.roadmapFocus && `Roadmap this quarter: ${ws.roadmapFocus}`,

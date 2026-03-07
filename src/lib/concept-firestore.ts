@@ -34,11 +34,17 @@ export interface WorkspaceContext {
   roadmapFocus?: string
   knownIssues?: string
   updatedAt?: string
+  productStory?: string  // one sentence: "We help X do Y" — injected into all drafts
   // WATI BSP integration
   watiEndpoint?: string
   watiToken?: string
   // Notifications
   notificationEmail?: string
+}
+
+export interface HealthHistoryEntry {
+  score: number
+  date: string // ISO string
 }
 
 export interface StoredAccount {
@@ -52,6 +58,8 @@ export interface StoredAccount {
   shareToken: string
   supplementalContext?: string
   signalActions?: Record<string, SignalAction>
+  healthHistory?: HealthHistoryEntry[]
+  lastAlertSentAt?: string // ISO string — written by /api/concept/notify on alert send
 }
 
 export type { SignalActionStatus, SignalAction } from "@/lib/signal-utils"
@@ -123,7 +131,12 @@ export async function saveAccount(
   data: Omit<StoredAccount, "id">
 ): Promise<StoredAccount> {
   const ref = doc(accountsRef(uid))
-  await setDoc(ref, { ...data, _createdAt: serverTimestamp() })
+  const initialHistory: HealthHistoryEntry[] = [{
+    score: data.result.healthScore ?? 5,
+    date: data.analyzedAt,
+  }]
+  const withHistory = { ...data, healthHistory: initialHistory }
+  await setDoc(ref, { ...withHistory, _createdAt: serverTimestamp() })
   // Mirror shareToken → sharedAccounts for lookup without uid
   await setDoc(doc(db, "sharedAccounts", data.shareToken), {
     uid,
@@ -131,7 +144,7 @@ export async function saveAccount(
     accountName: data.result.accountName,
     createdAt: serverTimestamp(),
   })
-  return { id: ref.id, ...data }
+  return { id: ref.id, ...withHistory }
 }
 
 export async function updateAccount(
@@ -140,7 +153,22 @@ export async function updateAccount(
   data: Partial<Omit<StoredAccount, "id">>
 ): Promise<void> {
   const ref = doc(accountsRef(uid), id)
-  await setDoc(ref, { ...data, _updatedAt: serverTimestamp() }, { merge: true })
+  // When result is being updated, append to healthHistory
+  if (data.result?.healthScore !== undefined) {
+    const existing = await getDoc(ref)
+    const prev = existing.exists() ? (existing.data().healthHistory as HealthHistoryEntry[] | undefined) ?? [] : []
+    const newEntry: HealthHistoryEntry = {
+      score: data.result.healthScore,
+      date: new Date().toISOString(),
+    }
+    // Avoid duplicate entries on same day
+    const today = newEntry.date.slice(0, 10)
+    const filtered = prev.filter((h) => h.date.slice(0, 10) !== today)
+    const updatedHistory = [...filtered, newEntry].slice(-20) // keep last 20 data points
+    await setDoc(ref, { ...data, healthHistory: updatedHistory, _updatedAt: serverTimestamp() }, { merge: true })
+  } else {
+    await setDoc(ref, { ...data, _updatedAt: serverTimestamp() }, { merge: true })
+  }
 }
 
 export async function getAccount(uid: string, id: string): Promise<StoredAccount | null> {

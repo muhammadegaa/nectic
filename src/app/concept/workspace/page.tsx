@@ -98,6 +98,7 @@ export default function WorkspacePage() {
     roadmapFocus: "",
     knownIssues: "",
     notificationEmail: "",
+    productStory: "",
   })
   const [workspaceUpdatedAt, setWorkspaceUpdatedAt] = useState<string | undefined>()
   const [loading, setLoading] = useState(true)
@@ -120,6 +121,7 @@ export default function WorkspacePage() {
         roadmapFocus: ws.roadmapFocus ?? "",
         knownIssues: ws.knownIssues ?? "",
         notificationEmail: ws.notificationEmail ?? "",
+        productStory: ws.productStory ?? "",
       }
       setForm(loaded)
       latestForm.current = loaded
@@ -320,6 +322,33 @@ export default function WorkspacePage() {
               <div className="flex items-center gap-2 mb-3">
                 <h2 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Alerts &amp; Digest</h2>
                 <div className="flex-1 h-px bg-neutral-200" />
+              </div>
+
+              {/* Product story — one sentence injected into all AI drafts */}
+              <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden mb-4">
+                <div className="flex items-center gap-3 px-5 pt-4 pb-3 border-b border-neutral-100">
+                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors ${form.productStory?.trim() ? "bg-neutral-900 text-white" : "bg-neutral-100 text-neutral-400"}`}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-xs font-medium text-neutral-400 uppercase tracking-wide">Company story</span>
+                    <p className="text-sm font-semibold text-neutral-800 leading-tight">One-line pitch</p>
+                  </div>
+                  <div className="shrink-0 hidden sm:flex items-center gap-1 text-[10px] text-neutral-400 bg-neutral-50 border border-neutral-100 px-2 py-1 rounded-md">
+                    <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M8 1l2 5h5l-4 3 1.5 5L8 11l-4.5 3L5 9 1 6h5z" fill="currentColor" opacity="0.5"/></svg>
+                    <span>Injected into every AI draft</span>
+                  </div>
+                </div>
+                <div className="px-5 pt-3 pb-4">
+                  <p className="text-xs text-neutral-400 mb-2 leading-relaxed">One sentence. "We help [who] do [what]." This is injected into every WhatsApp draft so responses sound like they come from your company.</p>
+                  <input
+                    type="text"
+                    value={form.productStory ?? ""}
+                    onChange={(e) => handleChange("productStory" as keyof WorkspaceContext, e.target.value)}
+                    placeholder="e.g. We help Indonesian HR teams automate payroll and attendance for SMEs."
+                    className="w-full text-sm border border-neutral-200 rounded-lg px-4 py-2.5 text-neutral-700 placeholder:text-neutral-300 focus:outline-none focus:border-neutral-400 bg-neutral-50 transition-colors"
+                  />
+                </div>
               </div>
 
               <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">

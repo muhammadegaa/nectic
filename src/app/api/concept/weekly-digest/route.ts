@@ -130,16 +130,20 @@ function buildDigestEmail({
         </tr>`
 
   const savedSection = saved.length > 0 ? `
-        <!-- Saved accounts -->
+        <!-- Saved accounts — first section, this is the win to celebrate -->
         <tr>
           <td style="padding:24px 24px 0;">
             <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px 20px;">
-              <p style="margin:0 0 10px;font-size:11px;font-weight:700;color:#16a34a;letter-spacing:1px;text-transform:uppercase;">Accounts recovered this month</p>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                <p style="margin:0;font-size:11px;font-weight:700;color:#16a34a;letter-spacing:1px;text-transform:uppercase;">Accounts saved this week</p>
+                ${arrProtected > 0 ? `<p style="margin:0;font-size:13px;font-weight:700;color:#16a34a;">$${arrProtected.toLocaleString()} ARR protected</p>` : ""}
+              </div>
               ${saved.map((a) => `
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid #d1fae5;">
                 <a href="${baseUrl}/concept/account/${a.id}" style="font-size:13px;font-weight:600;color:#171717;text-decoration:none;">${a.name}</a>
-                <span style="font-size:12px;color:#16a34a;font-weight:600;">↑ ${a.changesSince?.healthDelta ?? 0} health</span>
+                <span style="font-size:12px;color:#16a34a;font-weight:600;">↑ ${a.changesSince?.healthDelta ?? 0} health · signal actioned</span>
               </div>`).join("")}
+              <p style="margin:8px 0 0;font-size:11px;color:#16a34a;">Early action prevented churn. Nectic flagged ${saved.length} account${saved.length !== 1 ? "s" : ""} before they became critical.</p>
             </div>
           </td>
         </tr>` : ""
@@ -162,9 +166,9 @@ function buildDigestEmail({
           </td>
         </tr>
 
+        ${savedSection}
         ${urgentSection}
         ${portfolioSection}
-        ${savedSection}
 
         <!-- CTA -->
         <tr>

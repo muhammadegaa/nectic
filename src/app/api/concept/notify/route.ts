@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { getAdminDb } from "@/infrastructure/firebase/firebase-server"
 
 export const maxDuration = 30
 
@@ -17,6 +18,7 @@ export async function POST(req: NextRequest) {
       isCompetitorAlert,
       renewalMonth,
       email,
+      uid,
     } = await req.json() as {
       accountName: string
       accountId?: string
@@ -30,6 +32,7 @@ export async function POST(req: NextRequest) {
       isCompetitorAlert?: boolean
       renewalMonth?: string
       email: string
+      uid?: string
     }
 
     if (!accountName || !email) {
@@ -182,6 +185,17 @@ export async function POST(req: NextRequest) {
       const err = await res.text()
       console.error("Resend error:", err)
       return NextResponse.json({ error: "Failed to send email" }, { status: 502 })
+    }
+
+    // Write lastAlertSentAt to account for the "Alert sent X ago" indicator in the Queue
+    if (uid && accountId) {
+      try {
+        const adminDb = getAdminDb()
+        await adminDb
+          .collection("users").doc(uid)
+          .collection("accounts").doc(accountId)
+          .set({ lastAlertSentAt: new Date().toISOString() }, { merge: true })
+      } catch { /* non-fatal */ }
     }
 
     return NextResponse.json({ sent: true }, { status: 200 })

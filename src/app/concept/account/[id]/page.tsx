@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import LogoIcon from "@/components/logo-icon"
+import { HealthSparkline } from "@/components/health-sparkline"
 import { useAuth } from "@/contexts/auth-context"
 import { getAccount, deleteAccount, updateAccount, prefillFromContactBook, mergeContactBook, saveSignalAction, signalKey, getWorkspace, type StoredAccount, type ParticipantRole, type ParticipantRoles, type SignalAction, type SignalActionStatus, type WorkspaceContext } from "@/lib/concept-firestore"
 import { trackEvent } from "@/lib/posthog"
@@ -478,6 +479,12 @@ function AnalysisReport({
             <span className={`mt-2 inline-block text-xs font-semibold px-3 py-1 rounded-full border ${risk.bg} ${risk.text} ${risk.border}`}>
               {risk.label}
             </span>
+            {account.healthHistory && account.healthHistory.length >= 2 && (
+              <div className="mt-3 flex flex-col items-center gap-1">
+                <HealthSparkline history={account.healthHistory} width={80} height={28} />
+                <p className="text-[10px] text-neutral-400">health trend</p>
+              </div>
+            )}
           </div>
         </div>
         <div className="mt-5 flex items-center gap-4 flex-wrap pt-4 border-t border-black/5 text-xs">

@@ -6,6 +6,7 @@ import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
 import { toast } from "sonner"
 import ConceptNav from "@/components/concept-nav"
+import { HealthSparkline } from "@/components/health-sparkline"
 import { useAuth } from "@/contexts/auth-context"
 import {
   getAccounts,
@@ -38,6 +39,16 @@ interface QueueSignal {
 }
 
 const riskOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 }
+
+function timeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime()
+  const m = Math.floor(diff / 60000)
+  if (m < 1) return "just now"
+  if (m < 60) return `${m}m ago`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h}h ago`
+  return `${Math.floor(h / 24)}d ago`
+}
 
 const riskDot: Record<string, string> = {
   critical: "bg-red-500",
@@ -344,6 +355,9 @@ function QueueCard({
   const [copyDone, setCopyDone] = useState(false)
   const [sending, setSending] = useState(false)
   const [sendDone, setSendDone] = useState(false)
+  const [askQuestion, setAskQuestion] = useState("")
+  const [askAnswer, setAskAnswer] = useState("")
+  const [askLoading, setAskLoading] = useState(false)
 
   // Pick up auto-generated draft when it arrives via polling
   useEffect(() => {
@@ -459,6 +473,14 @@ function QueueCard({
           {account.result.accountName}
         </Link>
         <div className="flex items-center gap-2 shrink-0">
+          {account.lastAlertSentAt && (
+            <span className="hidden sm:inline text-[10px] text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded-full">
+              Alert {timeAgo(account.lastAlertSentAt)}
+            </span>
+          )}
+          {account.healthHistory && account.healthHistory.length >= 2 && (
+            <HealthSparkline history={account.healthHistory} width={56} height={20} />
+          )}
           {(risk === "critical" || risk === "high") && (
             <span className="text-xs font-semibold text-red-600 tabular-nums hidden sm:inline">
               {formatARR(arrAtRisk)} at risk
@@ -602,6 +624,59 @@ function QueueCard({
             >
               +{extraCount} more signal{extraCount !== 1 ? "s" : ""} →
             </Link>
+          )}
+        </div>
+
+        {/* Ask Nectic — single Q&A, grounded in this account's analysis */}
+        <div className="mt-4 border-t border-neutral-100 pt-3">
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault()
+              if (!askQuestion.trim() || askLoading) return
+              setAskLoading(true)
+              setAskAnswer("")
+              try {
+                const res = await fetch("/api/concept/ask", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    question: askQuestion,
+                    result: account.result,
+                    accountName: account.result.accountName,
+                  }),
+                })
+                const data = await res.json()
+                if (!res.ok) throw new Error(data.error ?? "Failed")
+                setAskAnswer(data.answer)
+              } catch {
+                setAskAnswer("Could not answer. Try again.")
+              } finally {
+                setAskLoading(false)
+              }
+            }}
+            className="flex items-center gap-2"
+          >
+            <input
+              type="text"
+              value={askQuestion}
+              onChange={(e) => { setAskQuestion(e.target.value); setAskAnswer("") }}
+              placeholder="Ask about this account…"
+              className="flex-1 text-xs border border-neutral-200 rounded-lg px-3 py-2 text-neutral-700 placeholder:text-neutral-400 focus:outline-none focus:border-neutral-400 bg-neutral-50 transition-colors"
+            />
+            <button
+              type="submit"
+              disabled={!askQuestion.trim() || askLoading}
+              className="text-xs font-medium px-3 py-2 bg-neutral-100 text-neutral-600 rounded-lg hover:bg-neutral-200 transition-colors disabled:opacity-40 shrink-0"
+            >
+              {askLoading ? (
+                <span className="w-3 h-3 rounded-full border border-neutral-400 border-t-neutral-700 animate-spin inline-block" />
+              ) : "Ask"}
+            </button>
+          </form>
+          {askAnswer && (
+            <div className="mt-2 text-xs text-neutral-600 leading-relaxed bg-neutral-50 border border-neutral-100 rounded-lg px-3 py-2.5">
+              {askAnswer}
+            </div>
           )}
         </div>
       </div>

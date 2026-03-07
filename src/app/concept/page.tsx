@@ -344,7 +344,9 @@ export default function ConceptPage() {
   const riskOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 }
   const sortedAccounts = [...accounts].sort((a, b) => (riskOrder[a.result.riskLevel] ?? 3) - (riskOrder[b.result.riskLevel] ?? 3))
   const aggregated = aggregateSignals(accounts)
-  const atRisk = accounts.filter((a) => a.result.riskLevel === "high" || a.result.riskLevel === "critical").length
+  const atRiskAccounts = accounts.filter((a) => a.result.riskLevel === "high" || a.result.riskLevel === "critical")
+  const atRisk = atRiskAccounts.length
+  const totalArrAtRisk = atRiskAccounts.reduce((sum, a) => sum + getArrAtRisk(a), 0)
   const sharedPatterns = aggregated.filter((s) => s.accountCount > 1)
   const hasWorkspace = !!(workspace.productDescription || workspace.featureAreas || workspace.roadmapFocus || workspace.knownIssues)
 
@@ -383,6 +385,22 @@ export default function ConceptPage() {
       />
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8 pb-24 sm:pb-8">
+        {/* Nectic is watching strip — visible when user has accounts */}
+        {!loadingAccounts && accounts.length > 0 && (
+          <div className="flex items-center justify-between bg-neutral-100 border border-neutral-200 rounded-lg px-4 py-2.5 mb-5 text-xs text-neutral-500">
+            <div className="flex items-center gap-2">
+              <span className="flex h-1.5 w-1.5 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
+              </span>
+              <span className="font-medium text-neutral-600">Nectic monitors {accounts.length} account{accounts.length !== 1 ? "s" : ""} daily</span>
+              <span className="hidden sm:inline text-neutral-400">· Next check tomorrow 9am UTC</span>
+            </div>
+            <Link href="/concept/board" className="font-medium text-neutral-600 hover:text-neutral-900 transition-colors">
+              Open queue →
+            </Link>
+          </div>
+        )}
         {loadingAccounts ? (
           <div className="flex items-center justify-center py-24">
             <div className="w-5 h-5 border-2 border-neutral-300 border-t-neutral-900 rounded-full animate-spin" />
@@ -450,7 +468,7 @@ export default function ConceptPage() {
                 )}
 
                 {/* Revenue at Risk — shown when accounts are at risk */}
-                {atRisk > 0 && <RevenueAtRisk atRiskCount={atRisk} savedCount={savedThisMonth} topAccountId={sortedAccounts[0]?.id} topAccountName={sortedAccounts[0]?.result.accountName} />}
+                {atRisk > 0 && <RevenueAtRisk atRiskCount={atRisk} savedCount={savedThisMonth} topAccountId={sortedAccounts[0]?.id} topAccountName={sortedAccounts[0]?.result.accountName} actualArrAtRisk={totalArrAtRisk} />}
 
                 {/* Workspace setup nudge */}
                 {!hasWorkspace && (
@@ -988,7 +1006,9 @@ function AccountCard({ account, onDelete, confirmingDelete, onConfirmDelete, onC
           <span className="text-neutral-200">·</span>
           <span>{account.result.riskSignals?.length ?? 0} risk signals</span>
           <span className="text-neutral-200">·</span>
-          <span>{timeAgo(account.updatedAt ?? account.analyzedAt)}</span>
+          <span title={`Analysis from ${new Date(account.updatedAt ?? account.analyzedAt).toLocaleDateString()}`}>
+            Last checked {timeAgo(account.updatedAt ?? account.analyzedAt)}
+          </span>
           {account.context?.industry && (
             <><span className="text-neutral-200">·</span><span className="capitalize">{account.context.industry}</span></>
           )}
@@ -1077,24 +1097,27 @@ const ACV_PRESETS = [
   { label: "$50k", value: 50000 },
 ]
 
-function RevenueAtRisk({ atRiskCount, savedCount, topAccountId, topAccountName }: {
+function RevenueAtRisk({ atRiskCount, savedCount, topAccountId, topAccountName, actualArrAtRisk }: {
   atRiskCount: number
   savedCount: number
   topAccountId?: string
   topAccountName?: string
+  actualArrAtRisk?: number
 }) {
   const [acv, setAcv] = useState(10000)
   const [customAcv, setCustomAcv] = useState("")
   const [showCustom, setShowCustom] = useState(false)
 
+  // Use real per-account ARR if available, otherwise fall back to count × ACV picker
+  const usingRealArr = actualArrAtRisk !== undefined && actualArrAtRisk > 0
   const effectiveAcv = showCustom ? (parseInt(customAcv.replace(/\D/g, "")) || 0) : acv
-  const atRiskArr = atRiskCount * effectiveAcv
+  const atRiskArr = usingRealArr ? actualArrAtRisk : atRiskCount * effectiveAcv
   const earlyRecovery = Math.round(atRiskArr * 0.40)
   const reactiveRecovery = Math.round(atRiskArr * 0.10)
   const opportunityCost = earlyRecovery - reactiveRecovery
-  const earlyPct = Math.round((earlyRecovery / atRiskArr) * 100)
-  const reactivePct = Math.round((reactiveRecovery / atRiskArr) * 100)
-  const arrProtected = savedCount * effectiveAcv
+  const earlyPct = atRiskArr > 0 ? Math.round((earlyRecovery / atRiskArr) * 100) : 40
+  const reactivePct = atRiskArr > 0 ? Math.round((reactiveRecovery / atRiskArr) * 100) : 10
+  const arrProtected = savedCount * (usingRealArr ? Math.round(atRiskArr / atRiskCount) : effectiveAcv)
 
   return (
     <div className="rounded-xl border border-neutral-200 bg-white overflow-hidden shadow-sm">
@@ -1122,7 +1145,8 @@ function RevenueAtRisk({ atRiskCount, savedCount, topAccountId, topAccountName }
       </div>
 
       <div className="px-5 py-4">
-        {/* ACV selector */}
+        {/* ACV selector — hidden when using real per-account ARR */}
+        {!usingRealArr && (
         <div className="flex items-center gap-2 mb-4 flex-wrap">
           <span className="text-xs text-neutral-500 font-medium mr-1">ACV:</span>
           {ACV_PRESETS.map((p) => (
@@ -1163,6 +1187,10 @@ function RevenueAtRisk({ atRiskCount, savedCount, topAccountId, topAccountName }
             </div>
           )}
         </div>
+        )}
+        {usingRealArr && (
+          <p className="text-[11px] text-emerald-600 font-medium mb-3">Using real ACV from account data</p>
+        )}
 
         {/* Primary metric */}
         <div className="flex items-end justify-between gap-4 mb-4">
