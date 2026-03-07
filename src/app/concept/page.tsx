@@ -17,6 +17,8 @@ import {
   getWorkspace,
   saveWorkspace,
   isOnboardingComplete,
+  saveSignalAction,
+  signalKey,
   type StoredAccount,
   type AccountContext,
   type ParticipantRole,
@@ -260,7 +262,44 @@ export default function ConceptPage() {
     setParticipantRoles((prev) => ({ ...prev, [name]: role }))
   }
 
-  const analyze = async () => {
+  // Fire-and-forget: auto-generate drafts for critical/high risk signals immediately after analysis
+  const autoDraftRiskSignals = async (uid: string, accountId: string, result: AnalysisResult) => {
+    const signalsToAuto = (result.riskSignals ?? []).filter(
+      (_, i) => i < 3 && (result.riskLevel === "critical" || result.riskLevel === "high")
+    )
+    if (!signalsToAuto.length) return
+    const drafts = await Promise.allSettled(
+      signalsToAuto.map(async (signal) => {
+        const res = await fetch("/api/concept/draft-response", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            signalTitle: signal.title ?? signal.explanation?.slice(0, 80) ?? "Risk signal",
+            signalExplanation: signal.explanation,
+            quote: signal.quote,
+            signalCategory: "risk",
+            accountName: result.accountName,
+            workspace,
+          }),
+        })
+        if (!res.ok) return null
+        const data = await res.json()
+        return { signal, draft: data.draft as string }
+      })
+    )
+    await Promise.allSettled(
+      drafts.map(async (r) => {
+        if (r.status !== "fulfilled" || !r.value) return
+        const { signal, draft } = r.value
+        const key = signalKey("risk", signal.title ?? signal.explanation?.slice(0, 80) ?? "risk-signal")
+        await saveSignalAction(uid, accountId, key, {
+          status: "open",
+          draftResponse: draft,
+          updatedAt: new Date().toISOString(),
+        })
+      })
+    )
+  }
     if (!parsed || !user) return
     setConnectStage("analyzing")
     setUploadError("")
@@ -290,7 +329,7 @@ export default function ConceptPage() {
       if (!res.ok) throw new Error(data.error || "Analysis failed")
 
       const shareToken = crypto.randomUUID()
-      await saveAccount(user.uid, {
+      const saved = await saveAccount(user.uid, {
         fileName,
         analyzedAt: new Date().toISOString(),
         result: data.result as AnalysisResult,
@@ -299,6 +338,8 @@ export default function ConceptPage() {
         shareToken,
       })
       await mergeContactBook(user.uid, participantRoles)
+      // Auto-draft responses for critical/high risk signals immediately — no CS action required to unblock
+      autoDraftRiskSignals(user.uid, saved.id, data.result as AnalysisResult).catch(() => {})
 
       await refreshAccounts()
       trackEvent("analysis_completed", {
@@ -334,7 +375,7 @@ export default function ConceptPage() {
       if (!res.ok) throw new Error(data.error || "Analysis failed")
 
       const shareToken = crypto.randomUUID()
-      await saveAccount(user.uid, {
+      const savedWati = await saveAccount(user.uid, {
         fileName: `WATI: ${contactName}`,
         analyzedAt: new Date().toISOString(),
         result: data.result as AnalysisResult,
@@ -348,6 +389,7 @@ export default function ConceptPage() {
         shareToken,
       })
       await mergeContactBook(user.uid, participantRoles)
+      autoDraftRiskSignals(user.uid, savedWati.id, data.result as AnalysisResult).catch(() => {})
       await refreshAccounts()
       trackEvent("wati_import_completed", {
         riskLevel: (data.result as AnalysisResult).riskLevel,
@@ -1627,6 +1669,9 @@ function AccountCard({ account, onDelete, confirmingDelete, onConfirmDelete, onC
   const acv = account.context?.annualValue ?? ARR_BY_TIER_CARD[account.context?.contractTier ?? ""] ?? 12000
   const arrAtRisk = Math.round(acv * (RISK_EXPOSURE_CARD[account.result.riskLevel] ?? 0.1))
   const showArrAtRisk = isCritical || isHigh
+
+  const daysSinceUpdate = Math.floor((Date.now() - new Date(account.updatedAt ?? account.analyzedAt).getTime()) / (1000 * 60 * 60 * 24))
+  const isStale = daysSinceUpdate >= 14 && (isCritical || isHigh)
   const scoreBarColor = isCritical ? "bg-red-500" : isHigh ? "bg-orange-400" : account.result.riskLevel === "medium" ? "bg-amber-400" : "bg-emerald-500"
 
   const healthDelta = changesSince?.healthDelta ?? 0
@@ -1649,6 +1694,11 @@ function AccountCard({ account, onDelete, confirmingDelete, onConfirmDelete, onC
               {competitors.length > 0 && (
                 <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-orange-50 text-orange-700 border border-orange-200">
                   ⚡ {competitors[0]}
+                </span>
+              )}
+              {isStale && (
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-500 border border-neutral-200" title={`Last analysed ${daysSinceUpdate} days ago — re-analyse to get current picture`}>
+                  {daysSinceUpdate}d stale
                 </span>
               )}
             </div>

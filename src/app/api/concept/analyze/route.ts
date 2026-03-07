@@ -207,7 +207,7 @@ export async function POST(req: NextRequest) {
         "X-Title": "Nectic - WhatsApp Signal Extractor",
       },
       body: JSON.stringify({
-        model: "anthropic/claude-haiku-4-5",
+        model: "anthropic/claude-sonnet-4.6",
         temperature: 0.2,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
@@ -267,6 +267,7 @@ export async function POST(req: NextRequest) {
             signalCount: (result.riskSignals?.length ?? 0) + (result.productSignals?.length ?? 0),
             topSignalTitle: result.riskSignals?.[0]?.title ?? result.riskSignals?.[0]?.explanation?.slice(0, 80),
             topSignalQuote: result.riskSignals?.[0]?.quote,
+            topSignalExplanation: result.riskSignals?.[0]?.explanation,
             email: workspace.notificationEmail,
           }),
         }).catch(() => {})

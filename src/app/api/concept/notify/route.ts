@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 
-export const maxDuration = 15
+export const maxDuration = 30
 
 export async function POST(req: NextRequest) {
   try {
@@ -11,6 +11,8 @@ export async function POST(req: NextRequest) {
       signalCount,
       topSignalTitle,
       topSignalQuote,
+      topSignalExplanation,
+      draftResponse,
       competitorNames,
       isCompetitorAlert,
       renewalMonth,
@@ -22,6 +24,8 @@ export async function POST(req: NextRequest) {
       signalCount: number
       topSignalTitle?: string
       topSignalQuote?: string
+      topSignalExplanation?: string
+      draftResponse?: string
       competitorNames?: string[]
       isCompetitorAlert?: boolean
       renewalMonth?: string
@@ -32,7 +36,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "accountName and email are required" }, { status: 400 })
     }
 
-    // Competitor alerts bypass the riskLevel check
     if (!isCompetitorAlert && riskLevel !== "critical" && riskLevel !== "high") {
       return NextResponse.json({ skipped: true, reason: "riskLevel not critical or high" }, { status: 200 })
     }
@@ -40,6 +43,40 @@ export async function POST(req: NextRequest) {
     const resendKey = process.env.RESEND_API_KEY
     if (!resendKey) {
       return NextResponse.json({ skipped: true, reason: "RESEND_API_KEY not configured" }, { status: 200 })
+    }
+
+    // Auto-generate draft inline if not provided and we have a quote
+    let resolvedDraft = draftResponse ?? ""
+    if (!resolvedDraft && topSignalQuote && topSignalTitle && process.env.OPENROUTER_API_KEY) {
+      try {
+        const draftRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://nectic.vercel.app",
+            "X-Title": "Nectic - Alert Draft",
+          },
+          body: JSON.stringify({
+            model: "anthropic/claude-haiku-4-5",
+            temperature: 0.4,
+            messages: [
+              {
+                role: "system",
+                content: `You are a senior Customer Success manager. Write a short, warm, direct WhatsApp response (2–3 sentences max). No bullet points, no placeholders. Plain text only. Acknowledge the issue, show ownership, set next step.`,
+              },
+              {
+                role: "user",
+                content: `Account: ${accountName}\nSignal: ${topSignalTitle}\n${topSignalExplanation ? `Context: ${topSignalExplanation}\n` : ""}Customer said: "${topSignalQuote}"\n\nWrite only the draft message.`,
+              },
+            ],
+          }),
+        })
+        if (draftRes.ok) {
+          const draftData = await draftRes.json()
+          resolvedDraft = draftData.choices?.[0]?.message?.content?.trim() ?? ""
+        }
+      } catch { /* non-fatal — draft is optional */ }
     }
 
     const accountUrl = accountId
@@ -50,7 +87,6 @@ export async function POST(req: NextRequest) {
     let htmlBody: string
 
     if (isCompetitorAlert && competitorNames?.length) {
-      // ─── Competitor alert template ───────────────────────────────────────────
       const competitorList = competitorNames.join(", ")
       subject = `[Nectic] ⚡ ${accountName} mentioned ${competitorList}`
 
@@ -62,54 +98,30 @@ export async function POST(req: NextRequest) {
         ? `<tr><td style="padding:0 24px 16px;"><p style="margin:0;font-size:13px;color:#431407;font-style:italic;border-left:3px solid #fdba74;padding-left:12px;line-height:1.7;background:#fff7ed;border-radius:0 6px 6px 0;padding:10px 12px 10px 16px;">"${topSignalQuote}"</p></td></tr>`
         : ""
 
-      htmlBody = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-</head>
-<body style="margin:0;padding:0;background:#f5f5f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:32px 16px;">
-    <tr><td>
-      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e5e5;">
-        <!-- Header -->
-        <tr>
-          <td style="background:#ea580c;padding:20px 24px;">
-            <p style="margin:0;color:#ffffff;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;opacity:0.85;">Nectic · Competitive Threat</p>
-            <p style="margin:4px 0 0;color:#ffffff;font-size:20px;font-weight:700;letter-spacing:-0.3px;">⚡ ${competitorList} Mentioned</p>
-          </td>
-        </tr>
-        <!-- Account -->
-        <tr>
-          <td style="padding:24px 24px 0;">
-            <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:#a3a3a3;letter-spacing:0.5px;text-transform:uppercase;">Account</p>
-            <p style="margin:0;font-size:18px;font-weight:700;color:#171717;">${accountName}</p>
-          </td>
-        </tr>
-        ${renewalLine}
-        <!-- Quote -->
-        ${quoteLine}
-        <!-- CTA -->
-        <tr>
-          <td style="padding:24px;">
-            <a href="${accountUrl}" style="display:inline-block;background:#ea580c;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;padding:12px 24px;border-radius:8px;">
-              Draft retention response →
-            </a>
-            <p style="margin:16px 0 0;font-size:12px;color:#a3a3a3;line-height:1.6;">
-              A competitor was mentioned in your WhatsApp conversation with ${accountName}. Act before the evaluation goes further.
-              <br>Manage alerts in <a href="https://nectic.vercel.app/concept/workspace" style="color:#404040;">workspace settings</a>.
-            </p>
-          </td>
-        </tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`
+      const draftSection = resolvedDraft
+        ? `<tr><td style="padding:0 24px 16px;">
+            <p style="margin:0 0 8px;font-size:11px;font-weight:600;color:#a3a3a3;letter-spacing:0.5px;text-transform:uppercase;">AI-drafted response</p>
+            <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px 16px;">
+              <p style="margin:0;font-size:13px;color:#14532d;line-height:1.7;">${resolvedDraft}</p>
+            </div>
+            <p style="margin:8px 0 0;font-size:11px;color:#a3a3a3;">Review and edit in Nectic before sending.</p>
+          </td></tr>`
+        : ""
 
+      htmlBody = buildEmailHtml({
+        headerBg: "#ea580c",
+        headerLabel: "Nectic · Competitive Threat",
+        headerTitle: `⚡ ${competitorList} Mentioned`,
+        accountName,
+        renewalLine,
+        quoteLine,
+        draftSection,
+        accountUrl,
+        ctaLabel: "Draft retention response →",
+        ctaBg: "#ea580c",
+        footerText: `A competitor was mentioned in your WhatsApp conversation with ${accountName}. Act before the evaluation goes further.`,
+      })
     } else {
-      // ─── Standard risk alert template ────────────────────────────────────────
       const riskLabel = riskLevel === "critical" ? "CRITICAL" : "HIGH"
       subject = `[Nectic] ${riskLabel} signal detected — ${accountName}`
 
@@ -117,63 +129,39 @@ export async function POST(req: NextRequest) {
         ? `<tr><td style="padding:0 24px 16px;"><p style="margin:0;font-size:13px;color:#262626;font-style:italic;border-left:3px solid #d4d4d4;padding-left:12px;line-height:1.7;">"${topSignalQuote}"</p></td></tr>`
         : ""
 
-      htmlBody = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-</head>
-<body style="margin:0;padding:0;background:#f5f5f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:32px 16px;">
-    <tr><td>
-      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e5e5;">
-        <!-- Header -->
-        <tr>
-          <td style="background:${riskLevel === "critical" ? "#ef4444" : "#f97316"};padding:20px 24px;">
-            <p style="margin:0;color:#ffffff;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;opacity:0.85;">Nectic Alert</p>
-            <p style="margin:4px 0 0;color:#ffffff;font-size:20px;font-weight:700;letter-spacing:-0.3px;">${riskLabel} Risk Detected</p>
-          </td>
-        </tr>
-        <!-- Account -->
-        <tr>
-          <td style="padding:24px 24px 0;">
-            <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:#a3a3a3;letter-spacing:0.5px;text-transform:uppercase;">Account</p>
-            <p style="margin:0;font-size:18px;font-weight:700;color:#171717;">${accountName}</p>
-          </td>
-        </tr>
-        <!-- Signal info -->
-        <tr>
-          <td style="padding:16px 24px 0;">
+      const draftSection = resolvedDraft
+        ? `<tr><td style="padding:0 24px 16px;">
+            <p style="margin:0 0 8px;font-size:11px;font-weight:600;color:#a3a3a3;letter-spacing:0.5px;text-transform:uppercase;">AI-drafted WhatsApp response — ready to send</p>
+            <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px 16px;">
+              <p style="margin:0;font-size:13px;color:#14532d;line-height:1.7;">${resolvedDraft}</p>
+            </div>
+            <p style="margin:8px 0 0;font-size:11px;color:#a3a3a3;">One-click approve and refine in Nectic →</p>
+          </td></tr>`
+        : ""
+
+      htmlBody = buildEmailHtml({
+        headerBg: riskLevel === "critical" ? "#ef4444" : "#f97316",
+        headerLabel: "Nectic Alert",
+        headerTitle: `${riskLabel} Risk — Action Required`,
+        accountName,
+        renewalLine: renewalMonth
+          ? `<tr><td style="padding:0 24px 8px;"><p style="margin:0;font-size:12px;color:#dc2626;font-weight:600;">Renewal: ${renewalMonth}</p></td></tr>`
+          : "",
+        signalBlock: `<tr><td style="padding:16px 24px 0;">
             <table width="100%" cellpadding="0" cellspacing="0" style="background:#fafafa;border:1px solid #e5e5e5;border-radius:8px;">
-              <tr>
-                <td style="padding:14px 16px;">
-                  <p style="margin:0 0 8px;font-size:11px;font-weight:600;color:#a3a3a3;letter-spacing:0.5px;text-transform:uppercase;">${signalCount} signal${signalCount !== 1 ? "s" : ""} detected</p>
-                  ${topSignalTitle ? `<p style="margin:0;font-size:14px;color:#404040;line-height:1.5;">${topSignalTitle}</p>` : ""}
-                </td>
-              </tr>
+              <tr><td style="padding:14px 16px;">
+                <p style="margin:0 0 6px;font-size:11px;font-weight:600;color:#a3a3a3;letter-spacing:0.5px;text-transform:uppercase;">${signalCount} signal${signalCount !== 1 ? "s" : ""} detected</p>
+                ${topSignalTitle ? `<p style="margin:0;font-size:14px;color:#404040;line-height:1.5;">${topSignalTitle}</p>` : ""}
+              </td></tr>
             </table>
-          </td>
-        </tr>
-        <!-- Customer quote -->
-        ${quoteLine}
-        <!-- CTA -->
-        <tr>
-          <td style="padding:24px;">
-            <a href="${accountUrl}" style="display:inline-block;background:#171717;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;padding:12px 24px;border-radius:8px;">
-              Review in Action Queue →
-            </a>
-            <p style="margin:16px 0 0;font-size:12px;color:#a3a3a3;line-height:1.6;">
-              This alert was triggered because ${accountName} has a ${riskLevel} risk level.
-              You can manage notification preferences in your <a href="https://nectic.vercel.app/concept/workspace" style="color:#404040;">workspace settings</a>.
-            </p>
-          </td>
-        </tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`
+          </td></tr>`,
+        quoteLine,
+        draftSection,
+        accountUrl,
+        ctaLabel: "Approve response in Nectic →",
+        ctaBg: "#171717",
+        footerText: `${accountName} has a ${riskLevel} risk level. The draft above is AI-generated — review before sending.`,
+      })
     }
 
     const res = await fetch("https://api.resend.com/emails", {
@@ -201,4 +189,70 @@ export async function POST(req: NextRequest) {
     console.error("Notify error:", err)
     return NextResponse.json({ skipped: true }, { status: 200 })
   }
+}
+
+function buildEmailHtml({
+  headerBg,
+  headerLabel,
+  headerTitle,
+  accountName,
+  renewalLine = "",
+  signalBlock = "",
+  quoteLine = "",
+  draftSection = "",
+  accountUrl,
+  ctaLabel,
+  ctaBg,
+  footerText,
+}: {
+  headerBg: string
+  headerLabel: string
+  headerTitle: string
+  accountName: string
+  renewalLine?: string
+  signalBlock?: string
+  quoteLine?: string
+  draftSection?: string
+  accountUrl: string
+  ctaLabel: string
+  ctaBg: string
+  footerText: string
+}): string {
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:32px 16px;">
+    <tr><td>
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e5e5;">
+        <tr>
+          <td style="background:${headerBg};padding:20px 24px;">
+            <p style="margin:0;color:#ffffff;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;opacity:0.85;">${headerLabel}</p>
+            <p style="margin:4px 0 0;color:#ffffff;font-size:20px;font-weight:700;letter-spacing:-0.3px;">${headerTitle}</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:24px 24px 0;">
+            <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:#a3a3a3;letter-spacing:0.5px;text-transform:uppercase;">Account</p>
+            <p style="margin:0;font-size:18px;font-weight:700;color:#171717;">${accountName}</p>
+          </td>
+        </tr>
+        ${renewalLine}
+        ${signalBlock}
+        ${quoteLine}
+        ${draftSection}
+        <tr>
+          <td style="padding:24px;">
+            <a href="${accountUrl}" style="display:inline-block;background:${ctaBg};color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;padding:12px 24px;border-radius:8px;">${ctaLabel}</a>
+            <p style="margin:16px 0 0;font-size:12px;color:#a3a3a3;line-height:1.6;">${footerText}<br>Manage alerts in <a href="https://nectic.vercel.app/concept/workspace" style="color:#404040;">workspace settings</a>.</p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`
 }

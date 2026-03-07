@@ -230,6 +230,21 @@ export default function ActionQueuePage() {
     }).finally(() => setLoading(false))
   }, [user])
 
+  // Refresh accounts every 8s for the first 90s after load — picks up auto-generated drafts
+  useEffect(() => {
+    if (!user) return
+    let count = 0
+    const interval = setInterval(async () => {
+      count++
+      if (count > 11) { clearInterval(interval); return }
+      const accs = await getAccounts(user.uid).catch(() => null)
+      if (!accs) return
+      setAccounts(accs)
+      setGroups(groupSignalsByAccount(accs))
+    }, 8000)
+    return () => clearInterval(interval)
+  }, [user])
+
   const updateSignalAction = useCallback(async (
     accountId: string,
     key: string,
@@ -564,7 +579,10 @@ function ActionCard({
 }) {
   const [status, setStatus] = useState<SignalActionStatus>(signal.action?.status ?? "open")
   const [note, setNote] = useState(signal.action?.note ?? "")
-  const [expanded, setExpanded] = useState(false)
+  // Auto-expand if: draft already exists (auto-generated) OR this is a critical signal
+  const [expanded, setExpanded] = useState(
+    !!(signal.action?.draftResponse) || (signal.riskLevel === "critical" && signal.signalCategory === "risk")
+  )
   const [draft, setDraft] = useState(signal.action?.draftResponse ?? "")
   const [draftLoading, setDraftLoading] = useState(false)
   const [adoptedIdx, setAdoptedIdx] = useState<number | null>(null)
@@ -575,7 +593,10 @@ function ActionCard({
   useEffect(() => {
     setStatus(signal.action?.status ?? "open")
     setNote(signal.action?.note ?? "")
-    setDraft(signal.action?.draftResponse ?? "")
+    const newDraft = signal.action?.draftResponse ?? ""
+    setDraft(newDraft)
+    // If draft just appeared (auto-generated), expand to show it
+    if (newDraft && !draft) setExpanded(true)
   }, [signal.action])
 
   const isClosedOut = status === "done" || status === "dismissed"
