@@ -1,0 +1,60 @@
+---
+description: Core project rules — always apply
+globs: ["**/*.ts", "**/*.tsx"]
+alwaysApply: true
+---
+
+# Nectic — Project Rules
+
+## What Nectic Is
+Nectic is an AI-native Customer Health & Churn Prevention OS for WhatsApp-heavy B2B SaaS. It is NOT an insight dashboard or productivity tool. It is the agentic system that autonomously monitors account health, detects churn risk from WhatsApp conversations, and surfaces pre-formed decisions (approve/edit/dismiss) to CS leads — replacing manual triage entirely.
+
+## Architecture: Two-Screen Product
+- **Screen 1 — Queue** (`/concept/board`): Approval interface. Pre-formed AI actions. CS lead approves, edits, or dismisses.
+- **Screen 2 — Account Context** (`/concept/account/[id]`): Read-only account detail. Health sparkline, signals, recommended action.
+- **Dashboard** (`/concept`): Account list + ROI panel. Entry point only.
+
+## Agentic Loops (DO NOT BREAK)
+1. Daily cron at 9am UTC (`/api/cron/account-health-check`) — re-alerts on unactioned critical/high signals >3 days, nudges stale accounts >7 days.
+2. On every analysis/re-analysis — appends to `healthHistory` in Firestore, auto-drafts risk signal responses.
+3. Weekly digest email — "accounts saved this week + ARR protected" section first.
+
+## Key Data Structures
+- `StoredAccount` in `src/lib/concept-firestore.ts`: includes `healthHistory: HealthHistoryEntry[]`, `lastAlertSentAt?: string`, `signalActions`, `result: AnalysisResult`
+- `WorkspaceContext` in `src/lib/concept-firestore.ts`: includes `productStory`, `productDescription`, `featureAreas`, `notificationEmail`, `annualValue`
+- **CRITICAL**: Any local `WorkspaceContext` interface in API routes (e.g. draft-response, analyze) MUST include `productStory?: string`
+
+## Tech Stack
+- Next.js 14 App Router, TypeScript strict mode
+- Firebase/Firestore (admin SDK for server routes, client SDK for browser)
+- OpenRouter API (OPENROUTER_API_KEY) — `anthropic/claude-sonnet-4-6` for analysis, `anthropic/claude-haiku-4-5` for Q&A/drafts
+- Resend for email (RESEND_API_KEY)
+- Vercel deployment — cron jobs defined in vercel.json
+- Framer Motion for animations
+
+## Build Rules — NEVER VIOLATE
+1. Run `npx tsc --noEmit` mentally before committing — catch type errors like missing interface fields
+2. All local interface duplicates of `WorkspaceContext` or `AnalysisResult` MUST stay in sync with the canonical versions in `src/lib/concept-firestore.ts` and `src/app/api/concept/analyze/route.ts`
+3. JSX self-closing tags: components with no children MUST end with `/>` not `>`
+4. Every `async` function using `await` MUST have the `async` keyword — do not strip it
+5. No `console.log` debug statements
+6. No new pages, nav items, or feature flags without explicit user instruction
+7. After any edit to `.tsx` or `.ts` files, check for unclosed JSX blocks, missing `)}`, and dangling IIFE returns
+
+## What NOT To Do
+- Do NOT add new features without being asked
+- Do NOT create new pages or nav items
+- Do NOT remove existing agentic loops or cron jobs
+- Do NOT change the two-screen product structure
+- Do NOT use WATI, Railway, or any live WhatsApp bridge — live WA is "Coming Soon"
+- Do NOT guess at types — read the source interface first
+- Do NOT revert strategic simplifications (e.g. don't re-add the Outcomes page)
+
+## WhatsApp Integration Status
+- File upload (.txt and .zip exports) → WORKS, use this for demo
+- Live WhatsApp connection → COMING SOON (marked in UI), do NOT attempt to implement
+
+## Demo Narrative (Antler Pitch)
+Hero: Head of CS at a WhatsApp-first B2B SaaS
+Story: "Nectic found TechCorp going cold 3 weeks before renewal. It drafted the save message. CS approved in one click. Account renewed."
+Loop: Upload chat → AI scores health → signal appears in Queue → CS approves draft → account marked saved → ARR protected shows in dashboard
