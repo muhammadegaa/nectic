@@ -129,8 +129,8 @@ export default function ConceptPage() {
     setWorkspace(updated)
   }
 
-  const handleWaContactAnalyze = async (contact: WaContact) => {
-    const contactName = contact.fullName || `${contact.firstName ?? ""} ${contact.lastName ?? ""}`.trim() || contact.wAid
+  const handleWaContactAnalyze = async (contact: WaContact, ctx?: { accountName?: string; industry?: string; contractTier?: "starter" | "growth" | "enterprise"; renewalMonth?: string }) => {
+    const contactName = ctx?.accountName || contact.fullName || `${contact.firstName ?? ""} ${contact.lastName ?? ""}`.trim() || contact.wAid
     setConnectStage("analyzing")
     setFileName(`WA: ${contactName}`)
     try {
@@ -143,7 +143,7 @@ export default function ConceptPage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? "Failed to load messages")
-      await analyzeFromWati(data.conversation, data.participantRoles, data.messageCount, contactName, contact.wAid || contact.phone)
+      await analyzeFromWati(data.conversation, data.participantRoles, data.messageCount, contactName, contact.wAid || contact.phone, ctx)
       closeConnect()
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Something went wrong"
@@ -310,7 +310,7 @@ export default function ConceptPage() {
     }
   }
 
-  const analyzeFromWati = async (conversation: string, participantRoles: ParticipantRoles, messageCount: number, contactName: string, watiPhone?: string) => {
+  const analyzeFromWati = async (conversation: string, participantRoles: ParticipantRoles, messageCount: number, contactName: string, watiPhone?: string, ctx?: { accountName?: string; industry?: string; contractTier?: "starter" | "growth" | "enterprise"; renewalMonth?: string }) => {
     if (!user) return
     trackEvent("wati_import_attempted", { contactName })
     try {
@@ -334,7 +334,12 @@ export default function ConceptPage() {
         analyzedAt: new Date().toISOString(),
         result: data.result as AnalysisResult,
         participantRoles,
-        context: { watiPhone },
+        context: {
+          watiPhone,
+          industry: ctx?.industry,
+          contractTier: ctx?.contractTier,
+          renewalMonth: ctx?.renewalMonth,
+        },
         shareToken,
       })
       await mergeContactBook(user.uid, participantRoles)
@@ -703,11 +708,11 @@ function ConnectModal({
   onAnalyze: () => void
   onRetry: () => void
   onSaveWaCredentials: (endpoint: string, token: string) => Promise<void>
-  onWaContactAnalyze: (contact: WaContact) => Promise<void>
+  onWaContactAnalyze: (contact: WaContact, ctx?: { accountName?: string; industry?: string; contractTier?: "starter" | "growth" | "enterprise"; renewalMonth?: string }) => Promise<void>
   onQrContactAnalyze: (data: { conversation: string; participantRoles: Record<string, "vendor" | "customer">; messageCount: number; contactName: string }) => Promise<void>
 }) {
   // WA subflow state (managed locally inside ConnectModal)
-  const [waSubStage, setWaSubStage] = useState<"credentials" | "loading" | "contacts">(
+  const [waSubStage, setWaSubStage] = useState<"credentials" | "loading" | "contacts" | "context">(
     workspace.watiEndpoint && workspace.watiToken ? "loading" : "credentials"
   )
   const [waEndpoint, setWaEndpoint] = useState(workspace.watiEndpoint ?? "")
@@ -717,6 +722,12 @@ function ConnectModal({
   const [waSearch, setWaSearch] = useState("")
   const [waConnecting, setWaConnecting] = useState(false)
   const [waError, setWaError] = useState("")
+  const [waSelectedContact, setWaSelectedContact] = useState<WaContact | null>(null)
+  const [waAccountName, setWaAccountName] = useState("")
+  const [waIndustry, setWaIndustry] = useState("")
+  const [waTier, setWaTier] = useState<"" | "starter" | "growth" | "enterprise">("")
+  const [waRenewal, setWaRenewal] = useState("")
+  const [waContextLoading, setWaContextLoading] = useState(false)
 
   // Sync credential fields when workspace loads async (race condition fix)
   useEffect(() => {
@@ -918,7 +929,7 @@ function ConnectModal({
                   {stage === "ready" && "Review before analysis"}
                   {stage === "analyzing" && "Analysing…"}
                   {stage === "error" && "Something went wrong"}
-                  {stage === "wa" && (waSubStage === "credentials" ? "Enter your API credentials" : waSubStage === "loading" ? "Connecting…" : "Select a contact")}
+                  {stage === "wa" && (waSubStage === "credentials" ? "Enter your API credentials" : waSubStage === "loading" ? "Connecting…" : waSubStage === "context" ? "Confirm account details" : "Select a contact")}
                   {stage === "qr" && (qrStatus === "pending" ? "Scan with your phone" : qrStatus === "connected" ? "Select a contact or group" : qrStatus === "starting" ? "Starting…" : "Connect via WhatsApp")}
                 </p>
               </div>
@@ -962,8 +973,23 @@ function ConnectModal({
                     <WhatsAppIcon size={20} className="text-[#25D366]" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-semibold text-neutral-900">Connect WhatsApp Business</p>
-                    <p className="text-xs text-neutral-400 mt-0.5">Pull conversations live via WATI API — send responses directly from Nectic</p>
+                    {workspace.watiEndpoint && workspace.watiToken ? (
+                      <>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-semibold text-neutral-900">WhatsApp Business</p>
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-full">
+                            <span className="w-1 h-1 rounded-full bg-emerald-500" />
+                            Connected
+                          </span>
+                        </div>
+                        <p className="text-xs text-neutral-400 mt-0.5">Pull live conversations — send responses directly from Nectic</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-sm font-semibold text-neutral-900">Connect WhatsApp Business</p>
+                        <p className="text-xs text-neutral-400 mt-0.5">Pull live conversations via WATI — send responses directly from Nectic</p>
+                      </>
+                    )}
                   </div>
                   <svg className="text-neutral-300 group-hover:text-neutral-600 shrink-0 transition-colors" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
                 </button>
@@ -975,17 +1001,17 @@ function ConnectModal({
                 {waSubStage === "credentials" && (
                   <div className="space-y-4">
                     <div>
-                      <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-1">WhatsApp Business</p>
-                      <p className="text-xs text-neutral-500 leading-relaxed mb-1">
-                        Connect your WhatsApp Business account to pull conversations directly.
+                      <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-2">One-time setup</p>
+                      <p className="text-xs text-neutral-500 leading-relaxed">
+                        Connect your WhatsApp Business account once. After this you can select any contact and Nectic will pull their conversation directly.
                       </p>
-                      <p className="text-xs text-neutral-400 mb-4">
-                        Get your API endpoint and token from your{" "}
+                      <p className="text-xs text-neutral-400 mt-2">
+                        Find your credentials in{" "}
                         <a href="https://app.wati.io/settings/api" target="_blank" rel="noopener noreferrer" className="text-neutral-600 underline hover:text-neutral-900">
-                          WATI dashboard → Settings → API
+                          WATI → Settings → API
                         </a>.
                       </p>
-                      {waError && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-3">{waError}</p>}
+                      {waError && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mt-3">{waError}</p>}
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-neutral-700 mb-1.5">API Endpoint</label>
@@ -1061,7 +1087,11 @@ function ConnectModal({
                         return (
                           <button
                             key={contact.id}
-                            onClick={() => onWaContactAnalyze(contact)}
+                            onClick={() => {
+                              setWaSelectedContact(contact)
+                              setWaAccountName(contact.fullName || `${contact.firstName ?? ""} ${contact.lastName ?? ""}`.trim() || "")
+                              setWaSubStage("context")
+                            }}
                             className="w-full flex items-center gap-3 px-6 py-3.5 hover:bg-neutral-50 transition-colors text-left group"
                           >
                             <div className="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center shrink-0 group-hover:bg-neutral-200 transition-colors">
@@ -1088,6 +1118,110 @@ function ConnectModal({
                         Change credentials
                       </button>
                     </div>
+                  </div>
+                )}
+
+                {waSubStage === "context" && waSelectedContact && (
+                  <div className="space-y-4">
+                    <button
+                      onClick={() => setWaSubStage("contacts")}
+                      className="flex items-center gap-1.5 text-xs text-neutral-400 hover:text-neutral-700 transition-colors"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg>
+                      Back to contacts
+                    </button>
+
+                    {/* Selected contact chip */}
+                    <div className="flex items-center gap-3 bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3">
+                      <div className="w-8 h-8 rounded-full bg-[#25D366]/10 flex items-center justify-center shrink-0">
+                        <WhatsAppIcon size={14} className="text-[#25D366]" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-neutral-900 truncate">
+                          {waSelectedContact.fullName || `${waSelectedContact.firstName ?? ""} ${waSelectedContact.lastName ?? ""}`.trim() || waSelectedContact.wAid}
+                        </p>
+                        <p className="text-xs text-neutral-400">{waSelectedContact.phone || waSelectedContact.wAid}</p>
+                      </div>
+                    </div>
+
+                    {/* Account name */}
+                    <div>
+                      <label className="block text-xs font-semibold text-neutral-700 mb-1.5">
+                        Account name <span className="text-neutral-400 font-normal">(what do you call this customer?)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={waAccountName}
+                        onChange={(e) => setWaAccountName(e.target.value)}
+                        placeholder="e.g. Tokopedia, PT Maju Bersama"
+                        autoFocus
+                        className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2.5 text-neutral-800 placeholder:text-neutral-300 focus:outline-none focus:border-neutral-500 bg-white"
+                      />
+                    </div>
+
+                    {/* Industry + Tier */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Industry <span className="text-neutral-400 font-normal">(optional)</span></label>
+                        <input
+                          type="text"
+                          value={waIndustry}
+                          onChange={(e) => setWaIndustry(e.target.value)}
+                          placeholder="e.g. E-commerce, Fintech"
+                          className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2.5 text-neutral-800 placeholder:text-neutral-300 focus:outline-none focus:border-neutral-500 bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Contract tier <span className="text-neutral-400 font-normal">(optional)</span></label>
+                        <select
+                          value={waTier}
+                          onChange={(e) => setWaTier(e.target.value as typeof waTier)}
+                          className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2.5 text-neutral-800 focus:outline-none focus:border-neutral-500 bg-white"
+                        >
+                          <option value="">— select —</option>
+                          <option value="starter">Starter</option>
+                          <option value="growth">Growth</option>
+                          <option value="enterprise">Enterprise</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Renewal */}
+                    <div>
+                      <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Renewal month <span className="text-neutral-400 font-normal">(optional)</span></label>
+                      <input
+                        type="month"
+                        value={waRenewal}
+                        onChange={(e) => setWaRenewal(e.target.value)}
+                        className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2.5 text-neutral-800 focus:outline-none focus:border-neutral-500 bg-white"
+                      />
+                    </div>
+
+                    <button
+                      onClick={async () => {
+                        if (!waSelectedContact || waContextLoading) return
+                        setWaContextLoading(true)
+                        try {
+                          await onWaContactAnalyze(waSelectedContact, {
+                            accountName: waAccountName.trim() || undefined,
+                            industry: waIndustry.trim() || undefined,
+                            contractTier: waTier || undefined,
+                            renewalMonth: waRenewal || undefined,
+                          })
+                        } finally {
+                          setWaContextLoading(false)
+                        }
+                      }}
+                      disabled={waContextLoading}
+                      className="w-full bg-neutral-900 text-white text-sm font-semibold py-3 rounded-xl hover:bg-neutral-700 transition-colors disabled:opacity-40 flex items-center justify-center gap-2"
+                    >
+                      {waContextLoading ? (
+                        <>
+                          <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                          Pulling conversations…
+                        </>
+                      ) : "Analyse this account →"}
+                    </button>
                   </div>
                 )}
               </div>
