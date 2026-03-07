@@ -15,7 +15,6 @@ import {
   prefillFromContactBook,
   mergeContactBook,
   getWorkspace,
-  saveWorkspace,
   isOnboardingComplete,
   saveSignalAction,
   signalKey,
@@ -27,10 +26,9 @@ import {
 } from "@/lib/concept-firestore"
 import type { AnalysisResult } from "@/app/api/concept/analyze/route"
 import { trackEvent, identifyUser } from "@/lib/posthog"
+import { getArrAtRisk, formatARR } from "@/lib/arr-utils"
 
-type ConnectStage = "method" | "instructions" | "upload" | "ready" | "analyzing" | "error" | "wa" | "qr"
-
-interface WaContact { id: string; wAid: string; fullName?: string; firstName?: string; lastName?: string; phone: string; lastUpdated?: string }
+type ConnectStage = "instructions" | "upload" | "ready" | "analyzing" | "error"
 
 const INDUSTRIES = ["SaaS / Software", "Fintech", "Logistics", "HR Tech", "E-commerce", "Healthcare", "Education", "Other"]
 const CONTRACT_TIERS = [
@@ -122,36 +120,6 @@ export default function ConceptPage() {
     if (!user) return
     const updated = await getAccounts(user.uid)
     setAccounts(updated)
-  }
-
-  const saveWaCredentials = async (endpoint: string, token: string) => {
-    if (!user) return
-    const updated = { ...workspace, watiEndpoint: endpoint, watiToken: token }
-    await saveWorkspace(user.uid, updated)
-    setWorkspace(updated)
-  }
-
-  const handleWaContactAnalyze = async (contact: WaContact, ctx?: { accountName?: string; industry?: string; contractTier?: "starter" | "growth" | "enterprise"; renewalMonth?: string }) => {
-    const contactName = ctx?.accountName || contact.fullName || `${contact.firstName ?? ""} ${contact.lastName ?? ""}`.trim() || contact.wAid
-    setConnectStage("analyzing")
-    setFileName(`WA: ${contactName}`)
-    try {
-      const endpoint = workspace.watiEndpoint!
-      const token = workspace.watiToken!
-      const res = await fetch("/api/wati/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ endpoint, token, phoneNumber: contact.wAid || contact.phone, contactName }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? "Failed to load messages")
-      await analyzeFromWati(data.conversation, data.participantRoles, data.messageCount, contactName, contact.wAid || contact.phone, ctx)
-      closeConnect()
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Something went wrong"
-      setUploadError(message)
-      setConnectStage("error")
-    }
   }
 
   const openConnect = () => {
@@ -356,68 +324,6 @@ export default function ConceptPage() {
     }
   }
 
-  const analyzeFromWati = async (conversation: string, participantRoles: ParticipantRoles, messageCount: number, contactName: string, watiPhone?: string, ctx?: { accountName?: string; industry?: string; contractTier?: "starter" | "growth" | "enterprise"; renewalMonth?: string }) => {
-    if (!user) return
-    trackEvent("wati_import_attempted", { contactName })
-    try {
-      const res = await fetch("/api/concept/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          conversation,
-          messageCount,
-          participantRoles,
-          context: {},
-          workspace,
-        }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || "Analysis failed")
-
-      const shareToken = crypto.randomUUID()
-      const savedWati = await saveAccount(user.uid, {
-        fileName: `WATI: ${contactName}`,
-        analyzedAt: new Date().toISOString(),
-        result: data.result as AnalysisResult,
-        participantRoles,
-        context: {
-          watiPhone,
-          industry: ctx?.industry,
-          contractTier: ctx?.contractTier,
-          renewalMonth: ctx?.renewalMonth,
-        },
-        shareToken,
-      })
-      await mergeContactBook(user.uid, participantRoles)
-      autoDraftRiskSignals(user.uid, savedWati.id, data.result as AnalysisResult).catch(() => {})
-      await refreshAccounts()
-      trackEvent("wati_import_completed", {
-        riskLevel: (data.result as AnalysisResult).riskLevel,
-        healthScore: (data.result as AnalysisResult).healthScore,
-      })
-    } catch (err) {
-      throw err
-    }
-  }
-
-  const handleQrContactAnalyze = async ({
-    conversation,
-    participantRoles: roles,
-    messageCount,
-    contactName,
-  }: { conversation: string; participantRoles: Record<string, "vendor" | "customer">; messageCount: number; contactName: string }) => {
-    setConnectStage("analyzing")
-    setFileName(`WA: ${contactName}`)
-    try {
-      await analyzeFromWati(conversation, roles, messageCount, contactName)
-      closeConnect()
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Something went wrong"
-      setUploadError(message)
-      setConnectStage("error")
-    }
-  }
-
   const handleDelete = async (id: string) => {
     if (!user) return
     await deleteAccount(user.uid, id)
@@ -524,6 +430,23 @@ export default function ConceptPage() {
                   )}
                 </motion.div>
 
+                {/* Queue CTA — shown when accounts need action */}
+                {urgentSignalCount > 0 && (
+                  <Link
+                    href="/concept/board"
+                    className="flex items-center justify-between bg-red-50 border border-red-200 rounded-xl px-5 py-4 hover:bg-red-100 transition-colors group"
+                  >
+                    <div>
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                        <p className="text-sm font-semibold text-red-800">{urgentSignalCount} signal{urgentSignalCount !== 1 ? "s" : ""} need attention</p>
+                      </div>
+                      <p className="text-xs text-red-600">Open queue to review drafts and take action</p>
+                    </div>
+                    <span className="text-red-500 text-lg group-hover:translate-x-0.5 transition-transform">→</span>
+                  </Link>
+                )}
+
                 {/* Revenue at Risk — shown when accounts are at risk */}
                 {atRisk > 0 && <RevenueAtRisk atRiskCount={atRisk} savedCount={savedThisMonth} topAccountId={sortedAccounts[0]?.id} topAccountName={sortedAccounts[0]?.result.accountName} />}
 
@@ -628,15 +551,9 @@ export default function ConceptPage() {
           aiSuggestedRoles={aiSuggestedRoles}
           classifying={classifying}
           context={context}
-          workspace={workspace}
-          uid={user?.uid ?? ""}
           onClose={closeConnect}
-          onSelectMethodFile={() => setConnectStage("instructions")}
-          onSelectMethodWa={() => setConnectStage("wa")}
-          onSelectMethodQr={() => setConnectStage("qr")}
           onContinueToUpload={() => setConnectStage("upload")}
           onBackToInstructions={() => setConnectStage("instructions")}
-          onBackToMethod={() => setConnectStage("method")}
           onDrop={onDrop}
           onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
           onDragLeave={() => setDragging(false)}
@@ -646,9 +563,6 @@ export default function ConceptPage() {
           onContextChange={setContext}
           onAnalyze={analyze}
           onRetry={() => { setConnectStage("upload"); setUploadError(""); if (inputRef.current) inputRef.current.value = "" }}
-          onSaveWaCredentials={saveWaCredentials}
-          onWaContactAnalyze={handleWaContactAnalyze}
-          onQrContactAnalyze={handleQrContactAnalyze}
         />
       )}
 
@@ -720,11 +634,10 @@ function ConsentFooter({ onAnalyze, onRetry }: { onAnalyze: () => void; onRetry:
 
 function ConnectModal({
   stage, parsed, fileName, error, dragging, inputRef,
-  participantRoles, aiSuggestedRoles, classifying, context, workspace, uid,
-  onClose, onSelectMethodFile, onSelectMethodWa, onSelectMethodQr, onContinueToUpload, onBackToInstructions, onBackToMethod,
+  participantRoles, aiSuggestedRoles, classifying, context,
+  onClose, onContinueToUpload, onBackToInstructions,
   onDrop, onDragOver, onDragLeave, onFileSelect, onInputChange,
   onSetRole, onContextChange, onAnalyze, onRetry,
-  onSaveWaCredentials, onWaContactAnalyze, onQrContactAnalyze,
 }: {
   stage: ConnectStage
   parsed: WaParsed | null
@@ -736,15 +649,9 @@ function ConnectModal({
   aiSuggestedRoles: Set<string>
   classifying: boolean
   context: AccountContext
-  workspace: WorkspaceContext
-  uid: string
   onClose: () => void
-  onSelectMethodFile: () => void
-  onSelectMethodWa: () => void
-  onSelectMethodQr: () => void
   onContinueToUpload: () => void
   onBackToInstructions: () => void
-  onBackToMethod: () => void
   onDrop: (e: React.DragEvent) => void
   onDragOver: (e: React.DragEvent) => void
   onDragLeave: () => void
@@ -754,282 +661,14 @@ function ConnectModal({
   onContextChange: (ctx: AccountContext) => void
   onAnalyze: () => void
   onRetry: () => void
-  onSaveWaCredentials: (endpoint: string, token: string) => Promise<void>
-  onWaContactAnalyze: (contact: WaContact, ctx?: { accountName?: string; industry?: string; contractTier?: "starter" | "growth" | "enterprise"; renewalMonth?: string }) => Promise<void>
-  onQrContactAnalyze: (data: { conversation: string; participantRoles: Record<string, "vendor" | "customer">; messageCount: number; contactName: string }) => Promise<void>
 }) {
-  // WA subflow state (managed locally inside ConnectModal)
-  const [waSubStage, setWaSubStage] = useState<"credentials" | "loading" | "contacts" | "context">(
-    workspace.watiEndpoint && workspace.watiToken ? "loading" : "credentials"
-  )
-  const [waEndpoint, setWaEndpoint] = useState(workspace.watiEndpoint ?? "")
-  const [waToken, setWaToken] = useState(workspace.watiToken ?? "")
-  const [waTokenVisible, setWaTokenVisible] = useState(false)
-  const [waContacts, setWaContacts] = useState<WaContact[]>([])
-  const [waSearch, setWaSearch] = useState("")
-  const [waConnecting, setWaConnecting] = useState(false)
-  const [waError, setWaError] = useState("")
-  const [waSelectedContact, setWaSelectedContact] = useState<WaContact | null>(null)
-  const [waAccountName, setWaAccountName] = useState("")
-  const [waIndustry, setWaIndustry] = useState("")
-  const [waTier, setWaTier] = useState<"" | "starter" | "growth" | "enterprise">("")
-  const [waRenewal, setWaRenewal] = useState("")
-  const [waContextLoading, setWaContextLoading] = useState(false)
-
-  // Sync credential fields when workspace loads async (race condition fix)
-  useEffect(() => {
-    if (workspace.watiEndpoint && !waEndpoint) setWaEndpoint(workspace.watiEndpoint)
-    if (workspace.watiToken && !waToken) setWaToken(workspace.watiToken)
-    // If credentials just became available, switch to loading substage
-    if (workspace.watiEndpoint && workspace.watiToken && waSubStage === "credentials" && waContacts.length === 0 && !waError) {
-      setWaSubStage("loading")
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workspace.watiEndpoint, workspace.watiToken])
-
-  // Auto-load contacts when stage becomes "wa" and credentials exist
-  useEffect(() => {
-    if (stage !== "wa") return
-    if (workspace.watiEndpoint && workspace.watiToken && waSubStage === "loading" && waContacts.length === 0 && !waError) {
-      loadWaContacts(workspace.watiEndpoint, workspace.watiToken)
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stage, waSubStage])
-
-  const loadWaContacts = async (endpoint: string, token: string) => {
-    setWaSubStage("loading")
-    setWaError("")
-    try {
-      const res = await fetch("/api/wati/contacts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ endpoint, token, pageSize: 100 }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? "Failed to load contacts")
-      setWaContacts(data.contacts ?? [])
-      setWaSubStage("contacts")
-    } catch (err) {
-      setWaError(err instanceof Error ? err.message : "Connection failed")
-      setWaSubStage("credentials")
-    }
+  const subtitleMap: Record<ConnectStage, string> = {
+    instructions: "Export a group chat to get started",
+    upload: "Drop your export file",
+    ready: "Review before analysis",
+    analyzing: "Analysing…",
+    error: "Something went wrong",
   }
-
-  const handleWaConnect = async () => {
-    if (!waEndpoint.trim() || !waToken.trim()) return
-    setWaConnecting(true)
-    try {
-      await onSaveWaCredentials(waEndpoint.trim(), waToken.trim())
-      await loadWaContacts(waEndpoint.trim(), waToken.trim())
-    } finally {
-      setWaConnecting(false)
-    }
-  }
-
-  const waFiltered = waContacts.filter((c) => {
-    const q = waSearch.toLowerCase()
-    const name = c.fullName || `${c.firstName ?? ""} ${c.lastName ?? ""}`.trim()
-    return name.toLowerCase().includes(q) || (c.phone ?? "").includes(q) || (c.wAid ?? "").includes(q)
-  })
-
-  // ─── QR bridge state ─────────────────────────────────────────────────────────
-  type QrStatus = "idle" | "starting" | "pending" | "syncing" | "connected" | "error"
-  interface QrContact { id: string; name: string; isGroup: boolean; participantCount?: number }
-  const [qrStatus, setQrStatus] = useState<QrStatus>("idle")
-  const [qrImage, setQrImage] = useState<string | null>(null)
-  const [qrContacts, setQrContacts] = useState<QrContact[]>([])
-  const [qrSearch, setQrSearch] = useState("")
-  const [qrLoadingId, setQrLoadingId] = useState<string | null>(null)
-  const [qrError, setQrError] = useState("")
-  const qrPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
-
-  const BRIDGE = "https://nectic-wa-bridge-production.up.railway.app"
-
-  const callBridge = async (body: Record<string, unknown>) => {
-    const { action, ...rest } = body
-    let url: string
-    let method = "GET"
-    let fetchBody: string | undefined
-
-    switch (action) {
-      case "start":
-        url = `${BRIDGE}/session/start`
-        method = "POST"
-        fetchBody = JSON.stringify({ uid, ...rest })
-        break
-      case "status":
-        url = `${BRIDGE}/session/status?uid=${encodeURIComponent(uid)}`
-        break
-      case "contacts":
-        url = `${BRIDGE}/contacts?uid=${encodeURIComponent(uid)}`
-        break
-      case "messages": {
-        const waid = rest.waid as string
-        const limit = (rest.limit as number) || 200
-        url = `${BRIDGE}/messages/${encodeURIComponent(waid)}?uid=${encodeURIComponent(uid)}&limit=${limit}`
-        break
-      }
-      case "logout":
-        url = `${BRIDGE}/session?uid=${encodeURIComponent(uid)}`
-        method = "DELETE"
-        break
-      default:
-        throw new Error("Unknown action")
-    }
-
-    const res = await fetch(url, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: fetchBody,
-    })
-    return res.json()
-  }
-
-  const loadQrContacts = async () => {
-    const data = await callBridge({ action: "contacts" })
-    setQrContacts(data.contacts ?? [])
-  }
-
-  const startQrSession = async () => {
-    setQrStatus("starting")
-    setQrError("")
-    setQrImage(null)
-    try {
-      const data = await callBridge({ action: "start" })
-      if (data.error) {
-        setQrError(data.error)
-        setQrStatus("error")
-      } else if (data.status === "connected") {
-        setQrImage(null)
-        if (data.historyReady) {
-          setQrStatus("connected")
-          await loadQrContacts()
-        } else {
-          setQrStatus("syncing")
-        }
-      } else if (data.qr) {
-        setQrImage(data.qr)
-        setQrStatus("pending")
-      } else {
-        setQrStatus("pending")
-      }
-    } catch {
-      setQrError("Could not reach the WhatsApp bridge service.")
-      setQrStatus("error")
-    }
-  }
-
-  // Poll status while QR is pending
-  useEffect(() => {
-    if (stage !== "qr") {
-      if (qrPollRef.current) { clearInterval(qrPollRef.current); qrPollRef.current = null }
-      setQrStatus("idle")
-      return
-    }
-    if (qrStatus === "idle") startQrSession()
-    if (qrStatus === "pending") {
-      qrPollRef.current = setInterval(async () => {
-        try {
-          const data = await callBridge({ action: "status" })
-          if (data.status === "connected") {
-            clearInterval(qrPollRef.current!)
-            qrPollRef.current = null
-            setQrImage(null)
-            if (data.historyReady) {
-              setQrStatus("connected")
-              await loadQrContacts()
-            } else {
-              setQrStatus("syncing")
-            }
-          } else if (data.qr && data.qr !== qrImage) {
-            setQrImage(data.qr)
-          }
-        } catch {}
-      }, 2500)
-    }
-    return () => { if (qrPollRef.current) { clearInterval(qrPollRef.current); qrPollRef.current = null } }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stage, qrStatus])
-
-  // Poll while syncing history — give up after 20s and show whatever we have
-  useEffect(() => {
-    if (qrStatus !== "syncing") return
-    const deadline = Date.now() + 20000
-    const interval = setInterval(async () => {
-      try {
-        const data = await callBridge({ action: "status" })
-        if (data.historyReady || Date.now() > deadline) {
-          clearInterval(interval)
-          setQrStatus("connected")
-          await loadQrContacts()
-        }
-      } catch {
-        clearInterval(interval)
-        setQrStatus("connected")
-        await loadQrContacts()
-      }
-    }, 1500)
-    return () => clearInterval(interval)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [qrStatus])
-
-  const handleQrContactSelect = async (contact: QrContact) => {
-    const contactName = contact.name
-    setQrError("")
-    setQrLoadingId(contact.id)
-    try {
-      // Retry up to 3 times with 3s gap if messages are empty (still syncing)
-      let messages: Array<{ created: string; text: string; owner: boolean; senderName: string }> = []
-      for (let attempt = 0; attempt < 3; attempt++) {
-        const data = await callBridge({ action: "messages", waid: contact.id, limit: 200 })
-        if (data.messages && data.messages.length > 0) {
-          messages = data.messages
-          break
-        }
-        if (attempt < 2) await new Promise(r => setTimeout(r, 3000))
-      }
-      setQrLoadingId(null)
-
-      if (messages.length === 0) {
-        setQrError("No messages found. This chat may not have recent activity — try another.")
-        return
-      }
-
-      const lines: string[] = []
-      const vendorNames = new Set<string>()
-      const customerNames = new Set<string>()
-      for (const msg of messages) {
-        if (!msg.text?.trim()) continue
-        const d = new Date(msg.created)
-        const dateStr = d.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" })
-        const timeStr = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
-        const senderName = msg.owner ? "Support Team" : (msg.senderName || contactName)
-        if (msg.owner) vendorNames.add(senderName)
-        else customerNames.add(senderName)
-        lines.push(`[${dateStr}, ${timeStr}] ${senderName}: ${msg.text}`)
-      }
-      if (lines.length === 0) {
-        setQrError("No text messages found for this contact.")
-        return
-      }
-      const participantRolesMap: Record<string, "vendor" | "customer"> = {}
-      vendorNames.forEach((n) => { participantRolesMap[n] = "vendor" })
-      customerNames.forEach((n) => { participantRolesMap[n] = "customer" })
-      await onQrContactAnalyze({
-        conversation: lines.join("\n"),
-        participantRoles: participantRolesMap,
-        messageCount: lines.length,
-        contactName,
-      })
-    } catch (err) {
-      setQrLoadingId(null)
-      setQrError(err instanceof Error ? err.message : "Failed to load messages")
-    }
-  }
-
-  const qrFiltered = qrContacts.filter((c) =>
-    c.name.toLowerCase().includes(qrSearch.toLowerCase())
-  )
 
   return (
     <>
@@ -1044,16 +683,7 @@ function ConnectModal({
               </div>
               <div>
                 <p className="text-sm font-semibold text-neutral-900">Connect account</p>
-                <p className="text-xs text-neutral-400">
-                  {stage === "method" && "Choose how to connect"}
-                  {stage === "instructions" && "Export a group chat to get started"}
-                  {stage === "upload" && "Drop your export file"}
-                  {stage === "ready" && "Review before analysis"}
-                  {stage === "analyzing" && "Analysing…"}
-                  {stage === "error" && "Something went wrong"}
-                  {stage === "wa" && (waSubStage === "credentials" ? "Enter your API credentials" : waSubStage === "loading" ? "Connecting…" : waSubStage === "context" ? "Confirm account details" : "Select a contact")}
-                  {stage === "qr" && (qrStatus === "pending" ? "Scan with your phone" : qrStatus === "connected" ? "Select a contact or group" : qrStatus === "syncing" ? "Syncing chats…" : qrStatus === "starting" ? "Starting…" : "Connect via WhatsApp")}
-                </p>
+                <p className="text-xs text-neutral-400">{subtitleMap[stage]}</p>
               </div>
             </div>
             {stage !== "analyzing" && (
@@ -1063,382 +693,6 @@ function ConnectModal({
 
           {/* Body — scrollable */}
           <div className="overflow-y-auto flex-1 px-6 py-5">
-
-            {stage === "method" && (
-              <div className="space-y-3">
-                <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-4">How do you want to connect?</p>
-
-                {/* Primary: File upload */}
-                <button
-                  onClick={onSelectMethodFile}
-                  className="w-full flex items-center gap-4 border-2 border-neutral-900 rounded-xl p-4 hover:bg-neutral-50 transition-all text-left group"
-                >
-                  <div className="w-10 h-10 bg-neutral-900 rounded-xl flex items-center justify-center shrink-0">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-semibold text-neutral-900">Upload chat export</p>
-                      <span className="text-[10px] font-semibold bg-neutral-900 text-white px-1.5 py-0.5 rounded-full">Start here</span>
-                    </div>
-                    <p className="text-xs text-neutral-400 mt-0.5">Export any chat from WhatsApp and drop it here — .txt or .zip</p>
-                  </div>
-                  <svg className="text-neutral-400 group-hover:text-neutral-900 shrink-0 transition-colors" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
-                </button>
-
-                {/* Coming soon: Live WA connection */}
-                <div className="w-full flex items-center gap-4 border border-neutral-100 rounded-xl p-4 opacity-50 cursor-not-allowed select-none">
-                  <div className="w-10 h-10 bg-[#25D366]/10 rounded-xl flex items-center justify-center shrink-0">
-                    <WhatsAppIcon size={20} className="text-[#25D366]" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-semibold text-neutral-400">Live WhatsApp connection</p>
-                      <span className="text-[10px] font-semibold bg-neutral-100 text-neutral-400 px-1.5 py-0.5 rounded-full">Coming soon</span>
-                    </div>
-                    <p className="text-xs text-neutral-300 mt-0.5">Auto-sync all chats and groups in real time</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {stage === "wa" && (
-              <div>
-                {waSubStage === "credentials" && (
-                  <div className="space-y-4">
-                    <div>
-                      <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-2">One-time setup</p>
-                      <p className="text-xs text-neutral-500 leading-relaxed">
-                        Connect your WhatsApp Business account once. After this you can select any contact and Nectic will pull their conversation directly.
-                      </p>
-                      <p className="text-xs text-neutral-400 mt-2">
-                        Find your credentials in{" "}
-                        <a href="https://app.wati.io/settings/api" target="_blank" rel="noopener noreferrer" className="text-neutral-600 underline hover:text-neutral-900">
-                          WATI → Settings → API
-                        </a>.
-                      </p>
-                      {waError && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mt-3">{waError}</p>}
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-neutral-700 mb-1.5">API Endpoint</label>
-                      <input
-                        type="text"
-                        value={waEndpoint}
-                        onChange={(e) => setWaEndpoint(e.target.value)}
-                        placeholder="https://eu-app-api.wati.io"
-                        className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 text-neutral-700 placeholder:text-neutral-300 focus:outline-none focus:border-neutral-400 bg-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Access Token</label>
-                      <div className="relative">
-                        <input
-                          type={waTokenVisible ? "text" : "password"}
-                          value={waToken}
-                          onChange={(e) => setWaToken(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === "Enter" && waEndpoint.trim() && waToken.trim()) handleWaConnect() }}
-                          placeholder="eyJhbGci…"
-                          className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 pr-16 text-neutral-700 placeholder:text-neutral-300 focus:outline-none focus:border-neutral-400 bg-white"
-                        />
-                        <button type="button" onClick={() => setWaTokenVisible(!waTokenVisible)} className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-neutral-400 hover:text-neutral-600">
-                          {waTokenVisible ? "Hide" : "Show"}
-                        </button>
-                      </div>
-                    </div>
-                    <button
-                      onClick={handleWaConnect}
-                      disabled={!waEndpoint.trim() || !waToken.trim() || waConnecting}
-                      className="w-full bg-neutral-900 text-white text-sm font-semibold py-3 rounded-lg hover:bg-neutral-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      {waConnecting ? "Connecting…" : "Connect →"}
-                    </button>
-                    <button onClick={onBackToMethod} className="w-full text-xs text-neutral-400 hover:text-neutral-600 py-1 transition-colors">← Back</button>
-                  </div>
-                )}
-
-                {waSubStage === "loading" && (
-                  <div className="flex flex-col items-center justify-center py-16 gap-3">
-                    <div className="w-5 h-5 border-2 border-neutral-200 border-t-[#25D366] rounded-full animate-spin" />
-                    <p className="text-sm text-neutral-500">Loading contacts…</p>
-                  </div>
-                )}
-
-                {waSubStage === "contacts" && (
-                  <div className="-mx-6">
-                    <div className="px-4 pb-3 border-b border-neutral-100 space-y-2">
-                      <input
-                        type="text"
-                        value={waSearch}
-                        onChange={(e) => setWaSearch(e.target.value)}
-                        placeholder="Search contacts…"
-                        className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:outline-none focus:border-neutral-400"
-                        autoFocus
-                      />
-                    </div>
-                    {waFiltered.length === 0 && (
-                      <p className="text-center py-10 text-sm text-neutral-400">
-                        {waSearch ? "No contacts match." : "No contacts found."}
-                      </p>
-                    )}
-                    <div className="divide-y divide-neutral-100">
-                      {waFiltered.map((contact) => {
-                        const displayName = contact.fullName || `${contact.firstName ?? ""} ${contact.lastName ?? ""}`.trim() || contact.wAid
-                        const lastActive = contact.lastUpdated
-                          ? (() => {
-                              const diff = Date.now() - new Date(contact.lastUpdated).getTime()
-                              const d = Math.floor(diff / 86400000)
-                              return d === 0 ? "today" : d === 1 ? "yesterday" : `${d}d ago`
-                            })()
-                          : null
-                        return (
-                          <button
-                            key={contact.id}
-                            onClick={() => {
-                              setWaSelectedContact(contact)
-                              setWaAccountName(contact.fullName || `${contact.firstName ?? ""} ${contact.lastName ?? ""}`.trim() || "")
-                              setWaSubStage("context")
-                            }}
-                            className="w-full flex items-center gap-3 px-6 py-3.5 hover:bg-neutral-50 transition-colors text-left group"
-                          >
-                            <div className="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center shrink-0 group-hover:bg-neutral-200 transition-colors">
-                              <span className="text-xs font-semibold text-neutral-600">{displayName.charAt(0).toUpperCase()}</span>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-neutral-900 truncate">{displayName}</p>
-                              <p className="text-xs text-neutral-400 truncate">{contact.phone || contact.wAid}</p>
-                            </div>
-                            {lastActive && (
-                              <span className="text-[11px] text-neutral-400 shrink-0">{lastActive}</span>
-                            )}
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-neutral-300 shrink-0 group-hover:text-neutral-500 transition-colors"><path d="M9 18l6-6-6-6"/></svg>
-                          </button>
-                        )
-                      })}
-                    </div>
-                    <div className="px-6 pt-3 pb-3 border-t border-neutral-100 flex items-center justify-between">
-                      <p className="text-xs text-neutral-400">{waFiltered.length} contact{waFiltered.length !== 1 ? "s" : ""}</p>
-                      <button
-                        onClick={() => { setWaSubStage("credentials"); setWaContacts([]) }}
-                        className="text-xs text-neutral-400 hover:text-neutral-600 transition-colors"
-                      >
-                        Change credentials
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {waSubStage === "context" && waSelectedContact && (
-                  <div className="space-y-4">
-                    <button
-                      onClick={() => setWaSubStage("contacts")}
-                      className="flex items-center gap-1.5 text-xs text-neutral-400 hover:text-neutral-700 transition-colors"
-                    >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg>
-                      Back to contacts
-                    </button>
-
-                    {/* Selected contact chip */}
-                    <div className="flex items-center gap-3 bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3">
-                      <div className="w-8 h-8 rounded-full bg-[#25D366]/10 flex items-center justify-center shrink-0">
-                        <WhatsAppIcon size={14} className="text-[#25D366]" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-neutral-900 truncate">
-                          {waSelectedContact.fullName || `${waSelectedContact.firstName ?? ""} ${waSelectedContact.lastName ?? ""}`.trim() || waSelectedContact.wAid}
-                        </p>
-                        <p className="text-xs text-neutral-400">{waSelectedContact.phone || waSelectedContact.wAid}</p>
-                      </div>
-                    </div>
-
-                    {/* Account name */}
-                    <div>
-                      <label className="block text-xs font-semibold text-neutral-700 mb-1.5">
-                        Account name <span className="text-neutral-400 font-normal">(what do you call this customer?)</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={waAccountName}
-                        onChange={(e) => setWaAccountName(e.target.value)}
-                        placeholder="e.g. Tokopedia, PT Maju Bersama"
-                        autoFocus
-                        className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2.5 text-neutral-800 placeholder:text-neutral-300 focus:outline-none focus:border-neutral-500 bg-white"
-                      />
-                    </div>
-
-                    {/* Industry + Tier */}
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Industry <span className="text-neutral-400 font-normal">(optional)</span></label>
-                        <input
-                          type="text"
-                          value={waIndustry}
-                          onChange={(e) => setWaIndustry(e.target.value)}
-                          placeholder="e.g. E-commerce, Fintech"
-                          className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2.5 text-neutral-800 placeholder:text-neutral-300 focus:outline-none focus:border-neutral-500 bg-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Contract tier <span className="text-neutral-400 font-normal">(optional)</span></label>
-                        <select
-                          value={waTier}
-                          onChange={(e) => setWaTier(e.target.value as typeof waTier)}
-                          className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2.5 text-neutral-800 focus:outline-none focus:border-neutral-500 bg-white"
-                        >
-                          <option value="">— select —</option>
-                          <option value="starter">Starter</option>
-                          <option value="growth">Growth</option>
-                          <option value="enterprise">Enterprise</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    {/* Renewal */}
-                    <div>
-                      <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Renewal month <span className="text-neutral-400 font-normal">(optional)</span></label>
-                      <input
-                        type="month"
-                        value={waRenewal}
-                        onChange={(e) => setWaRenewal(e.target.value)}
-                        className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2.5 text-neutral-800 focus:outline-none focus:border-neutral-500 bg-white"
-                      />
-                    </div>
-
-                    <button
-                      onClick={async () => {
-                        if (!waSelectedContact || waContextLoading) return
-                        setWaContextLoading(true)
-                        try {
-                          await onWaContactAnalyze(waSelectedContact, {
-                            accountName: waAccountName.trim() || undefined,
-                            industry: waIndustry.trim() || undefined,
-                            contractTier: waTier || undefined,
-                            renewalMonth: waRenewal || undefined,
-                          })
-                        } finally {
-                          setWaContextLoading(false)
-                        }
-                      }}
-                      disabled={waContextLoading}
-                      className="w-full bg-neutral-900 text-white text-sm font-semibold py-3 rounded-xl hover:bg-neutral-700 transition-colors disabled:opacity-40 flex items-center justify-center gap-2"
-                    >
-                      {waContextLoading ? (
-                        <>
-                          <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                          Pulling conversations…
-                        </>
-                      ) : "Analyse this account →"}
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {stage === "qr" && (
-              <div>
-                {(qrStatus === "idle" || qrStatus === "starting") && (
-                  <div className="flex flex-col items-center justify-center py-16 gap-3">
-                    <div className="w-5 h-5 border-2 border-neutral-200 border-t-[#25D366] rounded-full animate-spin" />
-                    <p className="text-sm text-neutral-500">Starting session…</p>
-                  </div>
-                )}
-
-                {qrStatus === "pending" && qrImage && (
-                  <div className="flex flex-col items-center gap-4">
-                    <div className="bg-white border border-neutral-200 rounded-xl p-4">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={qrImage} alt="WhatsApp QR code" width={220} height={220} className="rounded-lg" />
-                    </div>
-                    <div className="text-center space-y-1">
-                      <p className="text-sm font-semibold text-neutral-800">Open WhatsApp on your phone</p>
-                      <p className="text-xs text-neutral-400">Settings → Linked Devices → Link a Device → scan this code</p>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-                      <p className="text-xs text-neutral-400">Waiting for scan…</p>
-                    </div>
-                    <button onClick={onBackToMethod} className="text-xs text-neutral-400 hover:text-neutral-600 transition-colors">← Back</button>
-                  </div>
-                )}
-
-                {qrStatus === "syncing" && (
-                  <div className="flex flex-col items-center justify-center py-14 gap-4">
-                    <div className="relative w-12 h-12">
-                      <div className="w-12 h-12 border-2 border-[#25D366]/20 rounded-full" />
-                      <div className="absolute inset-0 w-12 h-12 border-2 border-transparent border-t-[#25D366] rounded-full animate-spin" />
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <WhatsAppIcon size={16} className="text-[#25D366]" />
-                      </div>
-                    </div>
-                    <div className="text-center space-y-1">
-                      <p className="text-sm font-semibold text-neutral-800">Importing your chats</p>
-                      <p className="text-xs text-neutral-400 max-w-[200px]">WhatsApp is sending your recent conversations…</p>
-                    </div>
-                  </div>
-                )}
-
-                {qrStatus === "connected" && (
-                  <div>
-                    {qrError && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-3">{qrError}</p>}
-                    <div className="flex items-center gap-2 mb-4">
-                      <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                      <p className="text-xs font-semibold text-green-700">Connected</p>
-                    </div>
-                    <input
-                      type="text"
-                      value={qrSearch}
-                      onChange={(e) => setQrSearch(e.target.value)}
-                      placeholder="Search contacts and groups…"
-                      className="w-full text-sm text-neutral-900 bg-white border border-neutral-200 rounded-lg px-3 py-2 mb-3 focus:outline-none focus:border-neutral-400"
-                    />
-                    {qrFiltered.length === 0 && (
-                      <p className="text-xs text-neutral-400 text-center py-8">{qrSearch ? "No matches." : "No conversations found."}</p>
-                    )}
-                    <div className="divide-y divide-neutral-100">
-                      {qrFiltered.map((contact) => {
-                        const isLoading = qrLoadingId === contact.id
-                        const isDisabled = qrLoadingId !== null && !isLoading
-                        return (
-                        <button
-                          key={contact.id}
-                          onClick={() => !qrLoadingId && handleQrContactSelect(contact)}
-                          disabled={isDisabled}
-                          className={`w-full flex items-center gap-3 px-2 py-3 transition-colors text-left rounded-lg ${isDisabled ? "opacity-40" : "hover:bg-neutral-50"} ${isLoading ? "bg-neutral-50" : ""}`}
-                        >
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${contact.isGroup ? "bg-[#25D366]/10 text-[#25D366]" : "bg-neutral-100 text-neutral-600"}`}>
-                            {contact.isGroup ? (
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-                            ) : (
-                              contact.name.charAt(0).toUpperCase()
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-neutral-800 truncate">{contact.name}</p>
-                            <p className="text-xs text-neutral-400">{isLoading ? "Loading messages…" : contact.isGroup ? `Group · ${contact.participantCount ?? "?"} members` : "1:1 conversation"}</p>
-                          </div>
-                          {isLoading
-                            ? <span className="w-4 h-4 rounded-full border-2 border-neutral-300 border-t-neutral-600 animate-spin shrink-0" />
-                            : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-neutral-300 shrink-0"><path d="M9 18l6-6-6-6"/></svg>
-                          }
-                        </button>
-                        )
-                      })}
-                    </div>
-                    <div className="mt-3 pt-3 border-t border-neutral-100 flex justify-between">
-                      <p className="text-xs text-neutral-400">{qrFiltered.length} conversation{qrFiltered.length !== 1 ? "s" : ""}</p>
-                      <button onClick={onBackToMethod} className="text-xs text-neutral-400 hover:text-neutral-600 transition-colors">← Back</button>
-                    </div>
-                  </div>
-                )}
-
-                {qrStatus === "error" && (
-                  <div className="text-center py-10 space-y-4">
-                    <p className="text-sm text-neutral-700">Bridge not available</p>
-                    <p className="text-xs text-neutral-400 leading-relaxed max-w-xs mx-auto">{qrError || "The WhatsApp bridge service is not running. Try uploading a chat export instead."}</p>
-                    <button onClick={onBackToMethod} className="text-sm text-neutral-600 hover:text-neutral-900 transition-colors border border-neutral-200 rounded-lg px-4 py-2">← Try another method</button>
-                  </div>
-                )}
-              </div>
-            )}
 
             {stage === "instructions" && (
               <div>
@@ -1525,7 +779,6 @@ function ConnectModal({
                   <div className="space-y-2">
                     {parsed.participants.map((name) => {
                       const role = participantRoles[name] ?? "other"
-                      const isAiSuggested = aiSuggestedRoles.has(name)
                       return (
                         <div key={name} className="flex items-center gap-2">
                           <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -1592,7 +845,6 @@ function ConnectModal({
                       value={context.renewalMonth ?? ""}
                       onChange={(e) => onContextChange({ ...context, renewalMonth: e.target.value || undefined })}
                       className="w-full text-xs border border-neutral-200 rounded-lg px-3 py-2 text-neutral-700 focus:outline-none focus:border-neutral-400 bg-white"
-                      placeholder="Renewal month (optional)"
                     />
                   </div>
                 </div>
@@ -1603,7 +855,7 @@ function ConnectModal({
               <div className="py-8 text-center">
                 <div className="w-12 h-12 border-2 border-neutral-200 border-t-neutral-900 rounded-full animate-spin mx-auto mb-4" />
                 <p className="text-sm font-semibold text-neutral-900">
-                  {parsed ? `Analysing ${parsed.totalMessages} messages` : fileName ? `Analysing ${fileName.replace("WA: ", "")}…` : "Analysing conversation…"}
+                  {parsed ? `Analysing ${parsed.totalMessages} messages` : fileName ? `Analysing ${fileName}…` : "Analysing conversation…"}
                 </p>
                 <p className="mt-1 text-xs text-neutral-400">Usually takes about 15–30 seconds</p>
                 <div className="mt-5 space-y-2 text-left">
@@ -1664,10 +916,7 @@ function AccountCard({ account, onDelete, confirmingDelete, onConfirmDelete, onC
   const isHigh = account.result.riskLevel === "high"
   const score = account.result.healthScore ?? 0
 
-  const ARR_BY_TIER_CARD: Record<string, number> = { starter: 6000, growth: 24000, enterprise: 60000 }
-  const RISK_EXPOSURE_CARD: Record<string, number> = { critical: 1.0, high: 0.7, medium: 0.3, low: 0.05 }
-  const acv = account.context?.annualValue ?? ARR_BY_TIER_CARD[account.context?.contractTier ?? ""] ?? 12000
-  const arrAtRisk = Math.round(acv * (RISK_EXPOSURE_CARD[account.result.riskLevel] ?? 0.1))
+  const arrAtRisk = getArrAtRisk(account)
   const showArrAtRisk = isCritical || isHigh
 
   const daysSinceUpdate = Math.floor((Date.now() - new Date(account.updatedAt ?? account.analyzedAt).getTime()) / (1000 * 60 * 60 * 24))
@@ -1743,7 +992,7 @@ function AccountCard({ account, onDelete, confirmingDelete, onConfirmDelete, onC
           )}
           {showArrAtRisk && (
             <span className="ml-auto font-semibold text-red-500 tabular-nums">
-              {arrAtRisk >= 1000 ? `$${Math.round(arrAtRisk / 1000)}K` : `$${arrAtRisk}`} at risk
+              {formatARR(arrAtRisk)} at risk
             </span>
           )}
         </div>

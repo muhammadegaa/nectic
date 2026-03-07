@@ -1,7 +1,7 @@
 # Nectic — Living Product Document
 
-> Last updated: March 2026 — agentic MVP complete (8 sprints)
-> Status: Pre-revenue MVP. File upload primary. QR-based live WhatsApp (wa-bridge) marked coming soon in UI. Targeting first paying customers and Antler Indonesia pitch.
+> Last updated: March 2026 — 2-screen agentic MVP
+> Status: Pre-revenue MVP. File upload primary. Live WhatsApp marked coming soon. Targeting first paying customers and Antler Indonesia pitch.
 >
 > **Rule for maintainers:** Only document what is built and working. Mark everything else as [PLANNED], [DEFERRED], or [NOT BUILT]. Do not mix aspiration with reality.
 
@@ -27,7 +27,7 @@ Nectic detects the churn signal (within 24hrs of analysis)
         ↓
 CS lead gets email alert: "Axara HR Tech — risk detected. Draft response ready."
         ↓
-CS opens Nectic, reads the draft, edits if needed, approves in one click
+CS opens Nectic Queue, reads the draft, edits if needed, approves in one click
         ↓
 Signal tracked as actioned. Account health score updated. ARR protected tracked.
         ↓
@@ -42,22 +42,21 @@ AI given to low-judgment operators makes outcomes worse — they can't filter go
 **What it does today:**
 
 - Parses WhatsApp exports (.txt / .zip) — primary demo path, no friction
-- Live WhatsApp via QR scan (wa-bridge on Railway) — marked "Coming soon" in UI; technically operational but unreliable for groups
+- Live WhatsApp: marked "Coming soon" in UI
 - Runs AI analysis against Claude Sonnet 4.6 to produce structured intelligence: health score, risk signals, product signals, relationship observations, competitor mentions, recommended action
 - Stores account analysis results per user in Firestore
-- Provides an in-context chat co-pilot (Claude Haiku 4.5) that knows the account, workspace context, and the CS lead's prior signal decisions
-- Aggregates signals across accounts on an **account-grouped** Signal Board with per-signal action tracking (grouped by account, sorted by worst risk)
-- **Draft → approve → send loop** on every risk signal card: generates a WhatsApp draft response, CS lead edits/approves, one click sends via WATI (`/api/wati/send`) — signal auto-marked done
-- Generates PM feature briefs from product signals (Claude Sonnet 4.6, streamed)
-- Allows re-analysis when new conversation data is available or context changes
+- Auto-generates WhatsApp draft responses for critical/high risk signals immediately after analysis
+- **Queue** (`/concept/board`) — one card per account, top signal + pre-loaded draft + 3 actions: Dismiss, Copy & done, Send via WhatsApp. No filter tabs, no suggested steps, no collapse toggle.
+- **Revenue header on Queue** — ARR at risk · ARR protected · Accounts in queue — leadership's first-5-second answer to "are we bleeding ARR?"
+- **Account context** (`/concept/account/[id]`) — single-column read-only view: health score, risk signals, product signals, recommended action, relationship observations. Re-analyse panel at bottom. No chat panel, no brief generator.
+- **Dashboard** (`/concept`) — account card grid sorted by risk. Queue CTA banner (red, urgent) when signals need attention. Connect account modal: instructions → upload → analyzing. No WA/QR branches.
+- **Draft → approve → send loop** on every Queue card: AI draft pre-loaded, CS edits/approves, Copy & done or Send via WhatsApp — signal auto-marked done, ARR protected updated.
+- Re-analyse when new conversation data is available or context changes
 - Shares read-only analysis reports via unique token links
-- **Sends email alerts** (via Resend) for high-risk / critical accounts and competitor mentions, with exact customer quotes and renewal date
-- **Competitor alert banner** on account detail page — shows competitor names, triggering quote, and pre-fills chat co-pilot with a retention response prompt
-- **Dashboard outcome story** — `changesSince` delta chip (coloured ↑/↓ badge + summary text) per card, ARR at risk shown on high/critical cards, competitor badge
+- **Email alerts** (via Resend) for high-risk / critical accounts and competitor mentions, with AI-drafted response embedded
 - **Weekly digest email** — Monday briefing with deteriorated accounts, saved accounts, competitive threats, and ARR at risk / ARR protected
 - **Vercel cron** — `/api/cron/weekly-digest` fires every Monday 8am UTC, sends digest to all users with `notificationEmail` set (secured with `CRON_SECRET`)
 - **Two-step onboarding** — captures `notificationEmail` for alerts and digest on step 2
-- **Outcomes page** (`/concept/outcomes`) — leadership view: ARR protected, ARR at risk, signals actioned, competitor threats, accounts saved, renewing this month, recent actions taken, NRR impact summary
 - **Real ACV input** — `annualValue` field on account context form; overrides tier-based estimate in all revenue calculations
 - **Account saved banner** — when the last risk signal on an account is marked done, a green "Account saved — ARR protected" toast appears
 - **Connect modal goes straight to upload** — no method selection screen; frictionless for demo

@@ -3,9 +3,6 @@
 import { useEffect, useRef, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
-import ReactMarkdown from "react-markdown"
-import remarkGfm from "remark-gfm"
-import type { Components } from "react-markdown"
 import LogoIcon from "@/components/logo-icon"
 import { useAuth } from "@/contexts/auth-context"
 import { getAccount, deleteAccount, updateAccount, prefillFromContactBook, mergeContactBook, saveSignalAction, signalKey, getWorkspace, type StoredAccount, type ParticipantRole, type ParticipantRoles, type SignalAction, type SignalActionStatus, type WorkspaceContext } from "@/lib/concept-firestore"
@@ -35,128 +32,7 @@ const urgencyConfig = {
   this_month: { label: "This month", color: "text-neutral-600 bg-neutral-100 border-neutral-200" },
 }
 
-// ─── Agentic prompt helpers ───────────────────────────────────────────────────
-
-function getDynamicPrompts(account: StoredAccount): string[] {
-  const r = account.result
-  const prompts: string[] = []
-
-  if (r.riskLevel === "critical") {
-    prompts.push("Account is critical — what do I do in the next 24 hours?")
-  } else if (r.riskLevel === "high") {
-    prompts.push("Account is high risk — what's the fastest way to stabilise it?")
-  }
-
-  if (r.riskSignals?.length > 0) {
-    const q = r.riskSignals[0].quote
-    const trimmed = q.length > 55 ? q.slice(0, 52) + "…" : q
-    prompts.push(`Help me respond to: "${trimmed}"`)
-  }
-
-  if (r.competitorMentions?.length > 0) {
-    prompts.push(`${r.competitorMentions[0]} was mentioned — how do I handle it?`)
-  }
-
-  if (account.context?.renewalMonth && prompts.length < 3) {
-    prompts.push(`Renewal is ${account.context.renewalMonth} — write me a prep plan`)
-  }
-
-  if (r.sentimentTrend === "declining" && prompts.length < 3) {
-    prompts.push("Sentiment is declining — what should CS say to turn it around?")
-  }
-
-  if (r.recommendedAction && prompts.length < 3) {
-    const action = r.recommendedAction.what
-    const trimmed = action.length > 60 ? action.slice(0, 57) + "…" : action
-    prompts.push(`Walk me through: "${trimmed}"`)
-  }
-
-  const highPri = r.productSignals?.find((s) => s.priority === "high")
-  if (highPri && prompts.length < 3) {
-    prompts.push(`Draft a Jira ticket for "${highPri.title}"`)
-  }
-
-  if (prompts.length === 0) {
-    prompts.push("What's the most important thing I'm missing in this account?")
-    prompts.push("Is renewal realistically at risk?")
-    prompts.push("What's the #1 thing the PM should fix this week?")
-  }
-
-  return prompts.slice(0, 3)
-}
-
-function getFollowUpSuggestions(lastMsg: string, account: StoredAccount): string[] {
-  const msg = lastMsg.toLowerCase()
-  const r = account.result
-  const out: string[] = []
-
-  if (msg.includes("renewal") || msg.includes("renew")) out.push("Draft the renewal prep email")
-  if (msg.includes("jira") || msg.includes("ticket") || msg.includes("sprint")) out.push("Format this as a Jira ticket")
-  if (msg.includes("email") || msg.includes("message") || msg.includes("whatsapp")) out.push("Make it shorter for WhatsApp")
-  if (msg.includes("churn") || msg.includes("cancel") || msg.includes("leaving")) out.push("What's the strongest argument to prevent churn?")
-  if ((msg.includes("feature") || msg.includes("build") || msg.includes("roadmap")) && r.productSignals?.length > 0)
-    out.push("Generate a brief for the top product signal")
-  if (r.competitorMentions?.length > 0 && msg.includes(r.competitorMentions[0].toLowerCase()))
-    out.push(`Write a battle card against ${r.competitorMentions[0]}`)
-  if (msg.includes("call") || msg.includes("meeting")) out.push("Write a meeting agenda")
-  if (msg.includes("assume") || msg.includes("uncertain") || msg.includes("not sure") || msg.includes("unclear"))
-    out.push("What context would make you more confident?")
-
-  if (out.length === 0) {
-    out.push("What should I do next?")
-    out.push("What am I missing?")
-  }
-
-  return out.slice(0, 2)
-}
-
-// ─── Markdown renderers ───────────────────────────────────────────────────────
-
-const chatMarkdownComponents: Components = {
-  p: ({ children }) => <p className="mb-2 last:mb-0 leading-relaxed">{children}</p>,
-  strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
-  em: ({ children }) => <em className="italic">{children}</em>,
-  ul: ({ children }) => <ul className="list-disc list-outside ml-4 mb-2 space-y-0.5">{children}</ul>,
-  ol: ({ children }) => <ol className="list-decimal list-outside ml-4 mb-2 space-y-0.5">{children}</ol>,
-  li: ({ children }) => <li className="text-sm">{children}</li>,
-  blockquote: ({ children }) => (
-    <blockquote className="border-l-2 border-neutral-400 pl-3 italic text-neutral-600 my-2">{children}</blockquote>
-  ),
-  code: ({ children }) => (
-    <code className="bg-neutral-200 text-neutral-800 rounded px-1 py-0.5 text-xs font-mono">{children}</code>
-  ),
-  h1: ({ children }) => <h1 className="font-semibold text-base mb-1 mt-2">{children}</h1>,
-  h2: ({ children }) => <h2 className="font-semibold text-sm mb-1 mt-2">{children}</h2>,
-  h3: ({ children }) => <h3 className="font-semibold text-sm mb-1 mt-1">{children}</h3>,
-}
-
-const briefMarkdownComponents: Components = {
-  p: ({ children }) => <p className="text-sm text-neutral-700 leading-relaxed mb-3 last:mb-0">{children}</p>,
-  strong: ({ children }) => <strong className="font-semibold text-neutral-900">{children}</strong>,
-  em: ({ children }) => <em className="italic text-neutral-600">{children}</em>,
-  h1: ({ children }) => <h1 className="text-base font-bold text-neutral-900 mt-6 mb-2 first:mt-0">{children}</h1>,
-  h2: ({ children }) => <h2 className="text-sm font-bold text-neutral-900 uppercase tracking-wide mt-5 mb-2 first:mt-0">{children}</h2>,
-  h3: ({ children }) => <h3 className="text-sm font-semibold text-neutral-800 mt-4 mb-1">{children}</h3>,
-  ul: ({ children }) => <ul className="list-disc list-outside ml-4 mb-3 space-y-1">{children}</ul>,
-  ol: ({ children }) => <ol className="list-decimal list-outside ml-4 mb-3 space-y-1">{children}</ol>,
-  li: ({ children }) => <li className="text-sm text-neutral-700 leading-relaxed">{children}</li>,
-  blockquote: ({ children }) => (
-    <blockquote className="border-l-3 border-neutral-300 pl-4 py-1 my-3 bg-neutral-50 rounded-r text-sm italic text-neutral-600">
-      {children}
-    </blockquote>
-  ),
-  code: ({ children }) => (
-    <code className="bg-neutral-100 border border-neutral-200 text-neutral-700 rounded px-1.5 py-0.5 text-xs font-mono">{children}</code>
-  ),
-  hr: () => <hr className="border-neutral-200 my-4" />,
-}
-
 // ─── Types ────────────────────────────────────────────────────────────────────
-
-interface ChatMessage {
-  role: "user" | "assistant"
-  content: string
-}
 
 interface ProductSignal {
   type: string
@@ -165,10 +41,6 @@ interface ProductSignal {
   quote: string
   priority: string
   pmAction: string
-}
-
-function canGenerateBrief(signal: ProductSignal): boolean {
-  return (signal.type === "complaint" || signal.type === "feature_request") && signal.priority !== "low"
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -182,16 +54,13 @@ export default function AccountPage() {
   const [workspace, setWorkspace] = useState<WorkspaceContext>({})
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
-  const [briefSignal, setBriefSignal] = useState<ProductSignal | null>(null)
   const [copied, setCopied] = useState(false)
   const [showReanalyze, setShowReanalyze] = useState(false)
-  const [mobileTab, setMobileTab] = useState<"report" | "chat">("report")
   const [reanalyzeParsed, setReanalyzeParsed] = useState<WaParsed | null>(null)
   const [reanalyzeRoles, setReanalyzeRoles] = useState<ParticipantRoles>({})
   const [reanalyzeFile, setReanalyzeFile] = useState<File | null>(null)
   const [reanalyzeRunning, setReanalyzeRunning] = useState(false)
   const reanalyzeInputRef = useRef<HTMLInputElement>(null)
-  const [copilotPrefill, setCopilotPrefill] = useState("")
   const [accountSavedBanner, setAccountSavedBanner] = useState(false)
 
   useEffect(() => {
@@ -466,109 +335,69 @@ export default function AccountPage() {
         </div>
       )}
 
-      {/* Mobile tab switcher — sticky, sits just below the nav */}
-      <div className="xl:hidden sticky top-12 z-10 bg-white border-b border-neutral-200 flex">
-        <button
-          onClick={() => setMobileTab("report")}
-          className={`flex-1 py-3 text-xs font-medium transition-colors ${mobileTab === "report" ? "border-b-2 border-neutral-900 text-neutral-900" : "text-neutral-400"}`}
-        >
-          Report
-        </button>
-        <button
-          onClick={() => setMobileTab("chat")}
-          className={`flex-1 py-3 text-xs font-medium transition-colors ${mobileTab === "chat" ? "border-b-2 border-neutral-900 text-neutral-900" : "text-neutral-400"}`}
-        >
-          Ask Nectic
-        </button>
-      </div>
-
-      {/* Report + Chat co-pilot layout */}
-      <div className={`max-w-6xl mx-auto xl:px-6 xl:py-8 xl:grid xl:grid-cols-5 xl:gap-8 xl:items-start ${mobileTab === "report" ? "px-4 sm:px-6 py-8" : ""}`}>
-        {/* Report — left column, hidden on mobile when chat tab active */}
-        <div className={`xl:col-span-3 ${mobileTab === "chat" ? "hidden xl:block" : ""}`}>
-          <AnalysisReport
-            result={account.result}
-            fileName={account.fileName}
-            analyzedAt={account.analyzedAt}
-            onGenerateBrief={setBriefSignal}
-            account={account}
-            onCopilotFill={(prompt) => {
-              setCopilotPrefill(prompt)
-              setMobileTab("chat")
-            }}
-            onSignalAction={async (key, action) => {
-              if (!user) return
-              try {
-                await saveSignalAction(user.uid, account.id, key, action)
-                const updatedActions = { ...account.signalActions, [key]: action }
-                setAccount((prev) => prev ? { ...prev, signalActions: updatedActions } : prev)
-                // Check if all risk signals are now actioned (done or dismissed)
-                if (action.status === "done") {
-                  const riskKeys = (account.result.riskSignals ?? []).map((s) => {
-                    const slug = s.explanation?.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 60) ?? ""
-                    return `risk-${slug}`
-                  })
-                  const allDone = riskKeys.length > 0 && riskKeys.every((k) => {
-                    const a = k === key ? action : updatedActions?.[k]
-                    return a?.status === "done" || a?.status === "dismissed"
-                  })
-                  if (allDone) {
-                    setAccountSavedBanner(true)
-                    setTimeout(() => setAccountSavedBanner(false), 8000)
-                  }
-                }
-              } catch (err) {
-                console.error("Failed to save signal action:", err)
-              }
-            }}
-            onSaveContext={async (ctx) => {
-              if (!user) return
-              await updateAccount(user.uid, id, { supplementalContext: ctx })
-              setAccount((prev) => prev ? { ...prev, supplementalContext: ctx } : prev)
-            }}
-            onReanalyzeWithContext={async (ctx) => {
-              if (!user) return
-              await updateAccount(user.uid, id, { supplementalContext: ctx })
-              setAccount((prev) => prev ? { ...prev, supplementalContext: ctx } : prev)
-              try {
-                const res = await fetch("/api/concept/reanalyze", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    priorAnalysis: account.result,
-                    participantRoles: account.participantRoles,
-                    supplementalContext: ctx,
-                    signalActions: account.signalActions ?? null,
-                    workspace,
-                  }),
-                })
-                const data = await res.json()
-                if (!res.ok) throw new Error(data.error)
-                await updateAccount(user.uid, id, { result: data.result as AnalysisResult, updatedAt: new Date().toISOString() })
-                const updated = await getAccount(user.uid, id)
-                if (updated) setAccount(updated)
-              } catch (err) {
-                console.error("Context re-analysis failed:", err)
-              }
-            }}
-          />
-        </div>
-
-        {/* Chat co-pilot — sticky right column, hidden on mobile when report tab active */}
-        <div className={`xl:col-span-2 mt-8 xl:mt-0 xl:sticky xl:top-20 ${mobileTab === "report" ? "hidden xl:block" : ""}`}>
-          <ChatPanel account={account} workspace={workspace} initialInput={copilotPrefill} onPrefillConsumed={() => setCopilotPrefill("")} />
-        </div>
-      </div>
-
-      {/* Brief slide-over */}
-      {briefSignal && (
-        <BriefPanel
-          signal={briefSignal}
+      {/* Single-column report */}
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
+        <AnalysisReport
+          result={account.result}
+          fileName={account.fileName}
+          analyzedAt={account.analyzedAt}
           account={account}
-          workspace={workspace}
-          onClose={() => setBriefSignal(null)}
-        />
-      )}
+          onSignalAction={async (key, action) => {
+            if (!user) return
+            try {
+              await saveSignalAction(user.uid, account.id, key, action)
+              const updatedActions = { ...account.signalActions, [key]: action }
+              setAccount((prev) => prev ? { ...prev, signalActions: updatedActions } : prev)
+              if (action.status === "done") {
+                const riskKeys = (account.result.riskSignals ?? []).map((s) => {
+                  const slug = s.explanation?.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 60) ?? ""
+                  return `risk-${slug}`
+                })
+                const allDone = riskKeys.length > 0 && riskKeys.every((k) => {
+                  const a = k === key ? action : updatedActions?.[k]
+                  return a?.status === "done" || a?.status === "dismissed"
+                })
+                if (allDone) {
+                  setAccountSavedBanner(true)
+                  setTimeout(() => setAccountSavedBanner(false), 8000)
+                }
+              }
+            } catch (err) {
+              console.error("Failed to save signal action:", err)
+            }
+          }}
+          onSaveContext={async (ctx) => {
+            if (!user) return
+            await updateAccount(user.uid, id, { supplementalContext: ctx })
+            setAccount((prev) => prev ? { ...prev, supplementalContext: ctx } : prev)
+          }}
+          onReanalyzeWithContext={async (ctx) => {
+            if (!user) return
+            await updateAccount(user.uid, id, { supplementalContext: ctx })
+            setAccount((prev) => prev ? { ...prev, supplementalContext: ctx } : prev)
+            try {
+              const res = await fetch("/api/concept/reanalyze", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  priorAnalysis: account.result,
+                  participantRoles: account.participantRoles,
+                  supplementalContext: ctx,
+                  signalActions: account.signalActions ?? null,
+                  workspace,
+                }),
+              })
+              const data = await res.json()
+              if (!res.ok) throw new Error(data.error)
+              await updateAccount(user.uid, id, { result: data.result as AnalysisResult, updatedAt: new Date().toISOString() })
+              const updated = await getAccount(user.uid, id)
+              if (updated) setAccount(updated)
+            } catch (err) {
+              console.error("Context re-analysis failed:", err)
+            }
+          }}
+      </div>
+
     </div>
   )
 }
@@ -579,22 +408,18 @@ function AnalysisReport({
   result,
   fileName,
   analyzedAt,
-  onGenerateBrief,
   account,
   onSignalAction,
   onSaveContext,
   onReanalyzeWithContext,
-  onCopilotFill,
 }: {
   result: AnalysisResult
   fileName: string
   analyzedAt: string
-  onGenerateBrief: (signal: ProductSignal) => void
   account: StoredAccount
   onSignalAction: (key: string, action: SignalAction) => Promise<void>
   onSaveContext: (ctx: string) => Promise<void>
   onReanalyzeWithContext: (ctx: string) => Promise<void>
-  onCopilotFill?: (prompt: string) => void
 }) {
   const risk = riskConfig[result.riskLevel] ?? riskConfig.medium
   const urgency = urgencyConfig[result.recommendedAction.urgency as keyof typeof urgencyConfig] ?? urgencyConfig.this_month
@@ -712,13 +537,6 @@ function AnalysisReport({
               <blockquote className="text-sm text-orange-900 italic border-l-4 border-orange-300 pl-3 py-1 bg-orange-100/60 rounded-r-lg mb-3 leading-relaxed">
                 &ldquo;{competitorQuote}&rdquo;
               </blockquote>
-            )}
-            <button
-              onClick={() => onCopilotFill?.(`Competitor ${competitors.join(", ")} was mentioned. Draft a WhatsApp retention response addressing their specific concerns and our switching cost.`)}
-              className="text-xs font-semibold text-orange-700 border border-orange-300 bg-white hover:bg-orange-50 px-4 py-2 rounded-lg transition-colors"
-            >
-              Draft retention response →
-            </button>
           </div>
         )
       })()}
@@ -780,14 +598,6 @@ function AnalysisReport({
                       </div>
                       <span className={`text-xs font-semibold flex-shrink-0 ${priColor}`}>{s.priority.charAt(0).toUpperCase() + s.priority.slice(1)}</span>
                     </div>
-                    {canGenerateBrief(s) && (
-                      <button
-                        onClick={() => onGenerateBrief(s)}
-                        className="mt-1.5 text-xs text-neutral-500 border border-neutral-200 bg-white hover:bg-neutral-900 hover:text-white hover:border-neutral-900 px-2.5 py-1 rounded transition-colors font-medium"
-                      >
-                        Generate brief →
-                      </button>
-                    )}
                   </div>
                   <div className="bg-neutral-50 rounded px-3 py-2 text-sm text-neutral-600 italic border border-neutral-100 mb-2">
                     &ldquo;{s.quote}&rdquo;
@@ -1108,425 +918,3 @@ function SignalActionControl({
   )
 }
 
-// ─── Chat panel ───────────────────────────────────────────────────────────────
-
-function ChatPanel({ account, workspace, initialInput, onPrefillConsumed }: {
-  account: StoredAccount
-  workspace: WorkspaceContext
-  initialInput?: string
-  onPrefillConsumed?: () => void
-}) {
-  const analysis = account.result
-  const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [input, setInput] = useState("")
-  const [streaming, setStreaming] = useState(false)
-  const [followUps, setFollowUps] = useState<string[]>([])
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages])
-
-  useEffect(() => {
-    if (initialInput) {
-      setInput(initialInput)
-      onPrefillConsumed?.()
-      textareaRef.current?.focus()
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialInput])
-
-  const dynamicPrompts = getDynamicPrompts(account)
-
-  const riskCount = analysis.riskSignals?.length ?? 0
-  const productCount = analysis.productSignals?.length ?? 0
-  const healthScore = analysis.healthScore
-
-  const buildAccountMeta = () => {
-    const roles = account.participantRoles ?? {}
-    const vendorTeam = Object.entries(roles).filter(([, r]) => r === "vendor").map(([n]) => n)
-    const customerTeam = Object.entries(roles).filter(([, r]) => r === "customer").map(([n]) => n)
-    return {
-      industry: account.context?.industry,
-      contractTier: account.context?.contractTier,
-      renewalMonth: account.context?.renewalMonth,
-      vendorTeam,
-      customerTeam,
-    }
-  }
-
-  const send = async (question: string) => {
-    if (!question.trim() || streaming) return
-    const q = question.trim()
-    setInput("")
-    setFollowUps([])
-    trackEvent("chat_message_sent", {
-      accountRiskLevel: analysis.riskLevel,
-      isFollowUp: messages.length > 0,
-    })
-    const newMessages: ChatMessage[] = [...messages, { role: "user", content: q }]
-    setMessages(newMessages)
-    setStreaming(true)
-    setMessages((prev) => [...prev, { role: "assistant", content: "" }])
-
-    try {
-      const res = await fetch("/api/concept/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          analysis,
-          messages,
-          question: q,
-          accountMeta: buildAccountMeta(),
-          workspace,
-          signalActions: account.signalActions ?? null,
-        }),
-      })
-
-      if (!res.ok || !res.body) throw new Error("Chat request failed")
-
-      const reader = res.body.getReader()
-      const decoder = new TextDecoder()
-
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-        const token = decoder.decode(value, { stream: true })
-        setMessages((prev) => {
-          const updated = [...prev]
-          const last = updated[updated.length - 1]
-          if (last.role === "assistant") {
-            updated[updated.length - 1] = { ...last, content: last.content + token }
-          }
-          return updated
-        })
-      }
-      setMessages((prev) => {
-        const last = prev[prev.length - 1]
-        if (last?.role === "assistant" && last.content) {
-          setFollowUps(getFollowUpSuggestions(last.content, account))
-        }
-        return prev
-      })
-    } catch {
-      setMessages((prev) => {
-        const updated = [...prev]
-        updated[updated.length - 1] = { role: "assistant", content: "Something went wrong. Please try again." }
-        return updated
-      })
-    } finally {
-      setStreaming(false)
-    }
-  }
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-      e.preventDefault()
-      send(input)
-    }
-  }
-
-  return (
-    <div className="bg-white border-0 xl:border xl:border-neutral-200 xl:rounded-xl flex flex-col overflow-hidden xl:shadow-sm h-[calc(100vh-92px)] xl:h-[calc(100vh-7rem)] xl:max-h-[760px] xl:min-h-[480px]">
-
-      {/* Header */}
-      <div className="px-4 h-12 flex items-center gap-2.5 border-b border-neutral-100 flex-shrink-0">
-        <div className="w-6 h-6 rounded-full bg-neutral-900 flex items-center justify-center flex-shrink-0">
-          <span className="text-[10px] font-bold text-white">N</span>
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-semibold text-neutral-900 leading-none">Nectic</p>
-          <p className="text-[10px] text-neutral-400 leading-none mt-0.5 truncate">
-            {riskCount} risk · {productCount} product signals · health {healthScore}/10
-          </p>
-        </div>
-        {streaming && (
-          <span className="text-[10px] text-amber-500 font-medium animate-pulse flex-shrink-0">thinking…</span>
-        )}
-      </div>
-
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 min-h-0">
-        {messages.length === 0 ? (
-          <div className="flex flex-col h-full">
-            {/* Context pill */}
-            <div className="bg-neutral-50 border border-neutral-100 rounded-lg px-3 py-2.5 mb-4">
-              <p className="text-xs text-neutral-500 leading-relaxed">
-                I&apos;ve read the full conversation for{" "}
-                <span className="font-medium text-neutral-700">{analysis.accountName}</span>.{" "}
-                {riskCount > 0 && (
-                  <span>
-                    {riskCount === 1 ? "1 risk signal" : `${riskCount} risk signals`} flagged
-                    {productCount > 0 ? ` and ${productCount} product requests captured.` : "."}
-                  </span>
-                )}
-              </p>
-            </div>
-            {/* Suggested prompts */}
-            <p className="text-[11px] font-medium text-neutral-400 uppercase tracking-wide mb-2">Start here</p>
-            <div className="flex flex-col gap-2">
-              {dynamicPrompts.map((p) => (
-                <button
-                  key={p}
-                  onClick={() => send(p)}
-                  className="text-xs text-neutral-700 bg-white border border-neutral-200 hover:border-neutral-900 hover:bg-neutral-900 hover:text-white px-3.5 py-2.5 rounded-lg transition-all text-left leading-snug"
-                >
-                  {p}
-                </button>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <>
-            {messages.map((m, i) => (
-              <div key={i} className={`flex gap-2 ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-                {m.role === "assistant" && (
-                  <div className="w-5 h-5 rounded-full bg-neutral-900 flex items-center justify-center flex-shrink-0 mt-1">
-                    <span className="text-[8px] font-bold text-white">N</span>
-                  </div>
-                )}
-                {m.role === "user" ? (
-                  <div className="max-w-[85%] text-sm px-3.5 py-2.5 rounded-2xl rounded-br-sm bg-neutral-900 text-white leading-relaxed">
-                    {m.content}
-                  </div>
-                ) : (
-                  <div className="flex-1 text-sm py-1 text-neutral-800 leading-relaxed min-w-0">
-                    {m.content === "" && streaming && i === messages.length - 1 ? (
-                      <div className="flex gap-1 py-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-neutral-300 animate-bounce" style={{ animationDelay: "0ms" }} />
-                        <span className="w-1.5 h-1.5 rounded-full bg-neutral-300 animate-bounce" style={{ animationDelay: "150ms" }} />
-                        <span className="w-1.5 h-1.5 rounded-full bg-neutral-300 animate-bounce" style={{ animationDelay: "300ms" }} />
-                      </div>
-                    ) : (
-                      <ReactMarkdown remarkPlugins={[remarkGfm]} components={chatMarkdownComponents}>
-                        {m.content}
-                      </ReactMarkdown>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
-            {/* Follow-up suggestions */}
-            {!streaming && followUps.length > 0 && (
-              <div className="flex flex-col gap-1.5 pl-7">
-                {followUps.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => send(s)}
-                    className="text-xs text-neutral-500 border border-neutral-200 bg-white hover:bg-neutral-900 hover:text-white hover:border-neutral-900 px-3 py-2 rounded-lg transition-all text-left"
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-            )}
-          </>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Input */}
-      <div className="border-t border-neutral-100 flex-shrink-0 p-3">
-        <div className="flex items-end gap-2 bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 focus-within:border-neutral-400 transition-colors">
-          <textarea
-            ref={textareaRef}
-            rows={1}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Ask about this account…"
-            disabled={streaming}
-            className="flex-1 resize-none text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none bg-transparent py-0.5 max-h-24 overflow-y-auto disabled:opacity-50 leading-relaxed"
-          />
-          <button
-            onClick={() => send(input)}
-            disabled={!input.trim() || streaming}
-            className="flex-shrink-0 w-7 h-7 bg-neutral-900 text-white rounded-lg hover:bg-neutral-700 transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center"
-          >
-            <span className="text-sm leading-none">{streaming ? "…" : "↑"}</span>
-          </button>
-        </div>
-        <p className="text-[10px] text-neutral-400 mt-1.5 px-0.5">⌘ + Enter to send</p>
-      </div>
-    </div>
-  )
-}
-
-// ─── Brief slide-over panel ───────────────────────────────────────────────────
-
-type RoadmapStatus = "new" | "planned" | "partial" | "unknown"
-
-const ROADMAP_OPTIONS: { value: RoadmapStatus; label: string; sub: string }[] = [
-  { value: "new", label: "Not on roadmap", sub: "Brief will include discovery validation steps" },
-  { value: "planned", label: "Already planned", sub: "Brief will focus on implementation scope and closing the gap" },
-  { value: "partial", label: "Similar thing planned", sub: "Brief will highlight what the current plan may miss" },
-  { value: "unknown", label: "Not sure", sub: "Brief will cover both validation and initial scope" },
-]
-
-function BriefPanel({
-  signal,
-  account,
-  workspace,
-  onClose,
-}: {
-  signal: ProductSignal
-  account: StoredAccount
-  workspace: WorkspaceContext
-  onClose: () => void
-}) {
-  const accountName = account.result.accountName
-  const accountSummary = account.result.summary
-  const [phase, setPhase] = useState<"context" | "generating">("context")
-  const [roadmapStatus, setRoadmapStatus] = useState<RoadmapStatus>("unknown")
-  const [additionalContext, setAdditionalContext] = useState("")
-  const [content, setContent] = useState("")
-  const [generating, setGenerating] = useState(false)
-  const [done, setDone] = useState(false)
-  const [copied, setCopied] = useState(false)
-
-  const copyToClipboard = async () => {
-    await navigator.clipboard.writeText(content)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
-  const generate = async (status: RoadmapStatus, extra: string) => {
-    setPhase("generating")
-    setGenerating(true)
-    setContent("")
-    setDone(false)
-    trackEvent("brief_generated", { signalType: signal.type, signalPriority: signal.priority, roadmapStatus: status })
-
-    try {
-      const res = await fetch("/api/concept/brief", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ signal, accountName, accountSummary, roadmapStatus: status, additionalContext: extra, workspace }),
-      })
-
-      if (!res.ok || !res.body) throw new Error("Brief generation failed")
-
-      const reader = res.body.getReader()
-      const decoder = new TextDecoder()
-
-      while (true) {
-        const { done: rdone, value } = await reader.read()
-        if (rdone) break
-        const token = decoder.decode(value, { stream: true })
-        setContent((prev) => prev + token)
-      }
-      setDone(true)
-    } catch {
-      setContent("Brief generation failed. Please try again.")
-      setDone(true)
-    } finally {
-      setGenerating(false)
-    }
-  }
-
-  return (
-    <>
-      <div className="fixed inset-0 bg-black/20 z-40" onClick={phase === "generating" && generating ? undefined : onClose} />
-      <div className="fixed right-0 top-0 bottom-0 w-full sm:w-[480px] bg-white border-l border-neutral-200 z-50 flex flex-col shadow-xl">
-
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100 flex-shrink-0">
-          <div>
-            <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-0.5">
-              {phase === "context" ? "Before writing the brief" : "Feature brief"}
-            </p>
-            <p className="text-sm font-semibold text-neutral-900 truncate max-w-[300px]">{signal.title}</p>
-          </div>
-          <div className="flex items-center gap-2">
-            {done && (
-              <button onClick={copyToClipboard} className="text-xs text-neutral-600 border border-neutral-200 bg-white hover:bg-neutral-50 px-3 py-1.5 rounded transition-colors font-medium">
-                {copied ? "Copied!" : "Copy"}
-              </button>
-            )}
-            <button onClick={onClose} className="text-neutral-400 hover:text-neutral-700 transition-colors text-lg leading-none px-1">×</button>
-          </div>
-        </div>
-
-        {/* Context phase */}
-        {phase === "context" && (
-          <div className="flex-1 overflow-y-auto px-5 py-5 flex flex-col">
-            <p className="text-xs text-neutral-500 mb-5 leading-relaxed">
-              The brief adapts based on where this sits on your roadmap.
-            </p>
-
-            {/* Problem statement */}
-            {signal.problemStatement && (
-              <div className="bg-neutral-50 border border-neutral-200 rounded-lg px-4 py-3 mb-5">
-                <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-1">Underlying problem</p>
-                <p className="text-xs text-neutral-700 leading-relaxed">{signal.problemStatement}</p>
-              </div>
-            )}
-
-            <p className="text-xs font-semibold text-neutral-700 mb-3">Is this already on your roadmap?</p>
-            <div className="space-y-2 mb-5">
-              {ROADMAP_OPTIONS.map((o) => (
-                <button
-                  key={o.value}
-                  onClick={() => setRoadmapStatus(o.value)}
-                  className={`w-full text-left px-4 py-3 rounded-lg border transition-colors ${roadmapStatus === o.value ? "border-neutral-900 bg-neutral-900 text-white" : "border-neutral-200 bg-white hover:border-neutral-400"}`}
-                >
-                  <p className={`text-sm font-semibold ${roadmapStatus === o.value ? "text-white" : "text-neutral-800"}`}>{o.label}</p>
-                  <p className={`text-xs mt-0.5 ${roadmapStatus === o.value ? "text-neutral-300" : "text-neutral-400"}`}>{o.sub}</p>
-                </button>
-              ))}
-            </div>
-
-            <p className="text-xs font-semibold text-neutral-700 mb-2">Anything else to include? <span className="font-normal text-neutral-400">(optional)</span></p>
-            <textarea
-              value={additionalContext}
-              onChange={(e) => setAdditionalContext(e.target.value)}
-              placeholder="e.g. we tried fixing this in Q3 but it didn't ship, this is blocking 2 enterprise deals, we already have a design for this…"
-              rows={3}
-              className="w-full text-xs border border-neutral-200 rounded-lg px-3 py-2.5 text-neutral-700 placeholder:text-neutral-400 focus:outline-none focus:border-neutral-400 resize-none mb-5"
-            />
-
-            <button
-              onClick={() => generate(roadmapStatus, additionalContext)}
-              className="w-full bg-neutral-900 text-white text-sm font-semibold py-3 rounded-lg hover:bg-neutral-700 transition-colors mt-auto"
-            >
-              Write brief →
-            </button>
-          </div>
-        )}
-
-        {/* Generating phase */}
-        {phase === "generating" && (
-          <>
-            <div className="flex-1 overflow-y-auto px-5 py-4">
-              {!content && generating && (
-                <div className="flex items-center gap-2 text-sm text-neutral-500 pt-4">
-                  <div className="w-4 h-4 border-2 border-neutral-300 border-t-neutral-700 rounded-full animate-spin flex-shrink-0" />
-                  <span>Writing brief…</span>
-                </div>
-              )}
-              {content && (
-                <div className="pb-2">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={briefMarkdownComponents}>
-                    {content}
-                  </ReactMarkdown>
-                  {generating && <span className="inline-block w-1.5 h-4 bg-neutral-400 animate-pulse ml-0.5 align-middle" />}
-                </div>
-              )}
-            </div>
-            {done && (
-              <div className="px-5 py-3 border-t border-neutral-100 flex-shrink-0 flex items-center gap-4">
-                <button onClick={() => generate(roadmapStatus, additionalContext)} className="text-xs text-neutral-500 hover:text-neutral-700 transition-colors">
-                  Regenerate →
-                </button>
-                <button onClick={() => { setPhase("context"); setContent(""); setDone(false) }} className="text-xs text-neutral-400 hover:text-neutral-600 transition-colors">
-                  Change context
-                </button>
-              </div>
-            )}
-          </>
-        )}
-      </div>
-    </>
-  )
-}

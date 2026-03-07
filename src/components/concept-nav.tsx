@@ -4,7 +4,7 @@ import Link from "next/link"
 import LogoIcon from "@/components/logo-icon"
 
 interface ConceptNavProps {
-  active: "accounts" | "board" | "workspace" | "outcomes"
+  active: "accounts" | "board" | "workspace"
   urgentCount?: number
   userLabel?: string
   saveStatus?: "idle" | "saving" | "saved"
@@ -49,7 +49,7 @@ export default function ConceptNav({
                   : "text-neutral-400 hover:text-neutral-700 transition-colors"
               }`}
             >
-              Action queue
+              Queue
               {urgentCount > 0 && (
                 <span className="flex items-center justify-center w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-bold leading-none">
                   <span className="absolute inline-flex h-3 w-3 rounded-full bg-red-400 animate-ping opacity-75" />
@@ -66,16 +66,6 @@ export default function ConceptNav({
               }
             >
               Workspace
-            </Link>
-            <Link
-              href="/concept/outcomes"
-              className={
-                active === "outcomes"
-                  ? "text-neutral-900 font-semibold border-b-2 border-neutral-900 pb-0.5"
-                  : "text-neutral-400 hover:text-neutral-700 transition-colors"
-              }
-            >
-              Outcomes
             </Link>
           </div>
         </div>
