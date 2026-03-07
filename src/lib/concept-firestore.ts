@@ -24,6 +24,7 @@ export interface AccountContext {
   industry?: string
   contractTier?: "starter" | "growth" | "enterprise"
   renewalMonth?: string // "YYYY-MM"
+  watiPhone?: string    // phone number for WATI-imported accounts (enables send-back)
 }
 
 export interface WorkspaceContext {

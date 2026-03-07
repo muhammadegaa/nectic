@@ -334,7 +334,7 @@ export default function ConceptPage() {
         analyzedAt: new Date().toISOString(),
         result: data.result as AnalysisResult,
         participantRoles,
-        context: {},
+        context: { watiPhone: contact.wAid || contact.phone },
         shareToken,
       })
       await mergeContactBook(user.uid, participantRoles)

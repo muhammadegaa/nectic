@@ -18,17 +18,25 @@ const steps = [
     number: "02",
     title: "Detect",
     description:
-      "AI reads each conversation and extracts churn signals with the exact customer quote. Competitor mentions, sentiment drops, renewal hesitation. Works in Bahasa Indonesia and English.",
+      "AI monitors every conversation and detects churn signals with the exact customer quote. Competitor mentions, sentiment drops, renewal hesitation — flagged in real time. Works in Bahasa Indonesia and English.",
     detail:
       "Every signal links to the original message. No black-box scores. You see exactly what the customer said and why it matters.",
   },
   {
     number: "03",
-    title: "Act",
+    title: "Draft",
     description:
-      "Accounts ranked by health score. Competitor alerts with a co-pilot to draft your retention response. A weekly briefing lands every Monday before standup.",
+      "For every risk signal, Nectic drafts the WhatsApp response your CS team should send. Tone-matched to the account, written in the customer's language. Your team reviews and approves — not writes from scratch.",
     detail:
-      "Signal detected, response drafted, sent. The full loop in under 2 minutes.",
+      "Accounts are ranked by health score. High-risk accounts surface at the top with a draft action already prepared.",
+  },
+  {
+    number: "04",
+    title: "Send",
+    description:
+      "One click sends the approved message directly to the customer via WhatsApp Business. Signal marked done. Account health updated. Full loop closed — no copy-pasting between tools.",
+    detail:
+      "Outcome tracked: saved this month, ARR protected, churn rate change. Leadership gets the numbers every Monday.",
   },
 ]
 
@@ -60,7 +68,7 @@ export default function HowItWorks() {
           </p>
           <h2 className="text-3xl font-light text-neutral-900 leading-tight max-w-lg">
             From WhatsApp conversation<br />
-            <span className="text-neutral-400">to action queue in minutes.</span>
+            <span className="text-neutral-400">to sent response in minutes.</span>
           </h2>
         </motion.div>
 
@@ -68,7 +76,7 @@ export default function HowItWorks() {
           variants={container}
           initial="hidden"
           animate={isInView ? "visible" : "hidden"}
-          className="grid md:grid-cols-3 gap-px bg-neutral-100 rounded-xl overflow-hidden"
+          className="grid md:grid-cols-2 lg:grid-cols-4 gap-px bg-neutral-100 rounded-xl overflow-hidden"
         >
           {steps.map((step) => (
             <motion.div
@@ -94,12 +102,14 @@ export default function HowItWorks() {
           className="mt-10 flex flex-wrap gap-2"
         >
           {[
+            "Send via WhatsApp Business",
             "Health score 1-10",
-            "Competitor mention detection",
+            "Competitor detection",
             "Bahasa Indonesia support",
             "Risk-ranked action queue",
-            "Co-pilot response drafting",
+            "Draft response generation",
             "Weekly digest email",
+            "Auto-notify on critical risk",
           ].map((chip) => (
             <span
               key={chip}

@@ -114,31 +114,31 @@ export default function HeroSection() {
               className="inline-flex items-center gap-2 text-xs font-medium text-neutral-400 uppercase tracking-widest"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              AI-native churn prevention for B2B SaaS in Southeast Asia
+              Autonomous churn prevention for CS teams in Southeast Asia
             </motion.span>
 
             <motion.h1
               variants={fadeUp}
               className="mt-6 text-4xl sm:text-5xl lg:text-[2.9rem] font-light text-neutral-900 leading-[1.1] tracking-tight"
             >
-              You find out a customer<br />
-              <span className="text-neutral-400">is leaving after they stop replying.</span>
+              Your CS team reads 200 WhatsApp chats.<br />
+              <span className="text-neutral-400">Nectic reads them and acts.</span>
             </motion.h1>
 
             <motion.p
               variants={fadeUp}
               className="mt-7 text-lg text-neutral-500 max-w-md leading-relaxed"
             >
-              Nectic reads your WhatsApp customer conversations and surfaces
-              churn signals 2 to 4 weeks early. Health scores, competitor
-              alerts, and a Monday briefing — without changing how your team works.
+              Nectic monitors your customer WhatsApp conversations, detects churn
+              signals before they escalate, drafts the response, and sends it — your
+              team approves, not investigates.
             </motion.p>
 
             <motion.p
               variants={fadeUp}
               className="mt-3 text-base text-neutral-400 max-w-md leading-relaxed"
             >
-              Built for CS leads at B2B SaaS companies in Indonesia and Singapore.
+              Built for CS leads at B2B SaaS companies in Indonesia and Singapore whose customers live in WhatsApp.
             </motion.p>
 
             <motion.div
@@ -163,7 +163,7 @@ export default function HeroSection() {
               variants={fadeUp}
               className="mt-5 text-xs text-neutral-400"
             >
-              No CRM required. Works with your existing WhatsApp Business account.
+              Connects to WhatsApp Business. No CRM required. First response in under 60 seconds.
             </motion.p>
           </motion.div>
 
@@ -182,8 +182,8 @@ export default function HeroSection() {
         >
           {[
             { stat: "91%", label: "of B2B communication in Indonesia happens on WhatsApp" },
-            { stat: "62-70%", label: "net revenue retention in SEA vs 90% globally" },
-            { stat: "40%", label: "save rate when churn signals are caught 3 weeks early" },
+            { stat: "2–3 hrs", label: "CS managers spend daily reading WhatsApp to triage accounts" },
+            { stat: "40%", label: "save rate when churn signals are actioned 3 weeks early" },
           ].map((item) => (
             <div key={item.stat}>
               <p className="text-3xl font-light text-neutral-900 tabular-nums">{item.stat}</p>

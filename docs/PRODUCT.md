@@ -9,9 +9,28 @@
 
 ## What Nectic is
 
-Nectic is a **PM and CS intelligence tool for WhatsApp-first B2B SaaS teams in Southeast Asia**.
+Nectic is an **autonomous account health and churn prevention system for CS teams at WhatsApp-first B2B SaaS companies in Southeast Asia**.
 
-It reads WhatsApp conversations between your company and your customers, extracts churn signals and product insights, and gives you an agentic co-pilot to help you act on them.
+**Primary buyer: Head of CS / CS Lead.** They own churn, manage accounts in WhatsApp, and spend 2–3 hrs/day reading conversations to figure out who needs attention. Nectic replaces that manual triage.
+
+**Secondary beneficiary: PM.** Product signals from CS conversations automatically feed the PM's view. They don't request it — it just appears.
+
+**The loop Nectic runs end-to-end:**
+```
+Customer sends a concerning WhatsApp message
+        ↓
+Nectic detects the churn signal (within 24hrs of analysis)
+        ↓
+CS lead gets email alert: "Axara HR Tech — risk detected. Draft response ready."
+        ↓
+CS opens Nectic, reads the draft, edits if needed, sends via WhatsApp in one click
+        ↓
+Signal tracked as actioned. Account health score updated. ARR protected tracked.
+        ↓
+Monday digest delivered: saved accounts, competitive threats, NRR impact
+```
+
+It reads WhatsApp conversations between your company and your customers, extracts churn signals and product insights, drafts the response your CS team should send, and sends it directly via WhatsApp Business — your team approves, not investigates.
 
 **What it does today:**
 
@@ -199,8 +218,9 @@ Path B — Context-only update (no new messages):
 | Google Sign-In                                   | ✅ Working        | Via Firebase Auth. Entry at /concept/login                                        |
 | Email/password auth                              | ⚠️ Exists        | At /auth/signup and /auth/login but not the primary product path                  |
 | File upload analysis (.txt, .zip)                | ✅ Working        | Client-side parsing, 1500 message cap                                             |
-| WATI 1:1 contact analysis                        | ✅ Working (demo) | Requires user to provide WATI endpoint + token                                    |
+| WATI 1:1 contact analysis                        | ✅ Working        | V3 API (auto-falls back to V1); requires user WATI endpoint + token               |
 | WATI group chat                                  | ❌ Not possible   | WhatsApp Business API does not support group chats                                |
+| **Send WhatsApp response via WATI**              | ✅ Working        | `/api/wati/send` — CS approves draft, one click sends via WATI session message API |
 | AI participant role classification               | ✅ Working        | Runs on unknowns after file upload                                                |
 | Contact book (cross-session role memory)         | ✅ Working        | Stored in Firestore per user                                                      |
 | Account health score                             | ✅ Working        | AI-generated 1–10 integer                                                         |

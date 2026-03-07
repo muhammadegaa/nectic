@@ -48,20 +48,20 @@ export default function CtaSection() {
               Early access
             </p>
             <h2 className="text-3xl sm:text-4xl font-light text-white mb-5 leading-tight">
-              Join the first teams using Nectic.
+              Stop managing churn manually.
             </h2>
             <p className="text-neutral-400 text-base leading-relaxed mb-8">
-              We are working with CS leads and PMs at B2B SaaS companies in
-              Indonesia and Singapore. If your customers live in WhatsApp,
-              this is built for you.
+              We are working with CS leads at B2B SaaS companies in Indonesia and Singapore
+              whose customers live in WhatsApp. If your team is reading chats manually
+              to figure out who&apos;s at risk — this is built for you.
             </p>
 
             <div className="space-y-3">
               {[
-                "Works with your existing WhatsApp Business account",
-                "Setup in under 5 minutes",
-                "No CRM or existing tooling required",
-                "Built for teams managing customers in Indonesia and Singapore",
+                "Connects to WhatsApp Business — no new tools for your team",
+                "First account analysed in under 60 seconds",
+                "Draft responses generated, ready to send with one click",
+                "Email alert the moment a high-risk signal appears",
               ].map((item) => (
                 <div key={item} className="flex items-center gap-3">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
