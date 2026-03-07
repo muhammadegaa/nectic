@@ -796,11 +796,44 @@ function ConnectModal({
   const [qrError, setQrError] = useState("")
   const qrPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
+  const BRIDGE = "https://nectic-wa-bridge-production.up.railway.app"
+
   const callBridge = async (body: Record<string, unknown>) => {
-    const res = await fetch("/api/wa-bridge", {
-      method: "POST",
+    const { action, ...rest } = body
+    let url: string
+    let method = "GET"
+    let fetchBody: string | undefined
+
+    switch (action) {
+      case "start":
+        url = `${BRIDGE}/session/start`
+        method = "POST"
+        fetchBody = JSON.stringify({ uid, ...rest })
+        break
+      case "status":
+        url = `${BRIDGE}/session/status?uid=${encodeURIComponent(uid)}`
+        break
+      case "contacts":
+        url = `${BRIDGE}/contacts?uid=${encodeURIComponent(uid)}`
+        break
+      case "messages": {
+        const waid = rest.waid as string
+        const limit = (rest.limit as number) || 200
+        url = `${BRIDGE}/messages/${encodeURIComponent(waid)}?uid=${encodeURIComponent(uid)}&limit=${limit}`
+        break
+      }
+      case "logout":
+        url = `${BRIDGE}/session?uid=${encodeURIComponent(uid)}`
+        method = "DELETE"
+        break
+      default:
+        throw new Error("Unknown action")
+    }
+
+    const res = await fetch(url, {
+      method,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...body, uid }),
+      body: fetchBody,
     })
     return res.json()
   }
