@@ -538,6 +538,7 @@ function AnalysisReport({
               <blockquote className="text-sm text-orange-900 italic border-l-4 border-orange-300 pl-3 py-1 bg-orange-100/60 rounded-r-lg mb-3 leading-relaxed">
                 &ldquo;{competitorQuote}&rdquo;
               </blockquote>
+            )}
           </div>
         )
       })()}
