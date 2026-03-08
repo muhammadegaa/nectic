@@ -161,8 +161,8 @@ function isSystemBody(body: string, sender: string): boolean {
 //
 // This lets us analyze a 12-month, 3000-message group without losing signals.
 
-const MAX_SAMPLE = 500
-const RECENT_COUNT = 200 // always include last N messages in full
+const MAX_SAMPLE = 400
+const RECENT_COUNT = 180 // always include last N messages in full
 
 function smartSample(messages: WaMessage[]): { sampled: WaMessage[]; note: string } {
   if (messages.length <= MAX_SAMPLE) {
