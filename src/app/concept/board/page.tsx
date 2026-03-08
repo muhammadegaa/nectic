@@ -78,8 +78,7 @@ function getTopRiskSignal(account: StoredAccount): QueueSignal | null {
   const s = sorted[0]
   const sType = (s as { type?: string }).type ?? "risk"
   const sTitle = (s as { title?: string }).title || s.explanation.slice(0, 80)
-  const sKeyTitle = s.explanation.slice(0, 80)
-  const key = signalKey(sType, sKeyTitle)
+  const key = signalKey(sType, sTitle)
   const action = account.signalActions?.[key]
 
   // Skip if already resolved
@@ -89,7 +88,7 @@ function getTopRiskSignal(account: StoredAccount): QueueSignal | null {
       const sig = sorted[i]
       const t = (sig as { type?: string }).type ?? "risk"
       const ttl = (sig as { title?: string }).title || sig.explanation.slice(0, 80)
-      const k = signalKey(t, sig.explanation.slice(0, 80))
+      const k = signalKey(t, ttl)
       const a = account.signalActions?.[k]
       if (!a || (a.status !== "done" && a.status !== "dismissed")) {
         return {
@@ -131,7 +130,7 @@ function countOpenSignals(account: StoredAccount): number {
   const allSignals = [
     ...(account.result.riskSignals ?? []).map((s) => {
       const t = (s as { type?: string }).type ?? "risk"
-      return signalKey(t, s.explanation.slice(0, 80))
+      return signalKey(t, (s as { title?: string }).title || s.explanation.slice(0, 80))
     }),
     ...(account.result.productSignals ?? []).map((s) => signalKey(s.type, s.title)),
   ]

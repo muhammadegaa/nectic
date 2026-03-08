@@ -375,8 +375,8 @@ export default function AccountPage() {
               setAccount((prev) => prev ? { ...prev, signalActions: updatedActions } : prev)
               if (action.status === "done") {
                 const riskKeys = (account.result.riskSignals ?? []).map((s) => {
-                  const slug = s.explanation?.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 60) ?? ""
-                  return `risk-${slug}`
+                  const t = (s as { type?: string }).type ?? "risk"
+                  return signalKey(t, (s as { title?: string }).title || s.explanation.slice(0, 80))
                 })
                 const allDone = riskKeys.length > 0 && riskKeys.every((k) => {
                   const a = k === key ? action : updatedActions?.[k]
@@ -585,7 +585,7 @@ function AnalysisReport({
             {result.riskSignals.map((s, i) => {
               const sev = s.severity === "high" ? "border-l-red-400" : s.severity === "medium" ? "border-l-amber-400" : "border-l-neutral-300"
               const sType = (s as { type?: string }).type ?? "risk"
-              const sTitle = s.explanation.slice(0, 80)
+              const sTitle = (s as { title?: string }).title || s.explanation.slice(0, 80)
               const key = signalKey(sType, sTitle)
               return (
                 <div key={i} className={`p-5 border-l-4 ${sev}`}>

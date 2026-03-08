@@ -368,10 +368,11 @@ export default function ConceptPage() {
       const signals = account.result.riskSignals ?? []
       for (const sig of signals) {
         const t = (sig as { type?: string }).type ?? "risk"
-        const k = signalKey(t, (sig.explanation ?? "").slice(0, 80))
+        const sigTitle = (sig as { title?: string }).title || (sig.explanation ?? "").slice(0, 80)
+        const k = signalKey(t, sigTitle)
         const action = account.signalActions?.[k]
         if (action?.draftResponse && action.status !== "done" && action.status !== "dismissed") {
-          return [{ account, title: (sig as { title?: string }).title ?? sig.explanation.slice(0, 60), draft: action.draftResponse, key: k }]
+          return [{ account, title: sigTitle, draft: action.draftResponse, key: k }]
         }
       }
       return []
