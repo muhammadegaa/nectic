@@ -9,6 +9,8 @@ interface WorkspaceContext {
   productStory?: string
 }
 
+type ToneAdjustment = "shorter" | "more_formal" | "bahasa"
+
 export async function POST(req: NextRequest) {
   try {
     const {
@@ -18,6 +20,7 @@ export async function POST(req: NextRequest) {
       signalCategory,
       accountName,
       workspace,
+      tone,
     } = await req.json() as {
       signalTitle: string
       signalExplanation?: string
@@ -25,6 +28,7 @@ export async function POST(req: NextRequest) {
       signalCategory: "risk" | "product"
       accountName: string
       workspace?: WorkspaceContext
+      tone?: ToneAdjustment
     }
 
     if (!signalTitle || !quote || !accountName) {
@@ -32,34 +36,54 @@ export async function POST(req: NextRequest) {
     }
 
     const productContext = workspace?.productStory
-      ? `Company: ${workspace.productStory}`
+      ? `You represent: ${workspace.productStory}`
       : workspace?.productDescription
       ? `Your product: ${workspace.productDescription}`
       : ""
 
-    const systemPrompt = `You are a senior Customer Success manager drafting a WhatsApp response to address a customer signal.
+    const toneInstruction = tone === "shorter"
+      ? "TONE: Make it shorter — 1-2 sentences maximum. Cut any pleasantry that isn't essential."
+      : tone === "more_formal"
+      ? "TONE: Use a more formal register — avoid contractions, use full sentences, maintain professional distance while staying warm."
+      : tone === "bahasa"
+      ? "TONE: Write entirely in Bahasa Indonesia regardless of the original quote language."
+      : ""
 
-Guidelines:
-- Write in a warm, professional, and direct tone
-- Keep it to 2-3 sentences maximum — WhatsApp messages should be concise
-- If the conversation was likely in Bahasa Indonesia (infer from the quote), write in Bahasa Indonesia
-- Otherwise write in English
-- Start with acknowledgment, then show ownership/action, then set expectation
-- Never be defensive. Never make excuses. Show empathy and urgency.
-- Do NOT use bullet points or markdown — plain conversational text only
-- Do NOT use placeholders like [Name] — write as if addressing the account directly
+    // Detect Bahasa from quote heuristic
+    const isBahasaQuote = /\b(tidak|iya|saya|kami|tolong|sudah|belum|bisa|mohon|terima kasih|halo|pak|bu|mas|kak)\b/i.test(quote)
+
+    const systemPrompt = `You are a CS manager sending a WhatsApp message to a customer. You are writing as yourself — a human, not a company chatbot.
+
+CRITICAL RULES — never break these:
+- Never open with "Halo kami dari [company]" or any company-introduction opener
+- Never use "kami" to mean yourself — use "saya" (I/me) for first-person; "kami" only when genuinely referring to the whole team taking collective action
+- Never end with a formal sign-off ("Salam hangat", "Best regards", "Hormat kami") — WhatsApp doesn't need it
+- Never use placeholders like [Name] — write as if you already know who you're addressing
+- No bullet points, no markdown — plain conversational prose only
+- Do NOT fabricate promises you can't keep (deadlines, specific fixes)
+
+VOICE:
+- Acknowledge the pain point directly — don't minimise it
+- Show personal ownership: "Saya akan..." / "I'll personally..." not "The team will look into"
+- 2-3 sentences is the target — enough to feel human, short enough for WhatsApp
+- Address the customer by first name if you can infer it from context; if not, use appropriate register (Kak / Mas / Bu + name if Bahasa)
+
+LANGUAGE:
+${isBahasaQuote ? "- The customer writes in Bahasa Indonesia — respond in Bahasa Indonesia" : "- The customer writes in English — respond in English"}
+- If mixed, follow the customer's dominant language
+
+${toneInstruction}
 
 ${productContext}`
 
-    const userPrompt = `Draft a WhatsApp response for this customer signal.
+    const userPrompt = `Draft a WhatsApp message responding to this customer signal.
 
 Account: ${accountName}
-Signal type: ${signalCategory === "risk" ? "Risk / churn signal" : "Product signal"}
 Signal: ${signalTitle}
-${signalExplanation ? `Context: ${signalExplanation}` : ""}
-Customer said: "${quote}"
+${signalExplanation ? `Why it matters: ${signalExplanation}` : ""}
+What they said: "${quote}"
 
-Write only the draft message, nothing else.`
+Write only the message text. No label, no header, no explanation.`
 
     let draft: string
     try {

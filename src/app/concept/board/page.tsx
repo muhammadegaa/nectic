@@ -331,7 +331,7 @@ export default function QueuePage() {
                 <div className="flex items-center gap-2 mb-3">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
                   <p className="text-xs font-semibold text-neutral-700">
-                    Ready to send — {readyQueue.length} draft{readyQueue.length !== 1 ? "s" : ""} prepared by agent
+                    Ready to review — {readyQueue.length} draft{readyQueue.length !== 1 ? "s" : ""} prepared by agent
                   </p>
                 </div>
                 <motion.div
@@ -400,6 +400,7 @@ function QueueCard({
   const risk = account.result.riskLevel
   const [draft, setDraft] = useState(topSignal.action?.draftResponse ?? "")
   const [draftLoading, setDraftLoading] = useState(false)
+  const [draftTone, setDraftTone] = useState<"shorter" | "more_formal" | "bahasa" | undefined>(undefined)
   const [copyDone, setCopyDone] = useState(false)
   const [sending, setSending] = useState(false)
   const [sendDone, setSendDone] = useState(false)
@@ -475,7 +476,7 @@ function QueueCard({
     }
   }
 
-  const generateDraft = async () => {
+  const generateDraft = async (tone?: "shorter" | "more_formal" | "bahasa") => {
     setDraftLoading(true)
     try {
       const res = await fetch("/api/concept/draft-response", {
@@ -488,6 +489,7 @@ function QueueCard({
           signalCategory: "risk",
           accountName: topSignal.accountName,
           workspace,
+          tone,
         }),
       })
       const data = await res.json()
@@ -567,7 +569,7 @@ function QueueCard({
             </div>
             {draft && (
               <button
-                onClick={generateDraft}
+                onClick={() => { setDraftTone(undefined); generateDraft() }}
                 className="text-[11px] text-neutral-400 hover:text-neutral-600 transition-colors"
               >
                 Regenerate
@@ -582,16 +584,34 @@ function QueueCard({
                 <div className="h-3 bg-neutral-100 rounded animate-pulse w-3/5" />
               </div>
             ) : draft ? (
-              <textarea
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                onBlur={() => saveAction({ draftResponse: draft })}
-                rows={3}
-                className="w-full text-xs text-neutral-700 leading-relaxed resize-none focus:outline-none bg-transparent"
-              />
+              <>
+                <textarea
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  onBlur={() => saveAction({ draftResponse: draft })}
+                  rows={3}
+                  className="w-full text-xs text-neutral-700 leading-relaxed resize-none focus:outline-none bg-transparent"
+                />
+                <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-neutral-100">
+                  <span className="text-[10px] text-neutral-400 mr-0.5">Adjust:</span>
+                  {(["shorter", "more_formal", "bahasa"] as const).map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => { setDraftTone(t); generateDraft(t) }}
+                      className={`text-[10px] font-medium px-2 py-0.5 rounded-full border transition-colors ${
+                        draftTone === t
+                          ? "bg-neutral-900 text-white border-neutral-900"
+                          : "text-neutral-500 border-neutral-200 hover:border-neutral-400 hover:text-neutral-700"
+                      }`}
+                    >
+                      {t === "shorter" ? "Shorter" : t === "more_formal" ? "More formal" : "Bahasa"}
+                    </button>
+                  ))}
+                </div>
+              </>
             ) : (
               <button
-                onClick={generateDraft}
+                onClick={() => generateDraft()}
                 className="w-full flex items-center justify-center gap-2 text-xs font-medium text-neutral-500 py-3 hover:text-neutral-900 transition-colors"
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">

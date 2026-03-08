@@ -88,7 +88,7 @@ const USER_PROMPT = (
   "sentimentTrend": "improving" | "stable" | "declining",
   "riskSignals": [
     {
-      "title": "<5 words max — a scannable label, e.g. 'delayed delivery causing frustration'>",
+      "title": "<how a sharp colleague would flag this in a Slack message — specific, human, no jargon. e.g. 'customer hasn't logged in for 3 weeks', 'billing dispute still unresolved', 'went quiet after last outage'. Max 8 words.>",
       "quote": "<exact quote from a customer-side participant>",
       "explanation": "<why this is a risk signal — 1-2 sentences>",
       "severity": "low" | "medium" | "high",
@@ -105,7 +105,7 @@ const USER_PROMPT = (
   "productSignals": [
     {
       "type": "complaint" | "feature_request" | "praise" | "confusion",
-      "title": "<short title, max 8 words>",
+      "title": "<what a PM would write in a Jira title — specific problem, not a category label. e.g. 'bulk export breaks on files over 50MB', 'can't reassign tasks without admin rights'. Max 8 words.>",
       "problemStatement": "<the underlying customer problem in one sentence, not the feature request itself>",
       "quote": "<exact quote from a customer-side participant>",
       "priority": "low" | "medium" | "high",
