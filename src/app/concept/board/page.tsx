@@ -228,16 +228,23 @@ export default function QueuePage() {
   }, [user, accounts])
 
   // Revenue metrics
+  // ARR at risk: only critical/high accounts that still have open signals
   const totalArrAtRisk = accounts
-    .filter((a) => a.result.riskLevel === "critical" || a.result.riskLevel === "high")
+    .filter((a) => {
+      if (a.result.riskLevel !== "critical" && a.result.riskLevel !== "high") return false
+      return countOpenSignals(a) > 0
+    })
     .reduce((sum, a) => sum + getArrAtRisk(a), 0)
 
+  // ARR protected: critical/high accounts where all signals are now actioned
   const arrProtected = accounts
     .filter((a) => {
+      if (a.result.riskLevel !== "critical" && a.result.riskLevel !== "high") return false
       const open = countOpenSignals(a)
-      return open === 0 && ((a.result.riskSignals?.length ?? 0) + (a.result.productSignals?.length ?? 0)) > 0
+      const total = (a.result.riskSignals?.length ?? 0) + (a.result.productSignals?.length ?? 0)
+      return open === 0 && total > 0
     })
-    .reduce((sum, a) => sum + getAccountARR(a), 0)
+    .reduce((sum, a) => sum + getArrAtRisk(a), 0)
 
   const urgentCount = accounts.reduce((sum, a) => {
     if (a.result.riskLevel !== "critical" && a.result.riskLevel !== "high") return sum
