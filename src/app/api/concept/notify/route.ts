@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getAdminDb } from "@/infrastructure/firebase/firebase-server"
+import { callAI } from "@/lib/ai-client"
 
 export const maxDuration = 30
 
@@ -50,32 +51,14 @@ export async function POST(req: NextRequest) {
 
     // Auto-generate draft inline if not provided and we have a quote
     let resolvedDraft = draftResponse ?? ""
-    if (!resolvedDraft && topSignalQuote && topSignalTitle && process.env.ANTHROPIC_API_KEY) {
+    if (!resolvedDraft && topSignalQuote && topSignalTitle) {
       try {
-        const draftRes = await fetch("https://api.anthropic.com/v1/messages", {
-          method: "POST",
-          headers: {
-            "x-api-key": process.env.ANTHROPIC_API_KEY,
-            "anthropic-version": "2023-06-01",
-            "content-type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "claude-haiku-4-5-20251001",
-            max_tokens: 300,
-            temperature: 0.4,
-            system: `You are a senior Customer Success manager. Write a short, warm, direct WhatsApp response (2–3 sentences max). No bullet points, no placeholders. Plain text only. Acknowledge the issue, show ownership, set next step.`,
-            messages: [
-              {
-                role: "user",
-                content: `Account: ${accountName}\nSignal: ${topSignalTitle}\n${topSignalExplanation ? `Context: ${topSignalExplanation}\n` : ""}Customer said: "${topSignalQuote}"\n\nWrite only the draft message.`,
-              },
-            ],
-          }),
-        })
-        if (draftRes.ok) {
-          const draftData = await draftRes.json()
-          resolvedDraft = draftData.content?.[0]?.text?.trim() ?? ""
-        }
+        resolvedDraft = (await callAI({
+          system: `You are a senior Customer Success manager. Write a short, warm, direct WhatsApp response (2–3 sentences max). No bullet points, no placeholders. Plain text only. Acknowledge the issue, show ownership, set next step.`,
+          user: `Account: ${accountName}\nSignal: ${topSignalTitle}\n${topSignalExplanation ? `Context: ${topSignalExplanation}\n` : ""}Customer said: "${topSignalQuote}"\n\nWrite only the draft message.`,
+          maxTokens: 300,
+          temperature: 0.4,
+        })).trim()
       } catch { /* non-fatal — draft is optional */ }
     }
 

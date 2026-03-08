@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { callAI } from "@/lib/ai-client"
 
 export const maxDuration = 20
 
@@ -28,11 +29,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ roles: {} }, { status: 200 })
     }
 
-    const apiKey = process.env.ANTHROPIC_API_KEY
-    if (!apiKey) {
-      return NextResponse.json({ roles: {} }, { status: 200 })
-    }
-
     const participantBlock = participants
       .map((p) => {
         const sample = p.messages.slice(0, 5).join(" | ")
@@ -40,33 +36,17 @@ export async function POST(req: NextRequest) {
       })
       .join("\n")
 
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 300,
-        temperature: 0,
+    let raw: string
+    try {
+      raw = await callAI({
         system: SYSTEM_PROMPT,
-        messages: [
-          {
-            role: "user",
-            content: `Classify these participants:\n\n${participantBlock}`,
-          },
-        ],
-      }),
-    })
-
-    if (!response.ok) {
+        user: `Classify these participants:\n\n${participantBlock}`,
+        maxTokens: 300,
+        temperature: 0,
+      })
+    } catch {
       return NextResponse.json({ roles: {} }, { status: 200 })
     }
-
-    const data = await response.json()
-    const raw = data.content?.[0]?.text ?? ""
     const jsonMatch = raw.match(/\{[\s\S]*\}/)
     if (!jsonMatch) return NextResponse.json({ roles: {} }, { status: 200 })
 

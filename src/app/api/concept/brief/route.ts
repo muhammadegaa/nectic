@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server"
+import { callAIStream, extractStreamToken } from "@/lib/ai-client"
 
 export const maxDuration = 60
 
@@ -114,33 +115,16 @@ export async function POST(req: NextRequest) {
       return new Response("Missing signal or accountName", { status: 400 })
     }
 
-    const apiKey = process.env.ANTHROPIC_API_KEY
-    if (!apiKey) {
-      return new Response("ANTHROPIC_API_KEY not configured", { status: 503 })
-    }
-
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 2048,
-        temperature: 0.2,
-        stream: true,
-        system: SYSTEM_PROMPT,
-        messages: [
-          { role: "user", content: USER_PROMPT(signal, accountName, accountSummary, roadmapStatus, additionalContext, workspace) },
-        ],
-      }),
+    const response = await callAIStream({
+      system: SYSTEM_PROMPT,
+      user: USER_PROMPT(signal, accountName, accountSummary, roadmapStatus, additionalContext, workspace),
+      maxTokens: 2048,
+      temperature: 0.2,
     })
 
     if (!response.ok || !response.body) {
       const err = await response.text()
-      return new Response(`Anthropic error: ${err}`, { status: 502 })
+      return new Response(`AI error: ${err}`, { status: 502 })
     }
 
     const { readable, writable } = new TransformStream()
@@ -155,14 +139,8 @@ export async function POST(req: NextRequest) {
           if (done) { await writer.close(); break }
           const chunk = decoder.decode(value, { stream: true })
           for (const line of chunk.split("\n")) {
-            if (!line.startsWith("data: ")) continue
-            const data = line.slice(6).trim()
-            if (data === "[DONE]") continue
-            try {
-              const parsed = JSON.parse(data)
-              const token = parsed.delta?.text
-              if (token) await writer.write(new TextEncoder().encode(token))
-            } catch { /* skip malformed */ }
+            const token = extractStreamToken(line)
+            if (token) await writer.write(new TextEncoder().encode(token))
           }
         }
       } catch { await writer.abort() }

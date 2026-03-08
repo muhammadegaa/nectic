@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { callAI } from "@/lib/ai-client"
 
 export const maxDuration = 30
 
@@ -75,11 +76,6 @@ export async function POST(req: NextRequest) {
     // Keep first 6000 chars of stripped text — enough context without blowing token budget
     const bodyText = stripHtml(html).slice(0, 6000)
 
-    const apiKey = process.env.ANTHROPIC_API_KEY
-    if (!apiKey) {
-      return NextResponse.json({ error: "AI service not configured" }, { status: 503 })
-    }
-
     const prompt = `You are extracting structured product information from a SaaS company website.
 
 Page title: ${pageTitle}
@@ -100,27 +96,12 @@ Rules:
 - If you cannot determine something clearly, use an empty string
 - Return ONLY the JSON object, no markdown wrapper`
 
-    const aiRes = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 400,
-        temperature: 0.1,
-        messages: [{ role: "user", content: prompt }],
-      }),
-    })
-
-    if (!aiRes.ok) {
+    let raw: string
+    try {
+      raw = await callAI({ system: "", user: prompt, maxTokens: 400, temperature: 0.1 })
+    } catch {
       return NextResponse.json({ error: "AI extraction failed" }, { status: 502 })
     }
-
-    const aiData = await aiRes.json()
-    const raw = aiData.content?.[0]?.text ?? ""
 
     let parsed: { productDescription?: string; featureAreas?: string }
     try {

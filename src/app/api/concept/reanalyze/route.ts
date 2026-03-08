@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import type { AnalysisResult } from "@/app/api/concept/analyze/route"
 import { buildSignalActionsBlock, type SignalAction } from "@/lib/signal-utils"
+import { callAI } from "@/lib/ai-client"
 
 export const maxDuration = 60
 
@@ -118,36 +119,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Provide conversation or supplementalContext" }, { status: 400 })
     }
 
-    const apiKey = process.env.ANTHROPIC_API_KEY
-    if (!apiKey) {
-      return NextResponse.json({ error: "ANTHROPIC_API_KEY not configured" }, { status: 503 })
-    }
-
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 4096,
-        temperature: 0.2,
+    let raw: string
+    try {
+      raw = await callAI({
         system: SYSTEM_PROMPT,
-        messages: [
-          { role: "user", content: USER_PROMPT(priorAnalysis, conversation, participantRoles, supplementalContext, signalActions, workspace) },
-        ],
-      }),
-    })
-
-    if (!response.ok) {
-      const err = await response.text()
-      return NextResponse.json({ error: "Re-analysis failed", detail: err }, { status: 502 })
+        user: USER_PROMPT(priorAnalysis, conversation, participantRoles, supplementalContext, signalActions, workspace),
+        maxTokens: 4096,
+        temperature: 0.2,
+      })
+    } catch (aiErr) {
+      return NextResponse.json({ error: "Re-analysis failed", detail: String(aiErr) }, { status: 502 })
     }
-
-    const data = await response.json()
-    const raw = data.content?.[0]?.text
     if (!raw) return NextResponse.json({ error: "Empty response from model. Please try again." }, { status: 502 })
 
     const stripped = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim()
