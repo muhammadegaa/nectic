@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
         "X-Title": "Nectic - Participant Classification",
       },
       body: JSON.stringify({
-        model: "anthropic/claude-haiku-4.5",
+        model: "anthropic/claude-sonnet-4.6",
         temperature: 0,
         max_tokens: 300,
         messages: [

@@ -209,7 +209,7 @@ export async function POST(req: NextRequest) {
         "X-Title": "Nectic - WhatsApp Signal Extractor",
       },
       body: JSON.stringify({
-        model: "anthropic/claude-haiku-4-5-20251001",
+        model: "anthropic/claude-sonnet-4.6",
         temperature: 0.2,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },

@@ -40,7 +40,7 @@ Competitor mentions: ${result.competitorMentions?.join(", ") || "none"}
         "X-Title": "Nectic - Account Q&A",
       },
       body: JSON.stringify({
-        model: "anthropic/claude-haiku-4-5",
+        model: "anthropic/claude-sonnet-4.6",
         temperature: 0.3,
         max_tokens: 200,
         messages: [

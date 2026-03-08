@@ -109,7 +109,7 @@ Rules:
         "X-Title": "Nectic - Workspace Autofill",
       },
       body: JSON.stringify({
-        model: "anthropic/claude-haiku-4.5",
+        model: "anthropic/claude-sonnet-4.6",
         temperature: 0.1,
         max_tokens: 400,
         messages: [{ role: "user", content: prompt }],
