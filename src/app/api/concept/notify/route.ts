@@ -50,24 +50,21 @@ export async function POST(req: NextRequest) {
 
     // Auto-generate draft inline if not provided and we have a quote
     let resolvedDraft = draftResponse ?? ""
-    if (!resolvedDraft && topSignalQuote && topSignalTitle && process.env.OPENROUTER_API_KEY) {
+    if (!resolvedDraft && topSignalQuote && topSignalTitle && process.env.ANTHROPIC_API_KEY) {
       try {
-        const draftRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        const draftRes = await fetch("https://api.anthropic.com/v1/messages", {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-            "Content-Type": "application/json",
-            "HTTP-Referer": "https://nectic.vercel.app",
-            "X-Title": "Nectic - Alert Draft",
+            "x-api-key": process.env.ANTHROPIC_API_KEY,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
           },
           body: JSON.stringify({
-            model: "anthropic/claude-sonnet-4.6",
+            model: "claude-haiku-4-5-20251001",
+            max_tokens: 300,
             temperature: 0.4,
+            system: `You are a senior Customer Success manager. Write a short, warm, direct WhatsApp response (2–3 sentences max). No bullet points, no placeholders. Plain text only. Acknowledge the issue, show ownership, set next step.`,
             messages: [
-              {
-                role: "system",
-                content: `You are a senior Customer Success manager. Write a short, warm, direct WhatsApp response (2–3 sentences max). No bullet points, no placeholders. Plain text only. Acknowledge the issue, show ownership, set next step.`,
-              },
               {
                 role: "user",
                 content: `Account: ${accountName}\nSignal: ${topSignalTitle}\n${topSignalExplanation ? `Context: ${topSignalExplanation}\n` : ""}Customer said: "${topSignalQuote}"\n\nWrite only the draft message.`,
@@ -77,7 +74,7 @@ export async function POST(req: NextRequest) {
         })
         if (draftRes.ok) {
           const draftData = await draftRes.json()
-          resolvedDraft = draftData.choices?.[0]?.message?.content?.trim() ?? ""
+          resolvedDraft = draftData.content?.[0]?.text?.trim() ?? ""
         }
       } catch { /* non-fatal — draft is optional */ }
     }

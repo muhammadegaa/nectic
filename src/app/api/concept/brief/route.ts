@@ -114,25 +114,25 @@ export async function POST(req: NextRequest) {
       return new Response("Missing signal or accountName", { status: 400 })
     }
 
-    const apiKey = process.env.OPENROUTER_API_KEY
+    const apiKey = process.env.ANTHROPIC_API_KEY
     if (!apiKey) {
-      return new Response("OPENROUTER_API_KEY not configured", { status: 503 })
+      return new Response("ANTHROPIC_API_KEY not configured", { status: 503 })
     }
 
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://nectic.vercel.app",
-        "X-Title": "Nectic - Feature Brief Generator",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
       },
       body: JSON.stringify({
-        model: "anthropic/claude-sonnet-4.6",
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 2048,
         temperature: 0.2,
         stream: true,
+        system: SYSTEM_PROMPT,
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: USER_PROMPT(signal, accountName, accountSummary, roadmapStatus, additionalContext, workspace) },
         ],
       }),
@@ -140,7 +140,7 @@ export async function POST(req: NextRequest) {
 
     if (!response.ok || !response.body) {
       const err = await response.text()
-      return new Response(`OpenRouter error: ${err}`, { status: 502 })
+      return new Response(`Anthropic error: ${err}`, { status: 502 })
     }
 
     const { readable, writable } = new TransformStream()
@@ -160,7 +160,7 @@ export async function POST(req: NextRequest) {
             if (data === "[DONE]") continue
             try {
               const parsed = JSON.parse(data)
-              const token = parsed.choices?.[0]?.delta?.content
+              const token = parsed.delta?.text
               if (token) await writer.write(new TextEncoder().encode(token))
             } catch { /* skip malformed */ }
           }

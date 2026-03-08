@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ roles: {} }, { status: 200 })
     }
 
-    const apiKey = process.env.OPENROUTER_API_KEY
+    const apiKey = process.env.ANTHROPIC_API_KEY
     if (!apiKey) {
       return NextResponse.json({ roles: {} }, { status: 200 })
     }
@@ -40,20 +40,19 @@ export async function POST(req: NextRequest) {
       })
       .join("\n")
 
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://nectic.vercel.app",
-        "X-Title": "Nectic - Participant Classification",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
       },
       body: JSON.stringify({
-        model: "anthropic/claude-sonnet-4.6",
-        temperature: 0,
+        model: "claude-haiku-4-5-20251001",
         max_tokens: 300,
+        temperature: 0,
+        system: SYSTEM_PROMPT,
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
           {
             role: "user",
             content: `Classify these participants:\n\n${participantBlock}`,
@@ -67,7 +66,7 @@ export async function POST(req: NextRequest) {
     }
 
     const data = await response.json()
-    const raw = data.choices?.[0]?.message?.content ?? ""
+    const raw = data.content?.[0]?.text ?? ""
     const jsonMatch = raw.match(/\{[\s\S]*\}/)
     if (!jsonMatch) return NextResponse.json({ roles: {} }, { status: 200 })
 

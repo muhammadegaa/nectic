@@ -15,9 +15,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "question and result are required" }, { status: 400 })
     }
 
-    const apiKey = process.env.OPENROUTER_API_KEY
+    const apiKey = process.env.ANTHROPIC_API_KEY
     if (!apiKey) {
-      return NextResponse.json({ error: "OPENROUTER_API_KEY not configured" }, { status: 503 })
+      return NextResponse.json({ error: "ANTHROPIC_API_KEY not configured" }, { status: 503 })
     }
 
     const accountSummary = `
@@ -31,23 +31,19 @@ Recommended action: ${result.recommendedAction?.what} — owner: ${result.recomm
 Competitor mentions: ${result.competitorMentions?.join(", ") || "none"}
 `.trim()
 
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://nectic.vercel.app",
-        "X-Title": "Nectic - Account Q&A",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
       },
       body: JSON.stringify({
-        model: "anthropic/claude-sonnet-4.6",
-        temperature: 0.3,
+        model: "claude-haiku-4-5-20251001",
         max_tokens: 200,
+        temperature: 0.3,
+        system: `You are a Customer Success analyst. You answer ONE specific question about an account based strictly on the analysis data provided. Answer in 1-3 sentences maximum. Be direct and specific — cite actual signals, quotes, or scores. Never speculate beyond what the data shows. Never use bullet points.`,
         messages: [
-          {
-            role: "system",
-            content: `You are a Customer Success analyst. You answer ONE specific question about an account based strictly on the analysis data provided. Answer in 1-3 sentences maximum. Be direct and specific — cite actual signals, quotes, or scores. Never speculate beyond what the data shows. Never use bullet points.`,
-          },
           {
             role: "user",
             content: `Account analysis:\n${accountSummary}\n\nQuestion: ${question}`,
@@ -58,12 +54,12 @@ Competitor mentions: ${result.competitorMentions?.join(", ") || "none"}
 
     if (!response.ok) {
       const err = await response.text()
-      console.error("OpenRouter ask error:", err)
+      console.error("Anthropic ask error:", err)
       return NextResponse.json({ error: "Could not answer question" }, { status: 502 })
     }
 
     const data = await response.json()
-    const answer = data.choices?.[0]?.message?.content?.trim()
+    const answer = data.content?.[0]?.text?.trim()
 
     if (!answer) {
       return NextResponse.json({ error: "Empty response" }, { status: 502 })

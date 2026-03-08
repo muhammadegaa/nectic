@@ -115,9 +115,9 @@ export async function POST(req: NextRequest) {
       return new Response("Missing question or analysis", { status: 400 })
     }
 
-    const apiKey = process.env.OPENROUTER_API_KEY
+    const apiKey = process.env.ANTHROPIC_API_KEY
     if (!apiKey) {
-      return new Response("OPENROUTER_API_KEY not configured", { status: 503 })
+      return new Response("ANTHROPIC_API_KEY not configured", { status: 503 })
     }
 
     const meta: AccountMeta = {
@@ -130,28 +130,26 @@ export async function POST(req: NextRequest) {
 
     const chatMessages = [...messages, { role: "user" as const, content: question }]
 
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://nectic.vercel.app",
-        "X-Title": "Nectic - PM Agent Chat",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
       },
       body: JSON.stringify({
-        model: "anthropic/claude-sonnet-4.6",
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 1024,
         temperature: 0.3,
         stream: true,
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT(analysis, meta, workspace, signalActions ?? undefined) },
-          ...chatMessages,
-        ],
+        system: SYSTEM_PROMPT(analysis, meta, workspace, signalActions ?? undefined),
+        messages: chatMessages,
       }),
     })
 
     if (!response.ok || !response.body) {
       const err = await response.text()
-      return new Response(`OpenRouter error: ${err}`, { status: 502 })
+      return new Response(`Anthropic error: ${err}`, { status: 502 })
     }
 
     const { readable, writable } = new TransformStream()
@@ -171,7 +169,8 @@ export async function POST(req: NextRequest) {
             if (data === "[DONE]") continue
             try {
               const parsed = JSON.parse(data)
-              const token = parsed.choices?.[0]?.delta?.content
+              // Anthropic streaming: content_block_delta with delta.text
+              const token = parsed.delta?.text
               if (token) await writer.write(new TextEncoder().encode(token))
             } catch { /* skip malformed */ }
           }

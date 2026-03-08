@@ -118,24 +118,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Provide conversation or supplementalContext" }, { status: 400 })
     }
 
-    const apiKey = process.env.OPENROUTER_API_KEY
+    const apiKey = process.env.ANTHROPIC_API_KEY
     if (!apiKey) {
-      return NextResponse.json({ error: "OPENROUTER_API_KEY not configured" }, { status: 503 })
+      return NextResponse.json({ error: "ANTHROPIC_API_KEY not configured" }, { status: 503 })
     }
 
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://nectic.vercel.app",
-        "X-Title": "Nectic - Account Re-analysis",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
       },
       body: JSON.stringify({
-        model: "anthropic/claude-sonnet-4.6",
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 4096,
         temperature: 0.2,
+        system: SYSTEM_PROMPT,
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: USER_PROMPT(priorAnalysis, conversation, participantRoles, supplementalContext, signalActions, workspace) },
         ],
       }),
@@ -147,7 +147,7 @@ export async function POST(req: NextRequest) {
     }
 
     const data = await response.json()
-    const raw = data.choices?.[0]?.message?.content
+    const raw = data.content?.[0]?.text
     if (!raw) return NextResponse.json({ error: "Empty response from model. Please try again." }, { status: 502 })
 
     const stripped = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim()

@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
     // Keep first 6000 chars of stripped text — enough context without blowing token budget
     const bodyText = stripHtml(html).slice(0, 6000)
 
-    const apiKey = process.env.OPENROUTER_API_KEY
+    const apiKey = process.env.ANTHROPIC_API_KEY
     if (!apiKey) {
       return NextResponse.json({ error: "AI service not configured" }, { status: 503 })
     }
@@ -100,18 +100,17 @@ Rules:
 - If you cannot determine something clearly, use an empty string
 - Return ONLY the JSON object, no markdown wrapper`
 
-    const aiRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    const aiRes = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://nectic.vercel.app",
-        "X-Title": "Nectic - Workspace Autofill",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
       },
       body: JSON.stringify({
-        model: "anthropic/claude-sonnet-4.6",
-        temperature: 0.1,
+        model: "claude-haiku-4-5-20251001",
         max_tokens: 400,
+        temperature: 0.1,
         messages: [{ role: "user", content: prompt }],
       }),
     })
@@ -121,7 +120,7 @@ Rules:
     }
 
     const aiData = await aiRes.json()
-    const raw = aiData.choices?.[0]?.message?.content ?? ""
+    const raw = aiData.content?.[0]?.text ?? ""
 
     let parsed: { productDescription?: string; featureAreas?: string }
     try {
