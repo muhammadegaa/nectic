@@ -105,7 +105,7 @@ export async function GET(req: NextRequest) {
         // Find the top unactioned risk signal
         const unactioned = riskSignals.find((s) => {
           const sType = (s as { type?: string }).type ?? "risk"
-          const sTitle = (s as { title?: string }).title || s.explanation?.slice(0, 80) ?? ""
+          const sTitle = (s as { title?: string }).title || (s.explanation?.slice(0, 80) ?? "")
           const key = signalKey(sType, sTitle)
           const action = signalActions[key]
           return !action || (action.status !== "done" && action.status !== "dismissed")
