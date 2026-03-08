@@ -26,12 +26,10 @@ export interface WaParsed {
   dateRange: { from: string; to: string }
   totalMessages: number
   truncated: boolean
+  samplingNote?: string // explains what was sampled when truncated
 }
 
 // Invisible Unicode characters WhatsApp injects into exports
-// \u200e = Left-to-Right Mark, \u200f = Right-to-Left Mark
-// \u2068 = First Strong Isolate, \u2069 = Pop Directional Isolate
-// \u202a-\u202e = directional formatting characters
 const INVISIBLE_UNICODE = /[\u200e\u200f\u2068\u2069\u202a-\u202e]/g
 
 // WhatsApp export line patterns — iOS uses brackets, Android uses dashes
@@ -85,25 +83,60 @@ const SKIP_BODY_PATTERNS = [
   /^\(file attached\)$/i,
 ]
 
+// ─── Signal detection (used for smart sampling of large conversations) ─────────
+
+// Bahasa Indonesia signals: frustration, complaint, confusion, competitor, churn
+const SIGNAL_KW_ID = [
+  "masalah", "kendala", "tidak bisa", "nggak bisa", "gabisa", "gak bisa",
+  "error", "bug", "eror", "down", "gangguan", "lambat", "lemot", "loading",
+  "lama", "putus", "mati", "crash", "gagal", "susah", "ribet", "bingung",
+  "kapan", "belum", "belum ada", "belum selesai", "masih belum", "masih error",
+  "mau pindah", "coba yang lain", "bandingkan", "compare", "kompetitor",
+  "lebih murah", "mahal", "tagihan", "bayar", "refund", "cancel", "berhenti",
+  "tidak lanjut", "nggak lanjut", "kecewa", "kurang puas", "tidak puas",
+  "nggak puas", "mengecewakan", "buruk", "jelek", "parah",
+  "sudah lapor", "sudah report", "sudah bilang", "kok belum", "kenapa masih",
+  "tolong", "mohon", "urgent", "segera", "asap",
+]
+
+// English signals
+const SIGNAL_KW_EN = [
+  "issue", "problem", "bug", "error", "broken", "crash", "slow", "can't",
+  "cannot", "doesn't work", "not working", "failed", "failing", "down",
+  "competitor", "alternative", "switch", "switching", "cancel", "refund",
+  "leave", "churning", "disappointed", "frustrated", "unhappy", "terrible",
+  "worse", "when will", "how long", "still not", "still broken", "still waiting",
+  "urgent", "asap", "escalate", "unacceptable", "unprofessional",
+  "mislead", "promised", "where is", "why hasn't", "nobody is",
+]
+
+// Known competitors in SEA SaaS space
+const COMPETITORS = [
+  "qontak", "zendesk", "freshdesk", "salesforce", "hubspot", "zoho", "pipedrive",
+  "respond.io", "twilio", "intercom", "crisp", "tawk", "sendbird",
+  "mekari", "talenta", "jurnal", "sleekr", "gadjian",
+]
+
+function isSignalMessage(msg: WaMessage): boolean {
+  const b = msg.body.toLowerCase()
+  if (SIGNAL_KW_ID.some((kw) => b.includes(kw))) return true
+  if (SIGNAL_KW_EN.some((kw) => b.includes(kw))) return true
+  if (COMPETITORS.some((kw) => b.includes(kw))) return true
+  // Meaningful questions (exclude very short "?" messages)
+  if (msg.body.includes("?") && msg.body.length > 25) return true
+  return false
+}
+
 function cleanBody(raw: string): string {
   let s = raw.replace(INVISIBLE_UNICODE, "")
-
-  // Strip the "<This message was edited>" marker
   s = s.replace(/<This message was edited>/gi, "").trim()
-
-  // Replace URLs with [link] to save tokens and reduce noise
   s = s.replace(/https?:\/\/\S+/g, "[link]")
-
-  // Clean @ mentions: @⁨Name⁩ → @Name
   s = s.replace(/@[^\s]+/g, (match) => match.replace(INVISIBLE_UNICODE, ""))
-
   return s.trim()
 }
 
 function cleanSender(raw: string): string {
-  // Strip invisible Unicode
   let s = raw.replace(INVISIBLE_UNICODE, "").trim()
-  // Strip leading ~ (contacts not saved in phonebook)
   s = s.replace(/^~\s*/, "")
   return s.trim()
 }
@@ -116,14 +149,69 @@ function isSystemBody(body: string, sender: string): boolean {
   )
 }
 
-export function parseWhatsAppExport(raw: string, maxMessages = 150): WaParsed {
+// ─── Smart sampling ───────────────────────────────────────────────────────────
+//
+// Strategy for large conversations:
+//   1. Always include the most recent RECENT_COUNT messages (last N messages)
+//      — recency matters most for active risk signals
+//   2. From the full history, include signal-rich messages
+//      — catches churn signals/complaints from months ago
+//   3. Spread "context" samples across the full timeline for baseline sentiment
+//   4. Hard cap at MAX_SAMPLE total messages
+//
+// This lets us analyze a 12-month, 3000-message group without losing signals.
+
+const MAX_SAMPLE = 500
+const RECENT_COUNT = 200 // always include last N messages in full
+
+function smartSample(messages: WaMessage[]): { sampled: WaMessage[]; note: string } {
+  if (messages.length <= MAX_SAMPLE) {
+    return { sampled: messages, note: "" }
+  }
+
+  const recent = messages.slice(-RECENT_COUNT)
+  const history = messages.slice(0, -RECENT_COUNT)
+
+  // From history: take all signal messages first
+  const signals = history.filter(isSignalMessage)
+
+  // Fill remaining budget with evenly-spaced context messages
+  const remaining = MAX_SAMPLE - RECENT_COUNT - signals.length
+  let context: WaMessage[] = []
+  if (remaining > 0 && history.length > 0) {
+    const nonSignal = history.filter((m) => !isSignalMessage(m))
+    if (nonSignal.length <= remaining) {
+      context = nonSignal
+    } else {
+      const step = Math.floor(nonSignal.length / remaining)
+      for (let i = 0; i < nonSignal.length && context.length < remaining; i += step) {
+        context.push(nonSignal[i])
+      }
+    }
+  }
+
+  // Merge and sort by original index (maintain chronological order)
+  const historySet = new Set([...signals, ...context])
+  const historyMerged = history.filter((m) => historySet.has(m))
+
+  const sampled = [...historyMerged, ...recent]
+
+  const dateFrom = messages[0]?.timestamp ?? ""
+  const dateTo = messages[messages.length - 1]?.timestamp ?? ""
+  const note = `Analyzed ${sampled.length} of ${messages.length} total messages (full period: ${dateFrom} – ${dateTo}). Smart sampling: last ${recent.length} messages in full, plus ${signals.length} signal-rich + ${context.length} context messages from earlier history.`
+
+  return { sampled, note }
+}
+
+// ─── Core parser ──────────────────────────────────────────────────────────────
+
+export function parseWhatsAppExport(raw: string): WaParsed {
   // Normalise line endings and strip BOM
   const lines = raw.replace(/^\uFEFF/, "").split(/\r?\n/)
   const messages: WaMessage[] = []
   let current: WaMessage | null = null
 
   for (const rawLine of lines) {
-    // Strip invisible Unicode from the whole line before pattern matching
     const line = rawLine.replace(INVISIBLE_UNICODE, "")
     let matched = false
 
@@ -135,7 +223,6 @@ export function parseWhatsAppExport(raw: string, maxMessages = 150): WaParsed {
         const [, date, time, rawSender, rawBody] = m
         const sender = cleanSender(rawSender)
         const body = cleanBody(rawBody)
-
         const isSystem = isSystemBody(body, sender) || isSystemBody(rawBody, rawSender)
 
         current = {
@@ -149,7 +236,6 @@ export function parseWhatsAppExport(raw: string, maxMessages = 150): WaParsed {
       }
     }
 
-    // Continuation line (multi-line message)
     if (!matched && current && line.trim()) {
       const cont = cleanBody(line)
       if (cont) current.body += "\n" + cont
@@ -158,44 +244,46 @@ export function parseWhatsAppExport(raw: string, maxMessages = 150): WaParsed {
 
   if (current) messages.push(current)
 
-  // Filter: no system messages, no empty/skipped bodies
+  // Filter out system messages, empty bodies, media-only messages
   const real = messages.filter((m) => {
     if (m.isSystem) return false
     if (!m.body || m.body.length < 2) return false
     if (SKIP_BODY_PATTERNS.some((p) => p.test(m.body))) return false
-    // Skip messages that are only [link]
     if (m.body.trim() === "[link]") return false
     return true
   })
 
-  // Deduplicate consecutive identical messages from same sender (forwarded spam)
+  // Deduplicate consecutive identical messages from same sender
   const deduped = real.filter((m, i) => {
     if (i === 0) return true
     const prev = real[i - 1]
     return !(m.sender === prev.sender && m.body === prev.body)
   })
 
-  // Normalise participant names (already cleaned via cleanSender)
   const participants = [...new Set(deduped.map((m) => m.sender))].filter(Boolean)
 
-  // Take last maxMessages to stay within token budget
-  const truncated = deduped.length > maxMessages
-  const slice = truncated ? deduped.slice(-maxMessages) : deduped
+  // Smart sampling: handles conversations of any size
+  const { sampled, note } = smartSample(deduped)
+  const truncated = deduped.length > sampled.length
 
   return {
-    messages: slice,
+    messages: sampled,
     participants,
     dateRange: {
-      from: slice[0]?.timestamp ?? "",
-      to: slice[slice.length - 1]?.timestamp ?? "",
+      from: sampled[0]?.timestamp ?? "",
+      to: sampled[sampled.length - 1]?.timestamp ?? "",
     },
     totalMessages: deduped.length,
     truncated,
+    samplingNote: note || undefined,
   }
 }
 
 export function formatForPrompt(parsed: WaParsed): string {
-  return parsed.messages
+  const header = parsed.samplingNote
+    ? `[CONTEXT: ${parsed.samplingNote}]\n\n`
+    : ""
+  return header + parsed.messages
     .map((m) => `[${m.timestamp}] ${m.sender}: ${m.body}`)
     .join("\n")
 }

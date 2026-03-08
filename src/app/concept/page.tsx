@@ -301,7 +301,7 @@ export default function ConceptPage() {
       try {
         data = JSON.parse(text)
       } catch {
-        throw new Error("Analysis timed out. Your chat may be too long — try exporting a shorter date range (1–2 months).")
+        throw new Error("Analysis timed out. Please try again — large conversations occasionally need a second attempt.")
       }
       if (!res.ok) throw new Error(data.error || "Analysis failed")
 
@@ -984,8 +984,8 @@ function ConnectModal({
                       </div>
                     </div>
                     {parsed.truncated && (
-                      <p className="mt-3 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-1.5">
-                        Large file — analysing the most recent {parsed.messages.length} messages.
+                      <p className="mt-3 text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded px-3 py-1.5">
+                        Large conversation — smart sampling applied. Recent messages + signal-rich history from the full period will be analysed.
                       </p>
                     )}
                   </div>

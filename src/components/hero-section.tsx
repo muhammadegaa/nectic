@@ -161,7 +161,7 @@ export default function HeroSection() {
               variants={fadeUp}
               className="mt-5 text-xs text-neutral-400"
             >
-              Upload any WhatsApp group export. ARR at risk calculated instantly. Live sync coming Q2 2026.
+              Upload any WhatsApp group export — any size, any date range. ARR at risk calculated in seconds. Live sync coming Q2 2026.
             </motion.p>
           </motion.div>
 
