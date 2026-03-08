@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
 
       const accounts = accountsSnap.docs.map((d) => ({
         id: d.id,
-        ...d.data(),
+        ...(d.data() as object),
       })) as StoredAccount[]
 
       const now = Date.now()

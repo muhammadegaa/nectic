@@ -209,9 +209,9 @@ export async function POST(req: NextRequest) {
       .orderBy("analyzedAt", "desc")
       .get()
 
-    const accounts: StoredAccount[] = accountsSnap.docs.map((d) => ({
+    const accounts = accountsSnap.docs.map((d) => ({
       id: d.id,
-      ...d.data(),
+      ...(d.data() as object),
     })) as StoredAccount[]
 
     if (accounts.length === 0) {
