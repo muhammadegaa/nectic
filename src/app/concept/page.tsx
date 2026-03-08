@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { motion } from "framer-motion"
+import { toast } from "sonner"
 import ConceptNav from "@/components/concept-nav"
 import { useAuth } from "@/contexts/auth-context"
 import { parseWhatsAppFile, formatForPrompt, type WaParsed } from "@/lib/whatsapp-parser"
@@ -31,6 +32,8 @@ import { trackEvent, identifyUser } from "@/lib/posthog"
 import { getArrAtRisk, formatARR } from "@/lib/arr-utils"
 
 type ConnectStage = "instructions" | "upload" | "ready" | "analyzing" | "error"
+
+type ReadyToSendEntry = { account: StoredAccount; title: string; draft: string; key: string }
 
 const INDUSTRIES = ["SaaS / Software", "Fintech", "Logistics", "HR Tech", "E-commerce", "Healthcare", "Education", "Other"]
 const CONTRACT_TIERS = [
@@ -337,6 +340,17 @@ export default function ConceptPage() {
     await refreshAccounts()
   }
 
+  const handleSignalDone = async (accountId: string, key: string, draft: string) => {
+    if (!user) return
+    await saveSignalAction(user.uid, accountId, key, {
+      status: "done",
+      draftResponse: draft,
+      resolvedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    })
+    await refreshAccounts()
+  }
+
   if (authLoading || !user) {
     return (
       <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
@@ -347,6 +361,21 @@ export default function ConceptPage() {
 
   const riskOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 }
   const sortedAccounts = [...accounts].sort((a, b) => (riskOrder[a.result.riskLevel] ?? 3) - (riskOrder[b.result.riskLevel] ?? 3))
+
+  const readyToSendEntries: ReadyToSendEntry[] = accounts
+    .filter((a) => a.result.riskLevel === "critical" || a.result.riskLevel === "high")
+    .flatMap((account): ReadyToSendEntry[] => {
+      const signals = account.result.riskSignals ?? []
+      for (const sig of signals) {
+        const t = (sig as { type?: string }).type ?? "risk"
+        const k = signalKey(t, (sig.explanation ?? "").slice(0, 80))
+        const action = account.signalActions?.[k]
+        if (action?.draftResponse && action.status !== "done" && action.status !== "dismissed") {
+          return [{ account, title: (sig as { title?: string }).title ?? sig.explanation.slice(0, 60), draft: action.draftResponse, key: k }]
+        }
+      }
+      return []
+    })
   const aggregated = aggregateSignals(accounts)
   const atRiskAccounts = accounts.filter((a) => a.result.riskLevel === "high" || a.result.riskLevel === "critical")
   const atRisk = atRiskAccounts.length
@@ -389,22 +418,6 @@ export default function ConceptPage() {
       />
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8 pb-24 sm:pb-8">
-        {/* Nectic is watching strip — visible when user has accounts */}
-        {!loadingAccounts && accounts.length > 0 && (
-          <div className="flex items-center justify-between bg-neutral-100 border border-neutral-200 rounded-lg px-4 py-2.5 mb-5 text-xs text-neutral-500">
-            <div className="flex items-center gap-2">
-              <span className="flex h-1.5 w-1.5 relative">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
-              </span>
-              <span className="font-medium text-neutral-600">Nectic monitors {accounts.length} account{accounts.length !== 1 ? "s" : ""} daily</span>
-              <span className="hidden sm:inline text-neutral-400">· Next check tomorrow 9am UTC</span>
-            </div>
-            <Link href="/concept/board" className="font-medium text-neutral-600 hover:text-neutral-900 transition-colors">
-              Open queue →
-            </Link>
-          </div>
-        )}
         {loadingAccounts ? (
           <div className="flex items-center justify-center py-24">
             <div className="w-5 h-5 border-2 border-neutral-300 border-t-neutral-900 rounded-full animate-spin" />
@@ -415,111 +428,50 @@ export default function ConceptPage() {
               <EmptyState onConnect={openConnect} userName={user.displayName?.split(" ")[0] ?? null} />
             )}
             {accounts.length > 0 && (
-              <div className="space-y-6">
-                {/* Stats row */}
-                <motion.div
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, ease: "easeOut" }}
-                  className="flex items-center gap-2 sm:gap-3 flex-wrap"
-                >
-                  <div className="flex items-center gap-1.5 bg-white border border-neutral-200 rounded-lg px-3 py-2">
-                    <span className="text-base font-semibold text-neutral-900 tabular-nums">{accounts.length}</span>
-                    <span className="text-xs text-neutral-400">account{accounts.length !== 1 ? "s" : ""}</span>
-                  </div>
-                  {atRisk > 0 ? (
-                    <div className="flex items-center gap-1.5 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse shrink-0" />
-                      <span className="text-base font-semibold text-red-700 tabular-nums">{atRisk}</span>
-                      <span className="text-xs text-red-600">need attention</span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
-                      <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><polyline points="2 8 6 12 14 4" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                      <span className="text-xs text-emerald-700 font-medium">All healthy</span>
-                    </div>
-                  )}
-                  {sharedPatterns.length > 0 && (
-                    <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
-                      <span className="text-base font-semibold text-blue-700 tabular-nums">{sharedPatterns.length}</span>
-                      <span className="text-xs text-blue-600">cross-account pattern{sharedPatterns.length !== 1 ? "s" : ""}</span>
-                    </div>
-                  )}
-                  {savedThisMonth > 0 && (
-                    <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
-                      <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><polyline points="2 8 6 12 14 4" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                      <span className="text-base font-semibold text-emerald-700 tabular-nums">{savedThisMonth}</span>
-                      <span className="text-xs text-emerald-600">saved this month</span>
-                    </div>
-                  )}
-                </motion.div>
+              <div className="space-y-5">
+                {/* Agent Brief — hero, leads every session */}
+                <AgentBriefCard agentRun={agentRun} accountCount={accounts.length} readyCount={readyToSendEntries.length} />
 
-                {/* Queue CTA — shown when accounts need action */}
-                {urgentSignalCount > 0 && (
+                {/* Portfolio KPIs */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  <KPITile label="Accounts" value={`${accounts.length}`} />
+                  <KPITile
+                    label={atRisk > 0 ? "At risk" : "All healthy"}
+                    value={atRisk > 0 ? `${atRisk}` : "✓"}
+                    highlight={atRisk > 0 ? "red" : "green"}
+                  />
+                  <KPITile
+                    label="ARR at risk"
+                    value={totalArrAtRisk > 0 ? formatARR(totalArrAtRisk) : "—"}
+                    highlight={totalArrAtRisk > 0 ? "red" : undefined}
+                  />
+                  <KPITile
+                    label="Saved this month"
+                    value={savedThisMonth > 0 ? `${savedThisMonth}` : "—"}
+                    highlight={savedThisMonth > 0 ? "green" : undefined}
+                  />
+                </div>
+
+                {/* Ready to send — agent-prepared drafts awaiting approval */}
+                {readyToSendEntries.length > 0 && (
+                  <ReadyToSendSection entries={readyToSendEntries} workspace={workspace} onDone={handleSignalDone} />
+                )}
+
+                {/* Urgent CTA — only when no ready drafts but has urgent signals */}
+                {urgentSignalCount > 0 && readyToSendEntries.length === 0 && (
                   <Link
                     href="/concept/board"
-                    className="flex items-center justify-between bg-red-50 border border-red-200 rounded-xl px-5 py-4 hover:bg-red-100 transition-colors group"
+                    className="flex items-center justify-between bg-neutral-900 rounded-xl px-5 py-4 hover:bg-neutral-800 transition-colors group"
                   >
                     <div>
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                        <p className="text-sm font-semibold text-red-800">{urgentSignalCount} signal{urgentSignalCount !== 1 ? "s" : ""} need attention</p>
-                      </div>
-                      <p className="text-xs text-red-600">Open queue to review drafts and take action</p>
+                      <p className="text-sm font-semibold text-white">{urgentSignalCount} signal{urgentSignalCount !== 1 ? "s" : ""} need attention</p>
+                      <p className="text-xs text-neutral-500 mt-0.5">Open inbox to generate responses and take action</p>
                     </div>
-                    <span className="text-red-500 text-lg group-hover:translate-x-0.5 transition-transform">→</span>
+                    <span className="text-neutral-400 group-hover:translate-x-0.5 transition-transform text-lg">→</span>
                   </Link>
                 )}
 
-                {/* Revenue at Risk — shown when accounts are at risk */}
-                {atRisk > 0 && <RevenueAtRisk atRiskCount={atRisk} savedCount={savedThisMonth} topAccountId={sortedAccounts[0]?.id} topAccountName={sortedAccounts[0]?.result.accountName} actualArrAtRisk={totalArrAtRisk} />}
-
-                {/* Agent Activity — real run data only */}
-                {agentRun ? (
-                  <div className="bg-white border border-neutral-200 rounded-xl px-5 py-4 shadow-sm mb-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                        <p className="text-xs font-semibold text-neutral-700">Nectic Agent</p>
-                        <span className="text-xs text-neutral-400">ran {timeAgo(agentRun.runAt)}</span>
-                      </div>
-                      <div className="flex items-center gap-3 text-xs text-neutral-400">
-                        <span>{agentRun.accountsScanned} accounts scanned</span>
-                        {agentRun.alertsSent > 0 && <span className="text-orange-600 font-medium">{agentRun.alertsSent} alert{agentRun.alertsSent !== 1 ? "s" : ""} sent</span>}
-                        {agentRun.nudgesSent > 0 && <span className="text-amber-600">{agentRun.nudgesSent} nudge{agentRun.nudgesSent !== 1 ? "s" : ""}</span>}
-                        {agentRun.alertsSent === 0 && agentRun.nudgesSent === 0 && <span className="text-emerald-600 font-medium">all clear</span>}
-                      </div>
-                    </div>
-                    {agentRun.events.length > 0 && (
-                      <div className="space-y-1.5">
-                        {agentRun.events.slice(0, 5).map((ev, i) => (
-                          <div key={i} className="flex items-center gap-2 text-xs">
-                            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
-                              ev.type === "alert" ? "bg-orange-400" :
-                              ev.type === "nudge" ? "bg-amber-400" :
-                              "bg-emerald-400"
-                            }`} />
-                            <span className="font-medium text-neutral-700 truncate max-w-[120px]">{ev.accountName}</span>
-                            <span className="text-neutral-400 truncate">{ev.detail}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ) : accounts.length > 0 ? (
-                  <div className="bg-neutral-50 border border-neutral-200 rounded-xl px-5 py-4 mb-4">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="w-2 h-2 rounded-full bg-neutral-300" />
-                      <p className="text-xs font-semibold text-neutral-500">Nectic Agent</p>
-                      <span className="text-xs text-neutral-400">first run scheduled for 9am UTC</span>
-                    </div>
-                    <p className="text-xs text-neutral-400">
-                      The agent will scan your {accounts.length} account{accounts.length !== 1 ? "s" : ""} overnight — re-alerting on unactioned critical and high signals, and sending your weekly ARR digest.
-                    </p>
-                  </div>
-                ) : null}
-
-                {/* Workspace setup nudge */}
+                {/* Workspace nudge */}
                 {!hasWorkspace && (
                   <Link href="/concept/workspace" className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 hover:bg-amber-100 transition-colors group">
                     <div>
@@ -562,7 +514,7 @@ export default function ConceptPage() {
                   </motion.div>
                 </div>
 
-                {/* Cross-account patterns — compact, max 3, link to board */}
+                {/* Cross-account product signals */}
                 {aggregated.length > 0 && (
                   <div>
                     <div className="flex items-center justify-between mb-3">
@@ -596,7 +548,7 @@ export default function ConceptPage() {
                       })}
                       {aggregated.length > 4 && (
                         <Link href="/concept/board" className="block text-center text-xs text-neutral-400 hover:text-neutral-700 transition-colors py-2">
-                          +{aggregated.length - 4} more on signal board →
+                          +{aggregated.length - 4} more →
                         </Link>
                       )}
                     </div>
@@ -643,6 +595,213 @@ export default function ConceptPage() {
         }} />
       )}
     </div>
+  )
+}
+
+// ─── Agent Brief ──────────────────────────────────────────────────────────────
+
+function AgentBriefCard({ agentRun, accountCount, readyCount }: { agentRun: AgentRun | null; accountCount: number; readyCount: number }) {
+  if (agentRun) {
+    return (
+      <div className="bg-white border border-neutral-200 rounded-xl px-5 py-4 shadow-sm">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-2 w-2 relative flex-shrink-0">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+            </div>
+            <p className="text-sm font-semibold text-neutral-900">Nectic Agent</p>
+            <span className="text-xs text-neutral-400">ran {timeAgo(agentRun.runAt)}</span>
+          </div>
+          <div className="flex items-center gap-3 text-xs">
+            <span className="text-neutral-400">{agentRun.accountsScanned} scanned</span>
+            {agentRun.alertsSent > 0 && <span className="font-semibold text-orange-600">{agentRun.alertsSent} alert{agentRun.alertsSent !== 1 ? "s" : ""} sent</span>}
+            {readyCount > 0 && <span className="font-semibold text-emerald-600">{readyCount} ready to send</span>}
+            {agentRun.alertsSent === 0 && readyCount === 0 && <span className="font-semibold text-emerald-600">all clear</span>}
+          </div>
+        </div>
+        {agentRun.events.length > 0 && (
+          <div className="space-y-1.5">
+            {agentRun.events.slice(0, 5).map((ev, i) => (
+              <div key={i} className="flex items-center gap-2 text-xs">
+                <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${ev.type === "alert" ? "bg-orange-400" : ev.type === "nudge" ? "bg-amber-400" : "bg-emerald-400"}`} />
+                <span className="font-medium text-neutral-700 truncate max-w-[120px]">{ev.accountName}</span>
+                <span className="text-neutral-400 truncate">{ev.detail}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
+  return (
+    <div className="bg-neutral-900 rounded-xl px-5 py-5">
+      <div className="flex items-center gap-2.5 mb-1.5">
+        <span className="w-2 h-2 rounded-full bg-neutral-600 flex-shrink-0" />
+        <p className="text-sm font-semibold text-white">Nectic Agent</p>
+        <span className="text-xs text-neutral-500">· first scan at 9am UTC</span>
+      </div>
+      <p className="text-xs text-neutral-400 leading-relaxed">
+        Watching {accountCount} account{accountCount !== 1 ? "s" : ""} daily — auto-alerts on unactioned critical signals, pre-drafts responses, and sends your weekly ARR digest.
+      </p>
+    </div>
+  )
+}
+
+// ─── KPI Tile ─────────────────────────────────────────────────────────────────
+
+function KPITile({ label, value, highlight }: { label: string; value: string; highlight?: "red" | "green" }) {
+  const bg = highlight === "red" ? "bg-red-50 border-red-200" : highlight === "green" ? "bg-emerald-50 border-emerald-200" : "bg-white border-neutral-200"
+  const vColor = highlight === "red" ? "text-red-600" : highlight === "green" ? "text-emerald-600" : "text-neutral-900"
+  const lColor = highlight === "red" ? "text-red-400" : highlight === "green" ? "text-emerald-500" : "text-neutral-400"
+  return (
+    <div className={`border rounded-xl px-4 py-3.5 ${bg}`}>
+      <p className={`text-xl font-bold tabular-nums leading-none mb-1 ${vColor}`}>{value}</p>
+      <p className={`text-[11px] font-medium ${lColor}`}>{label}</p>
+    </div>
+  )
+}
+
+// ─── Ready to Send ─────────────────────────────────────────────────────────────
+
+function ReadyToSendSection({
+  entries,
+  workspace,
+  onDone,
+}: {
+  entries: ReadyToSendEntry[]
+  workspace: WorkspaceContext
+  onDone: (accountId: string, key: string, draft: string) => Promise<void>
+}) {
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-3">
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
+        <h2 className="text-xs font-semibold text-neutral-700">
+          Ready to send — {entries.length} draft{entries.length !== 1 ? "s" : ""} prepared by agent
+        </h2>
+      </div>
+      <div className="space-y-2">
+        {entries.map(({ account, title, draft, key }) => (
+          <ReadyToSendCard
+            key={account.id + key}
+            account={account}
+            signalTitle={title}
+            draft={draft}
+            signalKey={key}
+            workspace={workspace}
+            onDone={onDone}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function ReadyToSendCard({
+  account,
+  signalTitle,
+  draft,
+  signalKey: sigKey,
+  workspace,
+  onDone,
+}: {
+  account: StoredAccount
+  signalTitle: string
+  draft: string
+  signalKey: string
+  workspace: WorkspaceContext
+  onDone: (accountId: string, key: string, draft: string) => Promise<void>
+}) {
+  const [sending, setSending] = useState(false)
+  const [gone, setGone] = useState(false)
+  const canSend = !!(account.context?.watiPhone && workspace.watiEndpoint && workspace.watiToken)
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(draft)
+    setGone(true)
+    await onDone(account.id, sigKey, draft)
+    toast.success(`Draft copied — signal marked done`)
+  }
+
+  const handleSend = async () => {
+    if (!canSend) return
+    setSending(true)
+    try {
+      const res = await fetch("/api/wati/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          endpoint: workspace.watiEndpoint,
+          token: workspace.watiToken,
+          phoneNumber: account.context?.watiPhone,
+          message: draft,
+        }),
+      })
+      if (!res.ok) throw new Error("Send failed")
+      setGone(true)
+      await onDone(account.id, sigKey, draft)
+      toast.success(`Sent via WhatsApp — signal marked done`)
+    } catch {
+      toast.error("Could not send. Try from the inbox.")
+    } finally {
+      setSending(false)
+    }
+  }
+
+  if (gone) return null
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-white border border-emerald-200 rounded-xl overflow-hidden"
+    >
+      <div className="flex items-center gap-3 px-4 py-2.5 bg-emerald-50/60 border-b border-emerald-100">
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
+        <Link
+          href={`/concept/account/${account.id}`}
+          className="text-sm font-semibold text-neutral-900 hover:underline truncate flex-1 min-w-0"
+        >
+          {account.result.accountName}
+        </Link>
+        <span className="text-xs text-neutral-400 truncate max-w-[160px] flex-shrink-0 hidden sm:inline">{signalTitle}</span>
+      </div>
+      <div className="px-4 py-3">
+        <p className="text-xs text-neutral-600 leading-relaxed mb-3">&ldquo;{draft}&rdquo;</p>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={handleCopy}
+            className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all ${canSend ? "bg-white text-neutral-600 border-neutral-200 hover:border-neutral-400" : "bg-neutral-900 text-white border-transparent hover:bg-neutral-700"}`}
+          >
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <rect x="9" y="9" width="13" height="13" rx="2" />
+              <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+            </svg>
+            Copy &amp; done
+          </button>
+          {canSend && (
+            <button
+              onClick={handleSend}
+              disabled={sending}
+              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-[#25D366] text-white hover:bg-green-600 border border-green-600 transition-all disabled:opacity-60"
+            >
+              {sending ? (
+                <span className="w-3 h-3 rounded-full border-2 border-white border-t-transparent animate-spin" />
+              ) : (
+                <>
+                  <WhatsAppIcon size={11} className="text-white" />
+                  Send
+                </>
+              )}
+            </button>
+          )}
+          <Link href="/concept/board" className="text-xs text-neutral-400 hover:text-neutral-600 transition-colors ml-auto">
+            View in inbox →
+          </Link>
+        </div>
+      </div>
+    </motion.div>
   )
 }
 

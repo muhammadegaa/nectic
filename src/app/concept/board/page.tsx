@@ -245,6 +245,9 @@ export default function QueuePage() {
     return sum + countOpenSignals(a)
   }, 0)
 
+  const readyQueue = queue.filter((e) => !!(e.topSignal.action?.draftResponse))
+  const pendingQueue = queue.filter((e) => !e.topSignal.action?.draftResponse)
+
   if (authLoading || !user) {
     return (
       <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
@@ -286,15 +289,15 @@ export default function QueuePage() {
         )}
 
         <div className="mb-5">
-          <h1 className="text-xl font-semibold text-neutral-900 tracking-tight">Revenue protection queue</h1>
+          <h1 className="text-xl font-semibold text-neutral-900 tracking-tight">Action inbox</h1>
           <p className="text-sm text-neutral-500 mt-0.5">
             {loading ? "Loading…" : queue.length === 0
-              ? "Queue is clear — all accounts healthy."
+              ? "Inbox clear — all accounts healthy."
               : `${queue.length} account${queue.length !== 1 ? "s" : ""} need${queue.length === 1 ? "s" : ""} attention.`}
           </p>
         </div>
 
-        {/* Queue */}
+        {/* Inbox */}
         {loading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
@@ -312,25 +315,64 @@ export default function QueuePage() {
                 <polyline points="2 8 6 12 14 4" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
-            <p className="text-sm font-semibold text-neutral-800 mb-1">Queue is clear</p>
-            <p className="text-xs text-neutral-400">Every signal has been addressed. Next digest Monday.</p>
+            <p className="text-sm font-semibold text-neutral-800 mb-1">Inbox clear</p>
+            <p className="text-xs text-neutral-400">Every signal has been addressed. Well done.</p>
           </motion.div>
         ) : (
-          <motion.div
-            initial="hidden"
-            animate="show"
-            variants={{ hidden: {}, show: { transition: { staggerChildren: 0.07 } } }}
-            className="space-y-3"
-          >
-            {queue.map((entry) => (
-              <QueueCard
-                key={entry.account.id}
-                entry={entry}
-                workspace={workspace}
-                onUpdate={(key, action) => updateSignalAction(entry.account.id, key, action)}
-              />
-            ))}
-          </motion.div>
+          <div className="space-y-8">
+            {readyQueue.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
+                  <p className="text-xs font-semibold text-neutral-700">
+                    Ready to send — {readyQueue.length} draft{readyQueue.length !== 1 ? "s" : ""} prepared by agent
+                  </p>
+                </div>
+                <motion.div
+                  initial="hidden"
+                  animate="show"
+                  variants={{ hidden: {}, show: { transition: { staggerChildren: 0.07 } } }}
+                  className="space-y-3"
+                >
+                  {readyQueue.map((entry) => (
+                    <QueueCard
+                      key={entry.account.id}
+                      entry={entry}
+                      workspace={workspace}
+                      onUpdate={(key, action) => updateSignalAction(entry.account.id, key, action)}
+                    />
+                  ))}
+                </motion.div>
+              </div>
+            )}
+            {pendingQueue.length > 0 && (
+              <div>
+                {readyQueue.length > 0 && (
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="w-1.5 h-1.5 rounded-full bg-neutral-300 flex-shrink-0" />
+                    <p className="text-xs font-semibold text-neutral-400">
+                      Generate response — {pendingQueue.length} account{pendingQueue.length !== 1 ? "s" : ""}
+                    </p>
+                  </div>
+                )}
+                <motion.div
+                  initial="hidden"
+                  animate="show"
+                  variants={{ hidden: {}, show: { transition: { staggerChildren: 0.07 } } }}
+                  className="space-y-3"
+                >
+                  {pendingQueue.map((entry) => (
+                    <QueueCard
+                      key={entry.account.id}
+                      entry={entry}
+                      workspace={workspace}
+                      onUpdate={(key, action) => updateSignalAction(entry.account.id, key, action)}
+                    />
+                  ))}
+                </motion.div>
+              </div>
+            )}
+          </div>
         )}
       </main>
     </div>

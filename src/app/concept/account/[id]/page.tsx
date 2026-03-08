@@ -218,6 +218,30 @@ export default function AccountPage() {
         </div>
       </nav>
 
+      {/* Next best action — full-width strip below nav */}
+      {account.result.recommendedAction && (() => {
+        const rec = account.result.recommendedAction
+        const allRiskDone = (account.result.riskSignals ?? []).every((s) => {
+          const k = signalKey("risk", (s.explanation ?? "").slice(0, 80))
+          const a = account.signalActions?.[k]
+          return a?.status === "done" || a?.status === "dismissed"
+        })
+        if (allRiskDone) return null
+        const urgencyLabel = rec.urgency === "immediate" ? "Act now" : rec.urgency === "this_week" ? "This week" : "This month"
+        const bg = rec.urgency === "immediate" ? "bg-red-900" : "bg-neutral-900"
+        return (
+          <div className={`${bg} px-4 sm:px-6 py-2.5 flex items-center justify-between gap-4`}>
+            <div className="min-w-0 flex items-center gap-3">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400 flex-shrink-0">{urgencyLabel} · {rec.owner}</span>
+              <p className="text-xs font-medium text-white truncate">{rec.what}</p>
+            </div>
+            <Link href="/concept/board" className="text-xs text-neutral-400 hover:text-white transition-colors flex-shrink-0">
+              Open inbox →
+            </Link>
+          </div>
+        )
+      })()}
+
       {/* Re-analysis file picker (hidden) */}
       <input
         ref={reanalyzeInputRef}
