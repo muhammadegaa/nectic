@@ -114,7 +114,7 @@ export default function HeroSection() {
               className="inline-flex items-center gap-2 text-xs font-medium text-neutral-400 uppercase tracking-widest"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              NRR protection for WhatsApp-first B2B SaaS in Southeast Asia
+              AI-native churn prevention system for WhatsApp-first B2B SaaS
             </motion.span>
 
             <motion.h1
@@ -129,7 +129,7 @@ export default function HeroSection() {
               variants={fadeUp}
               className="mt-7 text-lg text-neutral-500 max-w-md leading-relaxed"
             >
-              Nectic&apos;s agent monitors every customer WhatsApp conversation overnight, detects churn signals, drafts the response, and surfaces one decision for your CS lead to approve. The operational work is handled — your team focuses on relationships.
+              Nectic runs the full account health loop: monitors every WhatsApp conversation, detects churn signals the moment they appear, drafts the response, and closes the action — with or without your CS team in the room.
             </motion.p>
 
             <motion.p
@@ -179,9 +179,9 @@ export default function HeroSection() {
           className="mt-14 pt-10 border-t border-neutral-100 grid grid-cols-1 sm:grid-cols-3 gap-8"
         >
           {[
-            { stat: "91%", label: "of B2B customer conversations in Indonesia happen on WhatsApp — invisible to your CRM" },
-            { stat: "$240K", label: "average ARR at risk per CS team that relies on manual WhatsApp triage" },
-            { stat: "68%", label: "of churned customers showed warning signals 30+ days before cancelling" },
+            { stat: "91%", label: "of B2B customer conversations in Indonesia happen on WhatsApp — invisible to your CRM and ticketing system" },
+            { stat: "30+ days", label: "earlier signal detection vs manual triage — the window where early intervention saves the account" },
+            { stat: "68%", label: "of churned customers showed clear warning signals in their WhatsApp chats weeks before cancelling" },
           ].map((item) => (
             <div key={item.stat}>
               <p className="text-3xl font-light text-neutral-900 tabular-nums">{item.stat}</p>

@@ -32,11 +32,11 @@ const steps = [
   },
   {
     number: "04",
-    title: "Act",
+    title: "Close",
     description:
-      "One click sends the approved message directly via WhatsApp Business (WATI). Signal marked done. Account health recalculated. ARR protected recorded. Full loop closed — the agent tracks whether the account recovers.",
+      "One click sends via WhatsApp Business. Signal resolved. Health score recalculated. ARR protected recorded. The loop closes — and the agent continues watching for what comes next.",
     detail:
-      "Leadership gets weekly outcomes: accounts saved, ARR protected, churn rate change. Not a manual report — delivered automatically every Monday.",
+      "Leadership sees weekly outcomes automatically: accounts saved, ARR protected, churn events prevented. No manual reporting. The system tracks its own impact.",
   },
 ]
 
@@ -67,8 +67,8 @@ export default function HowItWorks() {
             How it works
           </p>
           <h2 className="text-3xl font-light text-neutral-900 leading-tight max-w-lg">
-            The agent runs the operational loop.<br />
-            <span className="text-neutral-400">Your CS lead makes one decision.</span>
+            One loop. Fully automated.<br />
+            <span className="text-neutral-400">Your CS lead approves. The system closes it.</span>
           </h2>
         </motion.div>
 
@@ -102,15 +102,16 @@ export default function HowItWorks() {
           className="mt-10 flex flex-wrap gap-2"
         >
           {[
-            "Agent monitors accounts 24/7",
-            "Send via WhatsApp Business",
-            "Health score 1-10",
-            "Competitor detection",
-            "Bahasa Indonesia support",
-            "Pre-formed decisions — not raw data",
-            "Draft response generation",
-            "Weekly digest email",
-            "Auto-notify on critical risk",
+            "Full closed loop — detect → draft → send → health tracked",
+            "Agent monitors accounts 24/7, no manual checking",
+            "Send via WhatsApp Business in one click",
+            "Health score 1–10 with trend history",
+            "Competitor mentions detected automatically",
+            "Bahasa Indonesia natively understood",
+            "Pre-formed decisions — not raw data dumps",
+            "Leadership digest every Monday — no manual report",
+            "Re-alerts unactioned signals after 3 days",
+            "ARR protected tracked per account",
           ].map((chip) => (
             <span
               key={chip}

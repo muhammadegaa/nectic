@@ -36,8 +36,8 @@ export default function GapSection() {
             Before &amp; after
           </p>
           <h2 className="text-3xl font-light text-neutral-900 max-w-lg leading-tight">
-            Same team. Same customers.<br />
-            <span className="text-neutral-400">Different amount of work.</span>
+            The agent runs the operational work.<br />
+            <span className="text-neutral-400">Your team focuses on saving the account.</span>
           </h2>
         </motion.div>
 
@@ -105,7 +105,7 @@ export default function GapSection() {
           transition={{ duration: 0.5, delay: 0.7 }}
           className="mt-7 text-sm text-neutral-400 max-w-xl"
         >
-          If Nectic disappears, your CS team reverts to manual WhatsApp triage. Accounts slip. Revenue at risk goes unnoticed. That&apos;s the test.
+          If Nectic disappears tomorrow, your CS team reverts to manual WhatsApp triage. Accounts slip. Revenue at risk goes unnoticed. Churn happens two weeks later. That&apos;s the test of whether something is mission-critical.
         </motion.p>
       </div>
     </section>
