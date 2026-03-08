@@ -88,7 +88,7 @@ const USER_PROMPT = (
   "sentimentTrend": "improving" | "stable" | "declining",
   "riskSignals": [
     {
-      "title": "<how a sharp colleague would flag this in a Slack message — specific, human, no jargon. e.g. 'customer hasn't logged in for 3 weeks', 'billing dispute still unresolved', 'went quiet after last outage'. Max 8 words.>",
+      "title": "<write this like a sharp colleague flagging it in Slack — name the actual situation, not a category. BAD: 'engagement below threshold' / 'delivery issue causing frustration'. GOOD: 'hasn't logged in since the integration broke' / 'waiting 2 weeks for refund with no update' / 'went quiet after we missed the go-live date'. Max 8 words. Be specific.>",
       "quote": "<exact quote from a customer-side participant>",
       "explanation": "<why this is a risk signal — 1-2 sentences>",
       "severity": "low" | "medium" | "high",
@@ -105,7 +105,7 @@ const USER_PROMPT = (
   "productSignals": [
     {
       "type": "complaint" | "feature_request" | "praise" | "confusion",
-      "title": "<what a PM would write in a Jira title — specific problem, not a category label. e.g. 'bulk export breaks on files over 50MB', 'can't reassign tasks without admin rights'. Max 8 words.>",
+      "title": "<the Jira ticket title a PM would actually write — name the specific failure or request, not the category. BAD: 'API performance issue' / 'user management complaint'. GOOD: 'bulk export times out on files over 50 rows' / 'can't reassign tasks without losing history'. Max 8 words.>",
       "problemStatement": "<the underlying customer problem in one sentence, not the feature request itself>",
       "quote": "<exact quote from a customer-side participant>",
       "priority": "low" | "medium" | "high",

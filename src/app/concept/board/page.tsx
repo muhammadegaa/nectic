@@ -490,6 +490,18 @@ function QueueCard({
           accountName: topSignal.accountName,
           workspace,
           tone,
+          accountContext: {
+            summary: account.result.summary,
+            sentimentTrend: account.result.sentimentTrend,
+            riskLevel: account.result.riskLevel,
+            relationshipSignals: account.result.relationshipSignals,
+            competitorMentions: account.result.competitorMentions,
+            recommendedAction: account.result.recommendedAction,
+            stats: account.result.stats,
+            otherRiskSignals: account.result.riskSignals
+              ?.filter((s) => (s.title ?? s.explanation.slice(0, 80)) !== topSignal.title)
+              .map((s) => ({ title: s.title, explanation: s.explanation, severity: s.severity })),
+          },
         }),
       })
       const data = await res.json()

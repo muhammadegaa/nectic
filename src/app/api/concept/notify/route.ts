@@ -53,9 +53,23 @@ export async function POST(req: NextRequest) {
     let resolvedDraft = draftResponse ?? ""
     if (!resolvedDraft && topSignalQuote && topSignalTitle) {
       try {
+        // Detect Bahasa from quote
+        const isBahasa = /\b(tidak|iya|saya|kami|tolong|sudah|belum|bisa|mohon|terima kasih|pak|bu|mas|kak|gimana|banget|dong)\b/i.test(topSignalQuote)
+        const competitorNote = competitorNames?.length
+          ? `Customer mentioned competitor(s): ${competitorNames.join(", ")} — message must show concrete value or urgency.`
+          : ""
         resolvedDraft = (await callAI({
-          system: `You are a senior Customer Success manager. Write a short, warm, direct WhatsApp response (2–3 sentences max). No bullet points, no placeholders. Plain text only. Acknowledge the issue, show ownership, set next step.`,
-          user: `Account: ${accountName}\nSignal: ${topSignalTitle}\n${topSignalExplanation ? `Context: ${topSignalExplanation}\n` : ""}Customer said: "${topSignalQuote}"\n\nWrite only the draft message.`,
+          system: `You are a CS manager writing a WhatsApp reply in an ongoing thread — not a cold message, not a bot intro.
+
+Rules: Never "Halo kami dari [company]". Use "saya" not "kami" for first-person. No sign-off. 2-3 sentences. No markdown. No placeholders. Show personal ownership: "Saya akan..." not "Tim kami akan...". Don't minimise the problem. Don't make promises you can't keep.
+${competitorNote}
+Write in ${isBahasa ? "Bahasa Indonesia" : "English"} — match the customer's register.`,
+          user: `Account: ${accountName} (risk: ${riskLevel})
+Signal: ${topSignalTitle}
+${topSignalExplanation ? `Context: ${topSignalExplanation}` : ""}
+What customer said: "${topSignalQuote}"
+
+Write only the message.`,
           maxTokens: 300,
           temperature: 0.4,
         })).trim()
