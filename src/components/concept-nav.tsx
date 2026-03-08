@@ -49,7 +49,7 @@ export default function ConceptNav({
                   : "text-neutral-400 hover:text-neutral-700 transition-colors"
               }`}
             >
-              Queue
+              Inbox
               {urgentCount > 0 && (
                 <span className="flex items-center justify-center w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-bold leading-none">
                   <span className="absolute inline-flex h-3 w-3 rounded-full bg-red-400 animate-ping opacity-75" />
