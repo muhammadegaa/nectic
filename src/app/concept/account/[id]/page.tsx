@@ -636,12 +636,20 @@ function AnalysisReport({
             <p className="text-sm font-semibold text-neutral-800">Relationship signals</p>
           </div>
           <div className="divide-y divide-neutral-100">
-            {result.relationshipSignals.map((s, i) => (
-              <div key={i} className="p-5">
-                <p className="text-sm font-medium text-neutral-700">{s.observation}</p>
-                <p className="mt-1 text-xs text-neutral-500">{s.implication}</p>
-              </div>
-            ))}
+            {result.relationshipSignals.map((s, i) => {
+              const key = signalKey("relationship", s.observation)
+              return (
+                <div key={i} className="p-5">
+                  <p className="text-sm font-medium text-neutral-700">{s.observation}</p>
+                  <p className="mt-1 text-xs text-neutral-500 mb-3">{s.implication}</p>
+                  <SignalActionControl
+                    signalKey={key}
+                    action={account.signalActions?.[key]}
+                    onUpdate={onSignalAction}
+                  />
+                </div>
+              )
+            })}
           </div>
         </div>
       )}
