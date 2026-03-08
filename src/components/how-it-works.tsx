@@ -8,35 +8,35 @@ const ease = [0.22, 1, 0.36, 1] as [number, number, number, number]
 const steps = [
   {
     number: "01",
-    title: "Connect",
+    title: "Ingest",
     description:
-      "Connect your WhatsApp Business account. Nectic reads your existing customer conversations in under 60 seconds. No new tools for your CS team, no IT ticket.",
+      "Upload your WhatsApp group exports — .txt or .zip, any length. Nectic parses the full conversation in seconds. Direct BSP sync via WATI for teams that want zero-touch ingestion.",
     detail:
-      "Works with any 1:1 WhatsApp Business conversation. Customer onboarding, renewal, support — all of it.",
+      "Works with any WhatsApp group: customer onboarding, renewal, support. Bahasa Indonesia and English both handled natively.",
   },
   {
     number: "02",
-    title: "Detect",
+    title: "Monitor",
     description:
-      "AI monitors every conversation and detects churn signals with the exact customer quote. Competitor mentions, sentiment drops, renewal hesitation — flagged in real time. Works in Bahasa Indonesia and English.",
+      "Nectic's agent runs every day. It re-scores every account, detects new churn signals, re-alerts on anything unactioned for 3+ days, and nudges stale accounts. No manual checking required.",
     detail:
-      "Every signal links to the original message. No black-box scores. You see exactly what the customer said and why it matters.",
+      "Every signal links to the original customer quote. No black-box scores — you see exactly what the customer said and why it matters.",
   },
   {
     number: "03",
-    title: "Draft",
+    title: "Decide",
     description:
-      "For every risk signal, Nectic drafts the WhatsApp response your CS team should send. Tone-matched to the account, written in the customer's language. Your team reviews and approves — not writes from scratch.",
+      "The queue surfaces one pre-formed decision per account: a risk signal with a draft WhatsApp response already written. Your CS lead approves, edits, or dismisses. That's the only decision they make.",
     detail:
-      "Accounts are ranked by health score. High-risk accounts surface at the top with a draft action already prepared.",
+      "Accounts ranked by health score and ARR at risk. Critical accounts surface first with a draft action already waiting.",
   },
   {
     number: "04",
-    title: "Send",
+    title: "Act",
     description:
-      "One click sends the approved message directly to the customer via WhatsApp Business. Signal marked done. Account health updated. Full loop closed — no copy-pasting between tools.",
+      "One click sends the approved message directly via WhatsApp Business (WATI). Signal marked done. Account health recalculated. ARR protected recorded. Full loop closed — the agent tracks whether the account recovers.",
     detail:
-      "Outcome tracked: saved this month, ARR protected, churn rate change. Leadership gets the numbers every Monday.",
+      "Leadership gets weekly outcomes: accounts saved, ARR protected, churn rate change. Not a manual report — delivered automatically every Monday.",
   },
 ]
 
@@ -67,8 +67,8 @@ export default function HowItWorks() {
             How it works
           </p>
           <h2 className="text-3xl font-light text-neutral-900 leading-tight max-w-lg">
-            From WhatsApp conversation<br />
-            <span className="text-neutral-400">to sent response in minutes.</span>
+            The agent runs the operational loop.<br />
+            <span className="text-neutral-400">Your CS lead makes one decision.</span>
           </h2>
         </motion.div>
 
@@ -102,11 +102,12 @@ export default function HowItWorks() {
           className="mt-10 flex flex-wrap gap-2"
         >
           {[
+            "Agent monitors accounts 24/7",
             "Send via WhatsApp Business",
             "Health score 1-10",
             "Competitor detection",
             "Bahasa Indonesia support",
-            "Risk-ranked action queue",
+            "Pre-formed decisions — not raw data",
             "Draft response generation",
             "Weekly digest email",
             "Auto-notify on critical risk",

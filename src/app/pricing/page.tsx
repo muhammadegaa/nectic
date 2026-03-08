@@ -15,10 +15,10 @@ const PLANS = [
     accounts: 3,
     features: [
       "3 accounts",
-      "Full signal extraction",
-      "PM agent chat",
-      "Feature brief generation",
-      "Signal board",
+      "Full churn signal extraction",
+      "Health score 1–10",
+      "Draft response generation",
+      "Account health queue",
     ],
     cta: "Start free",
     highlight: false,
@@ -31,10 +31,10 @@ const PLANS = [
     features: [
       "15 accounts",
       "Everything in Free",
-      "Workspace context injection",
-      "Contact book (persistent roles)",
-      "Re-analysis with delta tracking",
-      "Shareable read-only links",
+      "Autonomous daily monitoring agent",
+      "Re-analysis with health delta tracking",
+      "Weekly ARR protection digest email",
+      "Bahasa Indonesia support",
     ],
     cta: "Start 14-day trial",
     highlight: false,
@@ -47,9 +47,9 @@ const PLANS = [
     features: [
       "50 accounts",
       "Everything in Starter",
-      "Priority signal extraction",
-      "Signal export to CSV",
-      "Early access to new features",
+      "Competitor mention detection",
+      "Agent activity feed",
+      "Account outcomes tracking (saved ARR)",
     ],
     cta: "Start 14-day trial",
     highlight: true,
@@ -62,7 +62,7 @@ const PLANS = [
     features: [
       "Unlimited accounts",
       "Everything in Growth",
-      "BSP integration (Qiscus/Wati) — Q2 2026",
+      "WhatsApp Business direct send (WATI)",
       "Multi-user workspace",
       "Priority support",
       "Custom onboarding",
@@ -282,10 +282,6 @@ export default function PricingPage() {
             {
               q: "Do you support Bahasa Indonesia?",
               a: "Yes. Nectic is built specifically for SEA markets. Signal extraction works on Bahasa Indonesia, English, and code-switched conversations.",
-            },
-            {
-              q: "What is BSP integration?",
-              a: "In Q2 2026, Pro users will be able to connect via a WhatsApp Business Solution Provider (Qiscus/Wati) for automated ingestion — no more manual exports.",
             },
             {
               q: "Is there a free trial?",

@@ -47,6 +47,20 @@ export interface HealthHistoryEntry {
   date: string // ISO string
 }
 
+export interface AgentRunEvent {
+  type: "alert" | "nudge" | "healthy"
+  accountName: string
+  detail: string
+}
+
+export interface AgentRun {
+  runAt: string // ISO
+  accountsScanned: number
+  alertsSent: number
+  nudgesSent: number
+  events: AgentRunEvent[]
+}
+
 export interface StoredAccount {
   id: string
   fileName: string
@@ -218,6 +232,12 @@ export async function getWorkspace(uid: string): Promise<WorkspaceContext> {
   const snap = await getDoc(doc(db, "users", uid))
   if (!snap.exists()) return {}
   return (snap.data().workspace as WorkspaceContext) ?? {}
+}
+
+export async function getAgentRun(uid: string): Promise<AgentRun | null> {
+  const snap = await getDoc(doc(db, "users", uid))
+  if (!snap.exists()) return null
+  return (snap.data().lastAgentRun as AgentRun) ?? null
 }
 
 export async function saveWorkspace(uid: string, ctx: WorkspaceContext): Promise<void> {

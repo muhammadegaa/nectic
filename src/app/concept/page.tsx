@@ -18,11 +18,13 @@ import {
   isOnboardingComplete,
   saveSignalAction,
   signalKey,
+  getAgentRun,
   type StoredAccount,
   type AccountContext,
   type ParticipantRole,
   type ParticipantRoles,
   type WorkspaceContext,
+  type AgentRun,
 } from "@/lib/concept-firestore"
 import type { AnalysisResult } from "@/app/api/concept/analyze/route"
 import { trackEvent, identifyUser } from "@/lib/posthog"
@@ -90,6 +92,7 @@ export default function ConceptPage() {
   const [aiSuggestedRoles, setAiSuggestedRoles] = useState<Set<string>>(new Set())
   const [classifying, setClassifying] = useState(false)
   const [context, setContext] = useState<AccountContext>({})
+  const [agentRun, setAgentRun] = useState<AgentRun | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -109,6 +112,7 @@ export default function ConceptPage() {
       .catch(console.error)
       .finally(() => setLoadingAccounts(false))
     getWorkspace(user.uid).then(setWorkspace).catch(() => {})
+    getAgentRun(user.uid).then(setAgentRun).catch(() => {})
     // Show founder welcome once per browser
     if (typeof window !== "undefined" && !localStorage.getItem("nectic_welcome_seen")) {
       const t = setTimeout(() => setShowWelcome(true), 1200)
@@ -469,6 +473,40 @@ export default function ConceptPage() {
 
                 {/* Revenue at Risk — shown when accounts are at risk */}
                 {atRisk > 0 && <RevenueAtRisk atRiskCount={atRisk} savedCount={savedThisMonth} topAccountId={sortedAccounts[0]?.id} topAccountName={sortedAccounts[0]?.result.accountName} actualArrAtRisk={totalArrAtRisk} />}
+
+                {/* Agent Activity — shows what the autonomous agent did */}
+                {agentRun && (
+                  <div className="bg-white border border-neutral-200 rounded-xl px-5 py-4 shadow-sm mb-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                        <p className="text-xs font-semibold text-neutral-700">Nectic Agent</p>
+                        <span className="text-xs text-neutral-400">ran {timeAgo(agentRun.runAt)}</span>
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-neutral-400">
+                        <span>{agentRun.accountsScanned} accounts scanned</span>
+                        {agentRun.alertsSent > 0 && <span className="text-orange-600 font-medium">{agentRun.alertsSent} alert{agentRun.alertsSent !== 1 ? "s" : ""} sent</span>}
+                        {agentRun.nudgesSent > 0 && <span className="text-amber-600">{agentRun.nudgesSent} nudge{agentRun.nudgesSent !== 1 ? "s" : ""}</span>}
+                        {agentRun.alertsSent === 0 && agentRun.nudgesSent === 0 && <span className="text-emerald-600 font-medium">all clear</span>}
+                      </div>
+                    </div>
+                    {agentRun.events.length > 0 && (
+                      <div className="space-y-1.5">
+                        {agentRun.events.slice(0, 5).map((ev, i) => (
+                          <div key={i} className="flex items-center gap-2 text-xs">
+                            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+                              ev.type === "alert" ? "bg-orange-400" :
+                              ev.type === "nudge" ? "bg-amber-400" :
+                              "bg-emerald-400"
+                            }`} />
+                            <span className="font-medium text-neutral-700 truncate max-w-[120px]">{ev.accountName}</span>
+                            <span className="text-neutral-400 truncate">{ev.detail}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Workspace setup nudge */}
                 {!hasWorkspace && (
@@ -936,6 +974,13 @@ function AccountCard({ account, onDelete, confirmingDelete, onConfirmDelete, onC
   const isHigh = account.result.riskLevel === "high"
   const score = account.result.healthScore ?? 0
 
+  const totalSignals = (account.result.riskSignals?.length ?? 0) + (account.result.productSignals?.length ?? 0)
+  const allActioned = totalSignals > 0 && Object.values(account.signalActions ?? {}).filter(
+    a => a.status === "done" || a.status === "dismissed"
+  ).length >= totalSignals
+  const wasCritical = (account.result.riskLevel === "critical" || account.result.riskLevel === "high")
+  const isSaved = allActioned && wasCritical
+
   const arrAtRisk = getArrAtRisk(account)
   const showArrAtRisk = isCritical || isHigh
 
@@ -968,6 +1013,11 @@ function AccountCard({ account, onDelete, confirmingDelete, onConfirmDelete, onC
               {isStale && (
                 <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-500 border border-neutral-200" title={`Last analysed ${daysSinceUpdate} days ago — re-analyse to get current picture`}>
                   {daysSinceUpdate}d stale
+                </span>
+              )}
+              {isSaved && (
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  Saved
                 </span>
               )}
             </div>

@@ -47,6 +47,11 @@ export async function GET(req: NextRequest) {
 
       const now = Date.now()
 
+      let userAlerts = 0
+      let userNudges = 0
+      const events: { type: "alert" | "nudge" | "healthy"; accountName: string; detail: string }[] = []
+      let healthyCount = 0
+
       for (const account of accounts) {
         const riskLevel = account.result?.riskLevel
         const accountName = account.result?.accountName
@@ -55,6 +60,7 @@ export async function GET(req: NextRequest) {
 
         // Check 1: stale analysis (>7 days, any risk level)
         if (ageMs > SEVEN_DAYS_MS) {
+          const daysSinceAnalysis = Math.floor(ageMs / (24 * 60 * 60 * 1000))
           await fetch(`${baseUrl}/api/concept/notify`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -65,16 +71,32 @@ export async function GET(req: NextRequest) {
               signalCount: 0,
               email,
               isStaleNudge: true,
-              daysSinceAnalysis: Math.floor(ageMs / (24 * 60 * 60 * 1000)),
+              daysSinceAnalysis,
             }),
           }).catch(() => {})
           nudgesSent++
+          userNudges++
+          if (events.length < 10) {
+            events.push({ type: "nudge", accountName, detail: `${daysSinceAnalysis} days since last analysis — nudge sent` })
+          }
           continue
         }
 
         // Check 2: critical/high with unactioned signals for >3 days
-        if (riskLevel !== "critical" && riskLevel !== "high") continue
-        if (ageMs < THREE_DAYS_MS) continue
+        if (riskLevel !== "critical" && riskLevel !== "high") {
+          if (healthyCount < 3 && events.length < 10) {
+            events.push({ type: "healthy", accountName, detail: "No action needed" })
+            healthyCount++
+          }
+          continue
+        }
+        if (ageMs < THREE_DAYS_MS) {
+          if (healthyCount < 3 && events.length < 10) {
+            events.push({ type: "healthy", accountName, detail: "No action needed" })
+            healthyCount++
+          }
+          continue
+        }
 
         const riskSignals = account.result?.riskSignals ?? []
         const signalActions = account.signalActions ?? {}
@@ -88,7 +110,13 @@ export async function GET(req: NextRequest) {
           return !action || (action.status !== "done" && action.status !== "dismissed")
         })
 
-        if (!unactioned) continue
+        if (!unactioned) {
+          if (healthyCount < 3 && events.length < 10) {
+            events.push({ type: "healthy", accountName, detail: "No action needed" })
+            healthyCount++
+          }
+          continue
+        }
 
         // Re-send alert for persistently unactioned signal
         await fetch(`${baseUrl}/api/concept/notify`, {
@@ -108,7 +136,17 @@ export async function GET(req: NextRequest) {
           }),
         }).catch(() => {})
         alertsSent++
+        userAlerts++
+        if (events.length < 10) {
+          events.push({ type: "alert", accountName, detail: `Unactioned ${riskLevel} signal — re-alert sent` })
+        }
       }
+
+      // Write agent run results for this user
+      await adminDb.collection("users").doc(userDoc.id).set(
+        { lastAgentRun: { runAt: new Date().toISOString(), accountsScanned: accounts.length, alertsSent: userAlerts, nudgesSent: userNudges, events } },
+        { merge: true }
+      )
     }
 
     return NextResponse.json({ usersChecked, alertsSent, nudgesSent })

@@ -129,14 +129,14 @@ export default function HeroSection() {
               variants={fadeUp}
               className="mt-7 text-lg text-neutral-500 max-w-md leading-relaxed"
             >
-              Nectic reads every customer WhatsApp conversation, calculates ARR at risk in real time, and tells your CS team exactly which accounts to act on — and what to say.
+              Nectic&apos;s agent monitors every customer WhatsApp conversation overnight, detects churn signals, drafts the response, and surfaces one decision for your CS lead to approve. The operational work is handled — your team focuses on relationships.
             </motion.p>
 
             <motion.p
               variants={fadeUp}
               className="mt-3 text-base text-neutral-400 max-w-md leading-relaxed"
             >
-              Built for Heads of CS at B2B SaaS companies in Indonesia and Malaysia whose customers run on WhatsApp groups.
+              Built for Heads of CS at WhatsApp-first B2B SaaS in Indonesia and Malaysia. Bahasa Indonesia understood natively.
             </motion.p>
 
             <motion.div

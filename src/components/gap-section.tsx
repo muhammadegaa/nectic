@@ -6,17 +6,17 @@ import { motion, useInView } from "framer-motion"
 const ease = [0.22, 1, 0.36, 1] as [number, number, number, number]
 
 const before = [
-  "CS manager spends 2–3 hrs reading WhatsApp to understand where accounts stand",
-  "PM discovers a churn risk 3 weeks late when CS finally escalates it",
-  "Creating a follow-up ticket requires 4 manual steps across 2 tools",
-  "Weekly account health review takes 30 mins of copying notes into a doc",
+  "CS manager spends 2–3 hrs manually reading WhatsApp to see where accounts stand",
+  "Churn signal fires on Friday evening — nobody sees it until Tuesday",
+  "PM discovers an account at risk 3 weeks late, when CS finally escalates it",
+  "Weekly account health review takes 30 mins of copying notes across tools",
 ]
 
 const after = [
-  "Nectic reads all conversations, surfaces only what needs a decision today",
-  "Risk detected the day the signal appears — not when someone finally mentions it",
-  "Draft response generated and ready. Click send. Signal marked done.",
-  "Monday briefing delivered automatically before your team standup",
+  "Agent scans every account overnight — queue shows only what needs a decision today",
+  "Unactioned critical signal after 3 days? Agent re-alerts automatically",
+  "Risk detected the day the signal appears — draft response already waiting",
+  "Monday briefing delivered automatically. ARR saved, accounts protected, no manual report",
 ]
 
 export default function GapSection() {
