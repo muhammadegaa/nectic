@@ -43,6 +43,9 @@ firebase-service-account.json
 # IDE
 .vscode/
 .idea/
+
+# GitLab Duo experiment (not part of app)
+.gitlab/
 *.swp
 *.swo
 *~
