@@ -1,12 +1,12 @@
 # Nectic — Demo Script
 **Target audience:** Olivia / Antler Indonesia panel
 **Total time:** 5 minutes
-**Format:** Live product demo on nectic.app, then Q&A
+**Format:** Live product demo on nectic.vercel.app, then Q&A
 
 ---
 
 ## 0. Before you start (setup)
-- [ ] Log in to nectic.app in a clean browser tab
+- [ ] Log in to nectic.vercel.app in a clean browser tab
 - [ ] Have the WhatsApp export file ready on desktop (`demo-chat.txt` — real or sanitized)
 - [ ] Make sure at least 2 accounts are already analyzed and show **Critical / High** risk
 - [ ] Turn off notifications on screen

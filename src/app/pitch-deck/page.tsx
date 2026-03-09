@@ -516,7 +516,7 @@ function S8Ask() {
         <div className="bg-neutral-950 border border-neutral-800 rounded-2xl p-8 flex flex-col gap-3">
           <p className="text-[10px] font-semibold tracking-[0.16em] uppercase text-neutral-600">What we have</p>
           <p className="text-white font-medium">Working product. End-to-end.</p>
-          <p className="text-sm text-neutral-500 leading-relaxed">WhatsApp upload → AI detection → auto-draft → one-tap WATI send → ARR tracked. Full loop in 60 seconds. Live at nectic.app today.</p>
+          <p className="text-sm text-neutral-500 leading-relaxed">WhatsApp upload → AI detection → auto-draft → one-tap WATI send → ARR tracked. Full loop in 60 seconds. Live at nectic.vercel.app today.</p>
         </div>
         <div className="bg-neutral-950 border border-neutral-800 rounded-2xl p-8 flex flex-col gap-3">
           <p className="text-[10px] font-semibold tracking-[0.16em] uppercase text-neutral-600">What we need</p>
@@ -542,11 +542,11 @@ function S8Ask() {
         </div>
         <div>
           <div className="text-sm font-semibold text-white">Muhammad Ega Simatupang</div>
-          <div className="text-xs text-neutral-600 mt-0.5">Founder · Builder · nectic.app</div>
+          <div className="text-xs text-neutral-600 mt-0.5">Founder · Builder · nectic.vercel.app</div>
         </div>
         <div className="ml-auto text-right">
           <div className="text-sm font-medium" style={{ color: ORANGE }}>simatupang.ega@gmail.com</div>
-          <div className="text-xs text-neutral-600 mt-0.5">nectic.app</div>
+          <div className="text-xs text-neutral-600 mt-0.5">nectic.vercel.app</div>
         </div>
       </div>
     </div>
