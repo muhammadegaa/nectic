@@ -1,0 +1,1350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nectic — Pitch Deck · Antler Indonesia 2026</title>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+    background: #f5f5f5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ─── SLIDE BASE ─── */
+  .slide {
+    width: 1280px;
+    height: 720px;
+    background: #ffffff;
+    position: relative;
+    overflow: hidden;
+    page-break-after: always;
+    break-after: page;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ─── SHARED HEADER BAR ─── */
+  .slide-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 22px 64px;
+    border-bottom: 1px solid #f0f0f0;
+    flex-shrink: 0;
+  }
+  .logo-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .logo-wrap span {
+    font-size: 15px;
+    font-weight: 600;
+    color: #171717;
+    letter-spacing: -0.02em;
+  }
+  .slide-label {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #a3a3a3;
+  }
+  .slide-num {
+    font-size: 11px;
+    color: #d4d4d4;
+    font-weight: 400;
+  }
+
+  /* ─── SLIDE BODY ─── */
+  .slide-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 48px 64px;
+    overflow: hidden;
+  }
+
+  /* ─── EYEBROW / SECTION LABEL ─── */
+  .eyebrow {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #a3a3a3;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .eyebrow-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #F5A623;
+    display: inline-block;
+  }
+
+  /* ─── HEADLINE STYLES ─── */
+  .h1 {
+    font-size: 52px;
+    font-weight: 300;
+    color: #171717;
+    line-height: 1.08;
+    letter-spacing: -0.03em;
+  }
+  .h2 {
+    font-size: 38px;
+    font-weight: 300;
+    color: #171717;
+    line-height: 1.1;
+    letter-spacing: -0.025em;
+  }
+  .h3 {
+    font-size: 26px;
+    font-weight: 300;
+    color: #171717;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+  }
+  .muted { color: #a3a3a3; }
+  .orange { color: #F5A623; }
+  .strong { font-weight: 600; color: #171717; }
+
+  /* ─── STAT ─── */
+  .stat-num {
+    font-size: 44px;
+    font-weight: 300;
+    color: #171717;
+    letter-spacing: -0.04em;
+    line-height: 1;
+  }
+  .stat-label {
+    font-size: 13px;
+    color: #737373;
+    line-height: 1.5;
+    margin-top: 6px;
+  }
+
+  /* ─── CARD ─── */
+  .card {
+    background: #ffffff;
+    border: 1px solid #e5e5e5;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 2px 24px rgba(0,0,0,0.04);
+  }
+  .card-dark {
+    background: #171717;
+    border: 1px solid #262626;
+    border-radius: 12px;
+    padding: 24px;
+  }
+
+  /* ─── ORANGE BADGE ─── */
+  .badge-orange {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #c2780a;
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    padding: 3px 8px;
+    border-radius: 6px;
+  }
+  .badge-orange-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #fb923c;
+  }
+
+  /* ─── RISK DOT ─── */
+  .dot-red { width: 8px; height: 8px; border-radius: 50%; background: #f87171; display: inline-block; }
+  .dot-orange { width: 8px; height: 8px; border-radius: 50%; background: #fb923c; display: inline-block; }
+  .dot-emerald { width: 8px; height: 8px; border-radius: 50%; background: #34d399; display: inline-block; }
+
+  /* ─── PROGRESS BAR ─── */
+  .progress-bg {
+    height: 4px;
+    background: #f5f5f5;
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 99px;
+    background: #fb923c;
+  }
+
+  /* ─── DIVIDER ─── */
+  .divider { height: 1px; background: #f5f5f5; }
+  .divider-v { width: 1px; background: #f0f0f0; align-self: stretch; }
+
+  /* ─── GRID ─── */
+  .cols-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .cols-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+  .cols-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 16px; }
+
+  /* ─── FOOTER BAR ─── */
+  .slide-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 64px;
+    border-top: 1px solid #f5f5f5;
+    flex-shrink: 0;
+  }
+  .footer-url { font-size: 11px; color: #d4d4d4; }
+
+  /* ─── PRINT ─── */
+  @media print {
+    @page { size: 1280px 720px; margin: 0; }
+    body { background: white; }
+    .slide { page-break-after: always; break-after: page; margin: 0; }
+  }
+
+
+  /* ═══════════════════════════════════════════
+     SLIDE 1 — COVER
+  ═══════════════════════════════════════════ */
+  .s1 { background: #ffffff; }
+  .s1 .slide-body {
+    flex-direction: row;
+    align-items: stretch;
+    padding: 0;
+    gap: 0;
+  }
+  .s1-left {
+    flex: 1;
+    padding: 56px 64px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .s1-right {
+    width: 380px;
+    background: #171717;
+    padding: 48px 48px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .s1-tag {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #a3a3a3;
+    margin-bottom: 28px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .s1-headline {
+    font-size: 56px;
+    font-weight: 300;
+    color: #171717;
+    line-height: 1.07;
+    letter-spacing: -0.03em;
+    margin-bottom: 28px;
+  }
+  .s1-headline strong {
+    font-weight: 600;
+    color: #171717;
+  }
+  .s1-sub {
+    font-size: 16px;
+    color: #737373;
+    line-height: 1.65;
+    max-width: 440px;
+    margin-bottom: 40px;
+  }
+  .s1-meta {
+    font-size: 12px;
+    color: #a3a3a3;
+    line-height: 1.8;
+  }
+  .s1-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+  }
+  .s1-stat .num {
+    font-size: 36px;
+    font-weight: 300;
+    color: #ffffff;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .s1-stat .lbl {
+    font-size: 12px;
+    color: #737373;
+    line-height: 1.5;
+  }
+  .s1-stat-divider { height: 1px; background: #262626; }
+
+  /* ═══════════════════════════════════════════
+     SLIDE 2 — THE PROBLEM
+  ═══════════════════════════════════════════ */
+  .s2 .slide-body { gap: 32px; }
+  .s2-split {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    border: 1px solid #e5e5e5;
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .s2-col {
+    padding: 32px;
+  }
+  .s2-col.light { background: #ffffff; }
+  .s2-col.dark { background: #171717; }
+  .s2-col-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+  .s2-col.light .s2-col-label { color: #a3a3a3; }
+  .s2-col.dark .s2-col-label { color: #525252; }
+  .s2-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid;
+  }
+  .s2-col.light .s2-item { border-color: #f5f5f5; }
+  .s2-col.dark .s2-item { border-color: #1f1f1f; }
+  .s2-item:last-child { border-bottom: none; }
+  .s2-item-text {
+    font-size: 13px;
+    line-height: 1.55;
+  }
+  .s2-col.light .s2-item-text { color: #525252; }
+  .s2-col.dark .s2-item-text { color: #737373; }
+  .s2-item-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .s2-col.light .s2-item-dot { background: #fef2f2; border: 1px solid #fecaca; }
+  .s2-col.dark .s2-item-dot { background: #14532d; border: 1px solid #166534; }
+  .s2-item-dot-inner {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+  }
+  .s2-col.light .s2-item-dot-inner { background: #f87171; }
+  .s2-col.dark .s2-item-dot-inner { background: #34d399; }
+  .s2-mission {
+    font-size: 14px;
+    color: #737373;
+    line-height: 1.65;
+    padding: 16px 20px;
+    background: #fafafa;
+    border: 1px solid #f0f0f0;
+    border-radius: 10px;
+    border-left: 3px solid #F5A623;
+  }
+
+  /* ═══════════════════════════════════════════
+     SLIDE 3 — WHY NOW
+  ═══════════════════════════════════════════ */
+  .s3 .slide-body { gap: 36px; }
+  .s3-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0;
+    border: 1px solid #e5e5e5;
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .s3-stat {
+    padding: 28px 32px;
+    border-right: 1px solid #e5e5e5;
+  }
+  .s3-stat:last-child { border-right: none; }
+  .s3-stat .big { font-size: 48px; font-weight: 300; color: #171717; letter-spacing: -0.04em; line-height: 1; margin-bottom: 8px; }
+  .s3-stat .big em { color: #F5A623; font-style: normal; }
+  .s3-stat .lbl { font-size: 13px; color: #737373; line-height: 1.55; }
+  .s3-why {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .s3-why-card {
+    padding: 20px 24px;
+    background: #fafafa;
+    border: 1px solid #f0f0f0;
+    border-radius: 12px;
+  }
+  .s3-why-card .title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #171717;
+    margin-bottom: 6px;
+  }
+  .s3-why-card .body { font-size: 12px; color: #737373; line-height: 1.6; }
+  .s3-window {
+    background: #171717;
+    border-radius: 12px;
+    padding: 18px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .s3-window-dot { width: 8px; height: 8px; border-radius: 50%; background: #F5A623; flex-shrink: 0; }
+  .s3-window-text { font-size: 13px; color: #a3a3a3; line-height: 1.6; }
+  .s3-window-text strong { color: #ffffff; font-weight: 500; }
+
+  /* ═══════════════════════════════════════════
+     SLIDE 4 — CLOSED LOOP
+  ═══════════════════════════════════════════ */
+  .s4 .slide-body { gap: 32px; }
+  .s4-loop {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    border: 1px solid #e5e5e5;
+    border-radius: 14px;
+    overflow: hidden;
+    flex: 1;
+  }
+  .s4-step {
+    flex: 1;
+    padding: 28px 24px;
+    border-right: 1px solid #f0f0f0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .s4-step:last-child { border-right: none; background: #171717; }
+  .s4-step-num {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    color: #d4d4d4;
+    margin-bottom: 4px;
+  }
+  .s4-step:last-child .s4-step-num { color: #525252; }
+  .s4-step-icon { font-size: 22px; margin-bottom: 2px; }
+  .s4-step-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #171717;
+    margin-bottom: 2px;
+  }
+  .s4-step:last-child .s4-step-title { color: #ffffff; }
+  .s4-step-body { font-size: 12px; color: #737373; line-height: 1.55; }
+  .s4-step:last-child .s4-step-body { color: #525252; }
+  .s4-outcome {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 12px;
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .s4-outcome-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #92400e;
+    white-space: nowrap;
+  }
+  .s4-outcome-text { font-size: 13px; color: #78350f; line-height: 1.6; }
+  .s4-outcome-text strong { font-weight: 600; }
+
+  /* ═══════════════════════════════════════════
+     SLIDE 5 — PRODUCT
+  ═══════════════════════════════════════════ */
+  .s5 .slide-body {
+    flex-direction: row;
+    gap: 40px;
+    align-items: flex-start;
+    padding-top: 40px;
+  }
+  .s5-card {
+    width: 360px;
+    flex-shrink: 0;
+    background: #ffffff;
+    border: 1px solid #e5e5e5;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 4px 32px rgba(0,0,0,0.06);
+  }
+  .s5-card-header {
+    padding: 18px 20px;
+    border-bottom: 1px solid #f5f5f5;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .s5-acct-name { font-size: 14px; font-weight: 500; color: #171717; margin-bottom: 2px; }
+  .s5-acct-meta { font-size: 11px; color: #a3a3a3; }
+  .s5-card-arr {
+    padding: 16px 20px;
+    border-bottom: 1px solid #f5f5f5;
+  }
+  .s5-arr-row { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+  .s5-arr-num { font-size: 28px; font-weight: 300; color: #ef4444; letter-spacing: -0.03em; }
+  .s5-arr-label { font-size: 13px; color: #a3a3a3; }
+  .s5-arr-health { margin-left: auto; font-size: 12px; color: #f87171; font-weight: 500; }
+  .s5-card-signal {
+    background: #fff7ed;
+    border-bottom: 1px solid #fed7aa;
+    padding: 14px 20px;
+  }
+  .s5-signal-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .s5-signal-title { font-size: 12px; font-weight: 600; color: #c2780a; }
+  .s5-signal-tag {
+    margin-left: auto;
+    font-size: 10px;
+    color: #c2780a;
+    background: #fde68a;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-weight: 600;
+  }
+  .s5-signal-quote { font-size: 13px; color: #292524; line-height: 1.55; }
+  .s5-card-action {
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .s5-ai-badge {
+    width: 22px; height: 22px;
+    border-radius: 6px;
+    background: #f5f5f5;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; font-weight: 700; color: #737373;
+    flex-shrink: 0;
+  }
+  .s5-action-text { font-size: 12px; color: #525252; }
+  .s5-action-cta { margin-left: auto; font-size: 12px; color: #F5A623; font-weight: 600; }
+
+  .s5-features { flex: 1; display: flex; flex-direction: column; gap: 0; }
+  .s5-features-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #a3a3a3;
+    margin-bottom: 16px;
+  }
+  .s5-feature {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    padding: 16px 0;
+    border-bottom: 1px solid #f5f5f5;
+  }
+  .s5-feature:last-child { border-bottom: none; }
+  .s5-feature-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+  .s5-feature-title { font-size: 14px; font-weight: 600; color: #171717; margin-bottom: 3px; }
+  .s5-feature-body { font-size: 12px; color: #737373; line-height: 1.6; }
+
+  .s5-headline { font-size: 30px; font-weight: 300; color: #171717; letter-spacing: -0.02em; margin-bottom: 24px; }
+
+  /* ═══════════════════════════════════════════
+     SLIDE 6 — MARKET & COMPETITION
+  ═══════════════════════════════════════════ */
+  .s6 .slide-body { gap: 28px; }
+  .s6-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; flex: 1; }
+  .s6-market { display: flex; flex-direction: column; gap: 16px; }
+  .s6-tier {
+    border: 1px solid #e5e5e5;
+    border-radius: 12px;
+    padding: 22px 24px;
+    flex: 1;
+  }
+  .s6-tier.featured { border-color: #F5A623; background: #fffbeb; }
+  .s6-tier-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #a3a3a3;
+    margin-bottom: 6px;
+  }
+  .s6-tier.featured .s6-tier-label { color: #92400e; }
+  .s6-tier-num { font-size: 40px; font-weight: 300; color: #171717; letter-spacing: -0.04em; margin-bottom: 4px; }
+  .s6-tier.featured .s6-tier-num { color: #F5A623; }
+  .s6-tier-desc { font-size: 12px; color: #737373; line-height: 1.55; }
+
+  /* Comparison table */
+  .s6-table { display: flex; flex-direction: column; border: 1px solid #e5e5e5; border-radius: 12px; overflow: hidden; }
+  .s6-table-head {
+    display: grid;
+    grid-template-columns: 140px 1fr 1fr 1fr 1fr;
+    padding: 10px 16px;
+    background: #fafafa;
+    border-bottom: 1px solid #e5e5e5;
+  }
+  .s6-table-head span {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #a3a3a3;
+    text-align: center;
+  }
+  .s6-table-head span:first-child { text-align: left; }
+  .s6-row {
+    display: grid;
+    grid-template-columns: 140px 1fr 1fr 1fr 1fr;
+    padding: 10px 16px;
+    border-bottom: 1px solid #f5f5f5;
+    align-items: center;
+  }
+  .s6-row:last-child { border-bottom: none; }
+  .s6-row.us { background: #fffbeb; border-bottom: none; }
+  .s6-name { font-size: 13px; font-weight: 500; color: #525252; }
+  .s6-row.us .s6-name { color: #171717; font-weight: 700; }
+  .s6-check { text-align: center; font-size: 13px; color: #22c55e; }
+  .s6-cross { text-align: center; font-size: 13px; color: #d4d4d4; }
+  .s6-partial { text-align: center; font-size: 13px; color: #fb923c; }
+
+  /* ═══════════════════════════════════════════
+     SLIDE 7 — BUSINESS MODEL
+  ═══════════════════════════════════════════ */
+  .s7 .slide-body { gap: 28px; }
+  .s7-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; flex: 1; }
+  .s7-pricing { display: flex; flex-direction: column; gap: 16px; }
+  .s7-plan {
+    border: 1px solid #e5e5e5;
+    border-radius: 12px;
+    padding: 22px 24px;
+    flex: 1;
+  }
+  .s7-plan.featured { border-color: #171717; }
+  .s7-plan-tier {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #a3a3a3;
+    margin-bottom: 6px;
+  }
+  .s7-plan-price { font-size: 36px; font-weight: 300; color: #171717; letter-spacing: -0.04em; }
+  .s7-plan-price span { font-size: 14px; font-weight: 400; color: #a3a3a3; }
+  .s7-plan-unit { font-size: 12px; color: #a3a3a3; margin-bottom: 14px; margin-top: 2px; }
+  .s7-plan-list { list-style: none; }
+  .s7-plan-list li {
+    font-size: 12px;
+    color: #525252;
+    padding: 5px 0;
+    border-bottom: 1px solid #f5f5f5;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .s7-plan-list li:last-child { border-bottom: none; }
+  .s7-plan-list li span { color: #22c55e; font-weight: 600; }
+
+  .s7-ue {
+    border: 1px solid #e5e5e5;
+    border-radius: 12px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  .s7-ue-title {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #a3a3a3;
+    margin-bottom: 16px;
+  }
+  .s7-ue-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 10px 0;
+    border-bottom: 1px solid #f5f5f5;
+  }
+  .s7-ue-row:last-child { border-bottom: none; }
+  .s7-ue-label { font-size: 12px; color: #737373; }
+  .s7-ue-val { font-size: 14px; font-weight: 600; color: #171717; }
+  .s7-ue-val.orange { color: #F5A623; }
+  .s7-critical {
+    margin-top: 16px;
+    padding: 14px 18px;
+    background: #171717;
+    border-radius: 10px;
+  }
+  .s7-critical-text { font-size: 12px; color: #737373; line-height: 1.65; }
+  .s7-critical-text strong { color: #ffffff; font-weight: 500; }
+
+  /* ═══════════════════════════════════════════
+     SLIDE 8 — THE ASK
+  ═══════════════════════════════════════════ */
+  .s8 { background: #ffffff; }
+  .s8 .slide-body { gap: 32px; }
+  .s8-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    flex: 1;
+  }
+  .s8-card {
+    border: 1px solid #e5e5e5;
+    border-radius: 12px;
+    padding: 22px 24px;
+  }
+  .s8-card.dark {
+    background: #171717;
+    border-color: #262626;
+  }
+  .s8-card-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #a3a3a3;
+    margin-bottom: 10px;
+  }
+  .s8-card.dark .s8-card-label { color: #525252; }
+  .s8-card-text { font-size: 13px; color: #525252; line-height: 1.65; }
+  .s8-card.dark .s8-card-text { color: #737373; }
+  .s8-card-text strong { color: #171717; font-weight: 600; }
+  .s8-card.dark .s8-card-text strong { color: #ffffff; }
+  .s8-founder {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 18px 24px;
+    border: 1px solid #e5e5e5;
+    border-radius: 12px;
+  }
+  .s8-avatar {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: #171717;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px; font-weight: 700; color: #F5A623;
+    flex-shrink: 0;
+    font-family: -apple-system, sans-serif;
+  }
+  .s8-name { font-size: 14px; font-weight: 600; color: #171717; margin-bottom: 2px; }
+  .s8-role { font-size: 12px; color: #a3a3a3; }
+  .s8-contact { margin-left: auto; text-align: right; }
+  .s8-email { font-size: 13px; color: #F5A623; font-weight: 500; }
+  .s8-url { font-size: 11px; color: #a3a3a3; margin-top: 2px; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════
+     SLIDE 1 — COVER
+══════════════════════════════════════════════════════ -->
+<div class="slide s1">
+  <div class="slide-header">
+    <div class="logo-wrap">
+      <svg width="20" height="20" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M50 6 C26 28 20 46 20 64 A30 30 0 0 0 80 64 C80 46 74 28 50 6 Z" stroke="#F5A623" stroke-width="5.5" stroke-linejoin="round" fill="none"/>
+      </svg>
+      <span>Nectic</span>
+    </div>
+    <div class="slide-label">Antler Indonesia · March 2026</div>
+    <div class="slide-num">1 / 8</div>
+  </div>
+
+  <div class="slide-body">
+    <div class="s1-left">
+      <div>
+        <div class="s1-tag">
+          <span style="width:6px;height:6px;border-radius:50%;background:#34d399;display:inline-block;"></span>
+          AI-native churn prevention · WhatsApp-first B2B SaaS in SEA
+        </div>
+        <div class="s1-headline">
+          Every at-risk account.<br>
+          <strong>Caught before<br>it costs you.</strong>
+        </div>
+        <p class="s1-sub">
+          Nectic runs the full account health loop: monitors WhatsApp conversations, detects churn signals the moment they appear, drafts the response, and closes the action — with or without your CS team in the room.
+        </p>
+      </div>
+      <div class="s1-meta">
+        Built for Heads of Customer Success at B2B SaaS in Indonesia & Malaysia.<br>
+        Bahasa Indonesia understood natively.
+      </div>
+    </div>
+
+    <div class="s1-right">
+      <div class="s1-stats">
+        <div class="s1-stat">
+          <div class="num">91%</div>
+          <div class="lbl">of B2B customer conversations in Indonesia happen on WhatsApp — invisible to your CRM and ticketing system.</div>
+        </div>
+        <div class="s1-stat-divider"></div>
+        <div class="s1-stat">
+          <div class="num">30+ days</div>
+          <div class="lbl">earlier signal detection vs manual triage — the window where early intervention saves the account.</div>
+        </div>
+        <div class="s1-stat-divider"></div>
+        <div class="s1-stat">
+          <div class="num">68%</div>
+          <div class="lbl">of churned customers showed clear warning signals in their WhatsApp chats weeks before cancelling.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     SLIDE 2 — THE PROBLEM
+══════════════════════════════════════════════════════ -->
+<div class="slide s2">
+  <div class="slide-header">
+    <div class="logo-wrap">
+      <svg width="20" height="20" viewBox="0 0 100 100" fill="none"><path d="M50 6 C26 28 20 46 20 64 A30 30 0 0 0 80 64 C80 46 74 28 50 6 Z" stroke="#F5A623" stroke-width="5.5" stroke-linejoin="round" fill="none"/></svg>
+      <span>Nectic</span>
+    </div>
+    <div class="slide-label">The Problem</div>
+    <div class="slide-num">2 / 8</div>
+  </div>
+
+  <div class="slide-body">
+    <div class="h2">CS teams in SEA are flying blind. <span class="muted">The signals are in WhatsApp. Nobody's watching.</span></div>
+
+    <div class="s2-split">
+      <div class="s2-col light">
+        <div class="s2-col-label">Without Nectic</div>
+        <div class="s2-item">
+          <div class="s2-item-dot"><div class="s2-item-dot-inner"></div></div>
+          <p class="s2-item-text">CS manager spends 2–3 hrs manually reading WhatsApp to see where accounts stand — every single day.</p>
+        </div>
+        <div class="s2-item">
+          <div class="s2-item-dot"><div class="s2-item-dot-inner"></div></div>
+          <p class="s2-item-text">Churn signal fires on Friday evening. Nobody sees it until Tuesday. Account is already cold.</p>
+        </div>
+        <div class="s2-item">
+          <div class="s2-item-dot"><div class="s2-item-dot-inner"></div></div>
+          <p class="s2-item-text">PM discovers a critical account is at risk 3 weeks late — when CS finally escalates it in a Slack message.</p>
+        </div>
+        <div class="s2-item">
+          <div class="s2-item-dot"><div class="s2-item-dot-inner"></div></div>
+          <p class="s2-item-text">Gainsight costs $40K+/yr. Requires CRM setup. Has zero WhatsApp integration. Built for Salesforce orgs in San Francisco.</p>
+        </div>
+      </div>
+
+      <div class="s2-col dark">
+        <div class="s2-col-label">With Nectic</div>
+        <div class="s2-item">
+          <div class="s2-item-dot"><div class="s2-item-dot-inner"></div></div>
+          <p class="s2-item-text">Agent scans every account overnight. Queue shows only what needs a decision today.</p>
+        </div>
+        <div class="s2-item">
+          <div class="s2-item-dot"><div class="s2-item-dot-inner"></div></div>
+          <p class="s2-item-text">Unactioned critical signal after 3 days? Agent re-alerts automatically. Nothing falls through the cracks.</p>
+        </div>
+        <div class="s2-item">
+          <div class="s2-item-dot"><div class="s2-item-dot-inner"></div></div>
+          <p class="s2-item-text">Risk detected the day the signal appears. Draft response already waiting. CS lead approves in 5 seconds.</p>
+        </div>
+        <div class="s2-item">
+          <div class="s2-item-dot"><div class="s2-item-dot-inner"></div></div>
+          <p class="s2-item-text">Monday briefing delivered automatically. ARR saved, accounts protected, no manual report. $299/mo.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="s2-mission">
+      If Nectic disappears tomorrow, your CS team reverts to manual WhatsApp triage. Accounts slip. Revenue at risk goes unnoticed. Churn happens two weeks later. <strong style="color:#171717;">That's the test of whether something is mission-critical.</strong>
+    </div>
+  </div>
+
+  <div class="slide-footer">
+    <div class="footer-url">nectic.app</div>
+    <div class="slide-num">2 / 8</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     SLIDE 3 — WHY NOW
+══════════════════════════════════════════════════════ -->
+<div class="slide s3">
+  <div class="slide-header">
+    <div class="logo-wrap">
+      <svg width="20" height="20" viewBox="0 0 100 100" fill="none"><path d="M50 6 C26 28 20 46 20 64 A30 30 0 0 0 80 64 C80 46 74 28 50 6 Z" stroke="#F5A623" stroke-width="5.5" stroke-linejoin="round" fill="none"/></svg>
+      <span>Nectic</span>
+    </div>
+    <div class="slide-label">Why Now</div>
+    <div class="slide-num">3 / 8</div>
+  </div>
+
+  <div class="slide-body">
+    <div class="h2">WhatsApp is the OS for B2B in SEA. <span class="muted">AI can finally read it.</span></div>
+
+    <div class="s3-stats">
+      <div class="s3-stat">
+        <div class="big">2<em>B+</em></div>
+        <div class="lbl">WhatsApp active users globally. SEA has the highest B2B WhatsApp adoption of any region in the world — it's not Slack or email here, it's WhatsApp.</div>
+      </div>
+      <div class="s3-stat">
+        <div class="big">$1<em>B+</em></div>
+        <div class="lbl">Messages processed monthly by WATI BSP for B2B teams in SEA. The infrastructure for WhatsApp Business at scale already exists and is widely adopted.</div>
+      </div>
+      <div class="s3-stat">
+        <div class="big"><em>0</em></div>
+        <div class="lbl">Funded CS tools that combine WhatsApp signal analysis + proactive draft generation + WATI send for B2B SaaS in SEA. This category is unclaimed.</div>
+      </div>
+    </div>
+
+    <div class="s3-why">
+      <div class="s3-why-card">
+        <div class="title">LLMs now parse unstructured chat</div>
+        <div class="body">Nectic extracts churn signals from messy WhatsApp exports in Bahasa Indonesia, Malay, and English with high reliability. This capability didn't exist 18 months ago.</div>
+      </div>
+      <div class="s3-why-card">
+        <div class="title">B2B SaaS in SEA is maturing fast</div>
+        <div class="body">The cohort of ID/MY SaaS companies crossing $1M ARR is growing at 40%+ YoY. They're starting to feel churn pain and need CS systems built for their workflow.</div>
+      </div>
+    </div>
+
+    <div class="s3-window">
+      <div class="s3-window-dot"></div>
+      <div class="s3-window-text">
+        <strong>The competitive window is 12–18 months.</strong> Agency (Kai) is the closest threat — well-funded, AI-native, building toward WhatsApp. We have a first-mover advantage if we close 10 pilots in the next 90 days.
+      </div>
+    </div>
+  </div>
+
+  <div class="slide-footer">
+    <div class="footer-url">nectic.app</div>
+    <div class="slide-num">3 / 8</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     SLIDE 4 — THE CLOSED LOOP
+══════════════════════════════════════════════════════ -->
+<div class="slide s4">
+  <div class="slide-header">
+    <div class="logo-wrap">
+      <svg width="20" height="20" viewBox="0 0 100 100" fill="none"><path d="M50 6 C26 28 20 46 20 64 A30 30 0 0 0 80 64 C80 46 74 28 50 6 Z" stroke="#F5A623" stroke-width="5.5" stroke-linejoin="round" fill="none"/></svg>
+      <span>Nectic</span>
+    </div>
+    <div class="slide-label">The Solution</div>
+    <div class="slide-num">4 / 8</div>
+  </div>
+
+  <div class="slide-body">
+    <div class="h2">One closed loop. <span class="muted">End-to-end. Zero manual review.</span></div>
+
+    <div class="s4-loop">
+      <div class="s4-step">
+        <div class="s4-step-num">01</div>
+        <div class="s4-step-icon">📤</div>
+        <div class="s4-step-title">Upload</div>
+        <div class="s4-step-body">CS lead exports WhatsApp conversation. Drags it into Nectic. Any size, any date range, any language.</div>
+      </div>
+      <div class="s4-step">
+        <div class="s4-step-num">02</div>
+        <div class="s4-step-icon">🔍</div>
+        <div class="s4-step-title">Detect</div>
+        <div class="s4-step-body">AI reads every message. Surfaces risk signals, sentiment decay, competitor mentions, silence patterns. In 60 seconds.</div>
+      </div>
+      <div class="s4-step">
+        <div class="s4-step-num">03</div>
+        <div class="s4-step-icon">✍️</div>
+        <div class="s4-step-title">Draft</div>
+        <div class="s4-step-body">Response drafted in your team's actual communication voice. Evidence-backed. Queued for one-tap approval.</div>
+      </div>
+      <div class="s4-step">
+        <div class="s4-step-num">04</div>
+        <div class="s4-step-icon">📱</div>
+        <div class="s4-step-title">Send</div>
+        <div class="s4-step-body">Approved draft sent via WATI directly to the customer on WhatsApp. From the account manager's number.</div>
+      </div>
+      <div class="s4-step">
+        <div class="s4-step-num">05 →</div>
+        <div class="s4-step-icon">✅</div>
+        <div class="s4-step-title">Protect</div>
+        <div class="s4-step-body">Signal resolved. Health score updated. ARR protected — logged and reported in weekly leadership digest.</div>
+      </div>
+    </div>
+
+    <div class="s4-outcome">
+      <div class="s4-outcome-label">The outcome</div>
+      <div class="s4-outcome-text">
+        Nectic is not a dashboard or an analytics layer. It is an <strong>AI-native workflow engine that runs churn prevention end-to-end</strong> — from the first signal in a WhatsApp thread to the sent response to the ARR impact tracked — without requiring a CS manager to remember to check it.
+      </div>
+    </div>
+  </div>
+
+  <div class="slide-footer">
+    <div class="footer-url">nectic.app</div>
+    <div class="slide-num">4 / 8</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     SLIDE 5 — PRODUCT IN ACTION
+══════════════════════════════════════════════════════ -->
+<div class="slide s5">
+  <div class="slide-header">
+    <div class="logo-wrap">
+      <svg width="20" height="20" viewBox="0 0 100 100" fill="none"><path d="M50 6 C26 28 20 46 20 64 A30 30 0 0 0 80 64 C80 46 74 28 50 6 Z" stroke="#F5A623" stroke-width="5.5" stroke-linejoin="round" fill="none"/></svg>
+      <span>Nectic</span>
+    </div>
+    <div class="slide-label">Product</div>
+    <div class="slide-num">5 / 8</div>
+  </div>
+
+  <div class="slide-body">
+    <div>
+      <div class="s5-headline">Built for the Head of CS. <span class="muted">Not the analyst.</span></div>
+    </div>
+
+    <div style="display:flex; gap: 40px; flex:1; align-items: flex-start;">
+      <!-- Product card — mirrors landing page exactly -->
+      <div class="s5-card">
+        <div class="s5-card-header">
+          <div>
+            <div class="s5-acct-name">PT Mandiri Teknologi</div>
+            <div class="s5-acct-meta">Growth plan · $24K ARR · Renewal Mar 2026</div>
+          </div>
+          <div class="badge-orange">
+            <div class="badge-orange-dot"></div>
+            HIGH
+          </div>
+        </div>
+
+        <div class="s5-card-arr">
+          <div class="s5-arr-row">
+            <div class="s5-arr-num">$16K</div>
+            <div class="s5-arr-label">ARR at risk</div>
+            <div class="s5-arr-health">health 4/10</div>
+          </div>
+          <div class="progress-bg">
+            <div class="progress-fill" style="width: 40%;"></div>
+          </div>
+        </div>
+
+        <div class="s5-card-signal">
+          <div class="s5-signal-row">
+            <div class="dot-orange"></div>
+            <div class="s5-signal-title">Competitor mentioned</div>
+            <div class="s5-signal-tag">Qontak</div>
+          </div>
+          <div class="s5-signal-quote">"Kita lagi coba Qontak juga bulan ini, nanti kita compare hasilnya…"</div>
+          <div style="font-size:11px; color:#a3a3a3; margin-top:6px;">Renewal: March 2026 · Detected today</div>
+        </div>
+
+        <div class="s5-card-action">
+          <div class="s5-ai-badge">AI</div>
+          <div class="s5-action-text">Draft retention offer — save $16K ARR</div>
+          <div class="s5-action-cta">Send →</div>
+        </div>
+      </div>
+
+      <!-- Feature list -->
+      <div class="s5-features">
+        <div class="s5-features-title">How it works</div>
+        <div class="s5-feature">
+          <div class="s5-feature-icon">🧠</div>
+          <div>
+            <div class="s5-feature-title">AI Signal Detection in Bahasa & Malay</div>
+            <div class="s5-feature-body">Reads WhatsApp exports natively in Indonesian, Malay, and English. Detects churn risk, product friction, relationship decay — not just keywords. Understanding code-switching between languages is built in.</div>
+          </div>
+        </div>
+        <div class="s5-feature">
+          <div class="s5-feature-icon">✍️</div>
+          <div>
+            <div class="s5-feature-title">Human-Voice Draft Generation</div>
+            <div class="s5-feature-body">Responses are generated in your team's actual communication style — calibrated from real conversation history. The customer gets a message that sounds like their account manager, not a bot.</div>
+          </div>
+        </div>
+        <div class="s5-feature">
+          <div class="s5-feature-icon">📱</div>
+          <div>
+            <div class="s5-feature-title">One-Tap WATI Send</div>
+            <div class="s5-feature-body">Approved messages send directly to the customer via WhatsApp Business API. No copy-pasting. No switching apps. The CS lead sees a queue of drafts and approves in seconds.</div>
+          </div>
+        </div>
+        <div class="s5-feature">
+          <div class="s5-feature-icon">📊</div>
+          <div>
+            <div class="s5-feature-title">ARR Protection Dashboard</div>
+            <div class="s5-feature-body">Every resolved signal logs ARR saved. Weekly leadership digest shows actual revenue impact — the number the VP of Sales asks every Monday.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide-footer">
+    <div class="footer-url">nectic.app</div>
+    <div class="slide-num">5 / 8</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     SLIDE 6 — MARKET & COMPETITION
+══════════════════════════════════════════════════════ -->
+<div class="slide s6">
+  <div class="slide-header">
+    <div class="logo-wrap">
+      <svg width="20" height="20" viewBox="0 0 100 100" fill="none"><path d="M50 6 C26 28 20 46 20 64 A30 30 0 0 0 80 64 C80 46 74 28 50 6 Z" stroke="#F5A623" stroke-width="5.5" stroke-linejoin="round" fill="none"/></svg>
+      <span>Nectic</span>
+    </div>
+    <div class="slide-label">Market &amp; Competition</div>
+    <div class="slide-num">6 / 8</div>
+  </div>
+
+  <div class="slide-body">
+    <div class="h2">A clear gap. <span class="muted">A defensible wedge. A 12-month window.</span></div>
+
+    <div class="s6-cols">
+      <div class="s6-market">
+        <div class="s6-tier featured">
+          <div class="s6-tier-label">Beachhead · ID + MY</div>
+          <div class="s6-tier-num">~400</div>
+          <div class="s6-tier-desc">B2B SaaS companies with $1M–$20M ARR and a dedicated CS function. WhatsApp-first. Willing to pay for outcomes. Underserved by every existing tool.</div>
+        </div>
+        <div class="s6-tier">
+          <div class="s6-tier-label">Serviceable Market · SEA-6</div>
+          <div class="s6-tier-num">~3,000</div>
+          <div class="s6-tier-desc">B2B SaaS companies in Southeast Asia with $500K+ ARR and a CS or account management function. Same WhatsApp-first workflow pattern across the region.</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="s6-table">
+          <div class="s6-table-head">
+            <span></span>
+            <span>WhatsApp</span>
+            <span>SEA Pricing</span>
+            <span>Auto-Draft</span>
+            <span>WATI Send</span>
+          </div>
+          <div class="s6-row">
+            <div class="s6-name">Gainsight</div>
+            <div class="s6-cross">—</div>
+            <div class="s6-cross">—</div>
+            <div class="s6-partial">~</div>
+            <div class="s6-cross">—</div>
+          </div>
+          <div class="s6-row">
+            <div class="s6-name">ChurnZero</div>
+            <div class="s6-cross">—</div>
+            <div class="s6-cross">—</div>
+            <div class="s6-partial">~</div>
+            <div class="s6-cross">—</div>
+          </div>
+          <div class="s6-row">
+            <div class="s6-name">Vitally</div>
+            <div class="s6-cross">—</div>
+            <div class="s6-partial">~</div>
+            <div class="s6-partial">~</div>
+            <div class="s6-cross">—</div>
+          </div>
+          <div class="s6-row">
+            <div class="s6-name">Intercom Fin</div>
+            <div class="s6-partial">~</div>
+            <div class="s6-partial">~</div>
+            <div class="s6-check">✓</div>
+            <div class="s6-cross">—</div>
+          </div>
+          <div class="s6-row">
+            <div class="s6-name">Agency (Kai)</div>
+            <div class="s6-partial">~</div>
+            <div class="s6-partial">~</div>
+            <div class="s6-check">✓</div>
+            <div class="s6-cross">—</div>
+          </div>
+          <div class="s6-row us">
+            <div class="s6-name" style="color:#171717;font-weight:700;">Nectic</div>
+            <div class="s6-check">✓</div>
+            <div class="s6-check">✓</div>
+            <div class="s6-check">✓</div>
+            <div class="s6-check">✓</div>
+          </div>
+        </div>
+
+        <div style="margin-top:14px; padding: 14px 18px; background:#fafafa; border:1px solid #f0f0f0; border-radius:10px;">
+          <div style="font-size:12px; color:#737373; line-height:1.65;">
+            <strong style="color:#171717;">Our moat</strong> is not the AI — it's the willingness to do the unsexy work: parsing messy WhatsApp exports, handling Bahasa/Malay code-switching, integrating directly with WATI BSP, and building for a market that looks too small from San Francisco.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide-footer">
+    <div class="footer-url">nectic.app</div>
+    <div class="slide-num">6 / 8</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     SLIDE 7 — BUSINESS MODEL
+══════════════════════════════════════════════════════ -->
+<div class="slide s7">
+  <div class="slide-header">
+    <div class="logo-wrap">
+      <svg width="20" height="20" viewBox="0 0 100 100" fill="none"><path d="M50 6 C26 28 20 46 20 64 A30 30 0 0 0 80 64 C80 46 74 28 50 6 Z" stroke="#F5A623" stroke-width="5.5" stroke-linejoin="round" fill="none"/></svg>
+      <span>Nectic</span>
+    </div>
+    <div class="slide-label">Business Model</div>
+    <div class="slide-num">7 / 8</div>
+  </div>
+
+  <div class="slide-body">
+    <div class="h2">SaaS today. <span class="muted">Outcome-based as we scale.</span></div>
+
+    <div class="s7-cols">
+      <div class="s7-pricing">
+        <div class="s7-plan">
+          <div class="s7-plan-tier">Starter</div>
+          <div class="s7-plan-price">$149<span>/month</span></div>
+          <div class="s7-plan-unit">Up to 20 accounts</div>
+          <ul class="s7-plan-list">
+            <li><span>✓</span> WhatsApp upload + AI analysis</li>
+            <li><span>✓</span> Signal detection + risk scoring</li>
+            <li><span>✓</span> Auto-drafted responses</li>
+            <li><span>✓</span> Email re-alerts for unactioned signals</li>
+          </ul>
+        </div>
+        <div class="s7-plan featured">
+          <div class="s7-plan-tier">Growth <span style="font-size:10px; background:#171717; color:#ffffff; padding:2px 6px; border-radius:4px; margin-left:4px; letter-spacing:0.06em;">RECOMMENDED</span></div>
+          <div class="s7-plan-price">$299<span>/month</span></div>
+          <div class="s7-plan-unit">Up to 100 accounts · WATI send enabled</div>
+          <ul class="s7-plan-list">
+            <li><span>✓</span> Everything in Starter</li>
+            <li><span>✓</span> One-tap WATI WhatsApp send</li>
+            <li><span>✓</span> ARR protection dashboard</li>
+            <li><span>✓</span> Weekly leadership digest</li>
+            <li><span>✓</span> Alert preference controls</li>
+          </ul>
+        </div>
+      </div>
+
+      <div>
+        <div class="s7-ue">
+          <div class="s7-ue-title">Unit Economics · Growth Plan</div>
+          <div class="s7-ue-row">
+            <span class="s7-ue-label">Ideal customer</span>
+            <span class="s7-ue-val">Head of CS, B2B SaaS, ID/MY, $1M–$20M ARR</span>
+          </div>
+          <div class="s7-ue-row">
+            <span class="s7-ue-label">ACV</span>
+            <span class="s7-ue-val orange">$3,588</span>
+          </div>
+          <div class="s7-ue-row">
+            <span class="s7-ue-label">Payback period</span>
+            <span class="s7-ue-val">&lt; 1 month (early pilots, low CAC)</span>
+          </div>
+          <div class="s7-ue-row">
+            <span class="s7-ue-label">10 pilots ARR</span>
+            <span class="s7-ue-val orange">~$36K</span>
+          </div>
+          <div class="s7-ue-row">
+            <span class="s7-ue-label">Expansion motion</span>
+            <span class="s7-ue-val">More accounts per workspace over time</span>
+          </div>
+          <div class="s7-ue-row">
+            <span class="s7-ue-label">Pricing roadmap</span>
+            <span class="s7-ue-val">% of ARR protected (outcome-based)</span>
+          </div>
+        </div>
+
+        <div class="s7-critical">
+          <div class="s7-critical-text">
+            The reference point for CS teams: if saving one account worth $24K ARR takes Nectic 5 minutes instead of 2 weeks, <strong>the tool pays for itself in the first month from a single resolved account.</strong> That's the conversation opener with every CS lead.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide-footer">
+    <div class="footer-url">nectic.app</div>
+    <div class="slide-num">7 / 8</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     SLIDE 8 — THE ASK
+══════════════════════════════════════════════════════ -->
+<div class="slide s8">
+  <div class="slide-header">
+    <div class="logo-wrap">
+      <svg width="20" height="20" viewBox="0 0 100 100" fill="none"><path d="M50 6 C26 28 20 46 20 64 A30 30 0 0 0 80 64 C80 46 74 28 50 6 Z" stroke="#F5A623" stroke-width="5.5" stroke-linejoin="round" fill="none"/></svg>
+      <span>Nectic</span>
+    </div>
+    <div class="slide-label">The Ask</div>
+    <div class="slide-num">8 / 8</div>
+  </div>
+
+  <div class="slide-body">
+    <div class="h2">Join us to own <span class="muted">churn prevention for B2B SaaS in SEA.</span></div>
+
+    <div class="s8-grid">
+      <div class="s8-card dark">
+        <div class="s8-card-label">What we have</div>
+        <div class="s8-card-text">
+          <strong>Working product, end-to-end.</strong> WhatsApp upload → AI signal detection → auto-draft → one-tap WATI send → ARR tracking. The full loop runs in 60 seconds per account. Live at nectic.app today.
+        </div>
+      </div>
+      <div class="s8-card">
+        <div class="s8-card-label">What we're looking for</div>
+        <div class="s8-card-text">
+          <strong>Co-founder with CS / Revenue Ops background in ID or MY.</strong> Deep network among Heads of CS at $1M–$20M ARR SaaS companies. Can run 10 paying pilots in 90 days from their existing relationships.
+        </div>
+      </div>
+      <div class="s8-card">
+        <div class="s8-card-label">90-Day Goal</div>
+        <div class="s8-card-text">
+          <strong>10 paying pilots at $149–$299/mo.</strong> 5 completed customer discovery interviews with CS leads in ID/MY. One documented closed loop: signal detected → draft sent → ARR protected.
+        </div>
+      </div>
+      <div class="s8-card dark">
+        <div class="s8-card-label">Why Antler Indonesia</div>
+        <div class="s8-card-text">
+          <strong>Antler's SEA portfolio is our distribution channel.</strong> The B2B SaaS founders in this cohort are exactly the companies whose CS teams are our buyers. The network gives us warm introductions that would otherwise take months of cold outreach.
+        </div>
+      </div>
+    </div>
+
+    <div class="s8-founder">
+      <div class="s8-avatar">M</div>
+      <div>
+        <div class="s8-name">Muhammad Ega Simatupang</div>
+        <div class="s8-role">Founder · Builder · nectic.app</div>
+      </div>
+      <div class="s8-contact">
+        <div class="s8-email">simatupang.ega@gmail.com</div>
+        <div class="s8-url">nectic.app</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
