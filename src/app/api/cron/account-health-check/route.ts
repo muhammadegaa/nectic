@@ -33,6 +33,16 @@ export async function GET(req: NextRequest) {
       const email = workspace?.notificationEmail
       if (!email) continue
 
+      // Read alert preferences (defaults: high_and_critical, daily)
+      const alertThreshold: string = workspace?.alertThreshold ?? "high_and_critical"
+      const alertFrequency: string = workspace?.alertFrequency ?? "daily"
+
+      // User has paused all alerts — skip entirely
+      if (alertFrequency === "paused") continue
+
+      // Weekly frequency: only re-alert after 7 days of inaction (not 3)
+      const unactionedThresholdMs = alertFrequency === "weekly" ? SEVEN_DAYS_MS : THREE_DAYS_MS
+
       usersChecked++
 
       const accountsSnap = await adminDb
@@ -83,15 +93,22 @@ export async function GET(req: NextRequest) {
           continue
         }
 
-        // Check 2: critical/high with unactioned signals for >3 days
-        if (riskLevel !== "critical" && riskLevel !== "high") {
+        // Check 2: filter by alert threshold preference
+        const shouldAlert =
+          alertThreshold === "all"
+            ? true
+            : alertThreshold === "critical_only"
+              ? riskLevel === "critical"
+              : riskLevel === "critical" || riskLevel === "high" // high_and_critical (default)
+
+        if (!shouldAlert) {
           if (healthyCount < 3 && events.length < 10) {
-            events.push({ type: "healthy", accountName, detail: "No action needed" })
+            events.push({ type: "healthy", accountName, detail: "Below alert threshold" })
             healthyCount++
           }
           continue
         }
-        if (ageMs < THREE_DAYS_MS) {
+        if (ageMs < unactionedThresholdMs) {
           if (healthyCount < 3 && events.length < 10) {
             events.push({ type: "healthy", accountName, detail: "No action needed" })
             healthyCount++
