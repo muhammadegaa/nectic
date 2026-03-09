@@ -148,7 +148,7 @@ export default function OnboardingPage() {
       const ws = await getWorkspace(user.uid)
 
       // 3. Default participant roles: first participant as vendor, rest as customer
-      const participantRoles: Record<string, string> = {}
+      const participantRoles: Record<string, "vendor" | "customer"> = {}
       parsed.participants.forEach((name, i) => {
         participantRoles[name] = i === 0 ? "vendor" : "customer"
       })
