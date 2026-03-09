@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useCallback, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { motion } from "framer-motion"
 import { toast } from "sonner"
@@ -29,7 +29,7 @@ import {
 } from "@/lib/concept-firestore"
 import type { AnalysisResult } from "@/app/api/concept/analyze/route"
 import { trackEvent, identifyUser } from "@/lib/posthog"
-import { getArrAtRisk, formatARR } from "@/lib/arr-utils"
+import { getArrAtRisk, formatARR, computeArrProtected, countActionedToday } from "@/lib/arr-utils"
 
 type ConnectStage = "instructions" | "upload" | "ready" | "analyzing" | "error"
 
@@ -79,6 +79,7 @@ function WhatsAppIcon({ size = 16, className = "" }: { size?: number; className?
 export default function ConceptPage() {
   const { user, loading: authLoading, signOut } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
 
   const [accounts, setAccounts] = useState<StoredAccount[]>([])
   const [loadingAccounts, setLoadingAccounts] = useState(true)
@@ -140,6 +141,15 @@ export default function ConceptPage() {
     setContext({})
     setShowConnect(true)
   }
+
+  // Phase 6 — detect ?openUpload=1 from onboarding step 3 and auto-open upload modal
+  useEffect(() => {
+    if (loadingAccounts) return
+    if (searchParams.get("openUpload") === "1") {
+      openConnect()
+      router.replace("/concept")
+    }
+  }, [loadingAccounts, searchParams])
 
   const closeConnect = () => {
     setShowConnect(false)
@@ -391,14 +401,8 @@ export default function ConceptPage() {
     return sum + Math.max(0, openSignals - resolvedSignals)
   }, 0)
 
-  const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000
-  const savedThisMonth = accounts.filter((a) => {
-    const delta = a.result.changesSince?.healthDelta ?? 0
-    const updatedRecently = new Date(a.updatedAt ?? a.analyzedAt).getTime() > thirtyDaysAgo
-    const wasAtRisk = delta > 2
-    const nowHealthy = a.result.riskLevel === "low" || a.result.riskLevel === "medium"
-    return updatedRecently && wasAtRisk && nowHealthy
-  }).length
+  const savedThisMonth = computeArrProtected(accounts, { withinDays: 30 })
+  const actionedToday = countActionedToday(accounts)
 
   return (
     <div className="min-h-screen bg-neutral-50">
@@ -426,7 +430,7 @@ export default function ConceptPage() {
         ) : (
           <>
             {accounts.length === 0 && (
-              <EmptyState onConnect={openConnect} userName={user.displayName?.split(" ")[0] ?? null} />
+              <EmptyState onConnect={openConnect} />
             )}
             {accounts.length > 0 && (
               <div className="space-y-5">
@@ -442,14 +446,14 @@ export default function ConceptPage() {
                     highlight={atRisk > 0 ? "red" : "green"}
                   />
                   <KPITile
-                    label="ARR at risk"
-                    value={totalArrAtRisk > 0 ? formatARR(totalArrAtRisk) : "—"}
-                    highlight={totalArrAtRisk > 0 ? "red" : undefined}
+                    label="ARR protected (30d)"
+                    value={savedThisMonth > 0 ? formatARR(savedThisMonth) : "—"}
+                    highlight={savedThisMonth > 0 ? "green" : undefined}
                   />
                   <KPITile
-                    label="Saved this month"
-                    value={savedThisMonth > 0 ? `${savedThisMonth}` : "—"}
-                    highlight={savedThisMonth > 0 ? "green" : undefined}
+                    label="Actioned today"
+                    value={actionedToday > 0 ? `${actionedToday}` : "—"}
+                    highlight={actionedToday > 0 ? "green" : undefined}
                   />
                 </div>
 
@@ -1514,26 +1518,41 @@ function FounderWelcome({ onDismiss }: { onDismiss: () => void }) {
 
 // ─── Empty state ───────────────────────────────────────────────────────────────
 
-function EmptyState({ onConnect, userName }: { onConnect: () => void; userName: string | null }) {
+function EmptyState({ onConnect }: { onConnect: () => void }) {
   return (
-    <div className="max-w-md mx-auto pt-16 text-center">
-      <div className="w-14 h-14 bg-[#25D366] rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-green-200">
-        <WhatsAppIcon size={28} className="text-white" />
+    <div className="max-w-lg mx-auto bg-white border border-neutral-200 rounded-2xl p-8 mt-12">
+      <div className="w-10 h-10 flex items-center justify-center mb-5">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-neutral-300">
+          <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+        </svg>
       </div>
-      <p className="text-xs font-medium text-neutral-400 uppercase tracking-widest mb-3">
-        {userName ? `Welcome, ${userName}` : "Account Intelligence"}
+      <h2 className="text-lg font-semibold text-neutral-900 mb-2">Your accounts will appear here</h2>
+      <p className="text-sm text-neutral-500 leading-relaxed mb-6">
+        Upload a WhatsApp conversation to get started. Nectic analyzes the chat and surfaces churn signals, product feedback, and recommended actions.
       </p>
-      <h1 className="text-3xl font-light text-neutral-900 tracking-tight">
-        What are your customers<br /><span className="text-neutral-400">actually telling you?</span>
-      </h1>
-      <p className="mt-4 text-sm text-neutral-500 leading-relaxed max-w-sm mx-auto">
-        Connect a WhatsApp account group to extract churn signals, product pain points, and patterns your team would never catch manually.
-      </p>
-      <button onClick={onConnect} className="mt-8 flex items-center gap-2 bg-neutral-900 text-white text-sm font-semibold px-6 py-3 rounded-lg hover:bg-neutral-700 transition-colors mx-auto">
-        <WhatsAppIcon size={14} className="text-white" />
-        Connect first account
+
+      <div className="space-y-2.5 mb-6">
+        {[
+          "Export a WhatsApp chat (group or 1:1 with customer)",
+          "Upload the .txt or .zip — Nectic analyzes it in ~60s",
+          "See signals, draft replies, track actions",
+        ].map((step, i) => (
+          <div key={i} className="flex items-start gap-3">
+            <div className="w-5 h-5 rounded-full bg-neutral-900 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</div>
+            <p className="text-sm text-neutral-600">{step}</p>
+          </div>
+        ))}
+      </div>
+
+      <button
+        onClick={onConnect}
+        className="w-full bg-neutral-900 text-white text-sm font-semibold py-3 rounded-xl hover:bg-neutral-700 transition-colors"
+      >
+        Upload first account →
       </button>
-      <p className="mt-4 text-xs text-neutral-400">Upload WhatsApp .txt or .zip exports · Bahasa Indonesia + English · Live sync coming soon</p>
+      <p className="mt-3 text-xs text-neutral-400 text-center">
+        How to export: WhatsApp → conversation → ⋮ → Export chat → Without media
+      </p>
     </div>
   )
 }

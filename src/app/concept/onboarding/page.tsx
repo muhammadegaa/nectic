@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import LogoIcon from "@/components/logo-icon"
 import { useAuth } from "@/contexts/auth-context"
@@ -27,7 +27,7 @@ export default function OnboardingPage() {
 
   const [checking, setChecking] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [step, setStep] = useState<1 | 2>(1)
+  const [step, setStep] = useState<1 | 2 | 3>(1)
 
   const [productDescription, setProductDescription] = useState("")
   const [featureAreas, setFeatureAreas] = useState("")
@@ -40,10 +40,13 @@ export default function OnboardingPage() {
   const [autofillUrl, setAutofillUrl] = useState("")
   const [autofill, setAutofill] = useState<AutofillState>({ phase: "idle" })
 
+  const [firstUploadFile, setFirstUploadFile] = useState<File | null>(null)
+  const [firstUploadName, setFirstUploadName] = useState("")
+  const uploadInputRef = useRef<HTMLInputElement>(null)
+
   useEffect(() => {
     if (authLoading) return
     if (!user) { router.replace("/concept/login"); return }
-    // If already onboarded, skip to dashboard
     isOnboardingComplete(user.uid).then((done) => {
       if (done) router.replace("/concept")
       else setChecking(false)
@@ -85,26 +88,59 @@ export default function OnboardingPage() {
     setStep(2)
   }
 
+  const saveStep2Data = async () => {
+    if (!user) return
+    const ctx: WorkspaceContext = {}
+    if (productDescription.trim()) ctx.productDescription = productDescription.trim()
+    if (featureAreas.trim()) ctx.featureAreas = featureAreas.trim()
+    if (roadmapFocus.trim()) ctx.roadmapFocus = roadmapFocus.trim()
+    if (knownIssues.trim()) ctx.knownIssues = knownIssues.trim()
+    if (notificationEmail.trim()) ctx.notificationEmail = notificationEmail.trim()
+    if (watiEndpoint.trim()) ctx.watiEndpoint = watiEndpoint.trim()
+    if (watiToken.trim()) ctx.watiToken = watiToken.trim()
+    if (Object.keys(ctx).length > 0) await saveWorkspace(user.uid, ctx)
+  }
+
+  const handleStep2Next = async () => {
+    if (!user) return
+    setSaving(true)
+    try {
+      await saveStep2Data()
+    } finally {
+      setSaving(false)
+    }
+    setStep(3)
+  }
+
   const handleComplete = async (skip = false) => {
     if (!user) return
     setSaving(true)
     try {
-      const ctx: WorkspaceContext = {}
       if (!skip) {
-        if (productDescription.trim()) ctx.productDescription = productDescription.trim()
-        if (featureAreas.trim()) ctx.featureAreas = featureAreas.trim()
-        if (roadmapFocus.trim()) ctx.roadmapFocus = roadmapFocus.trim()
-        if (knownIssues.trim()) ctx.knownIssues = knownIssues.trim()
+        await saveStep2Data()
       }
-      if (notificationEmail.trim()) ctx.notificationEmail = notificationEmail.trim()
-      if (watiEndpoint.trim()) ctx.watiEndpoint = watiEndpoint.trim()
-      if (watiToken.trim()) ctx.watiToken = watiToken.trim()
-      if (Object.keys(ctx).length > 0) await saveWorkspace(user.uid, ctx)
       await markOnboardingComplete(user.uid)
       router.replace("/concept")
     } finally {
       setSaving(false)
     }
+  }
+
+  const handleAnalyzeAndComplete = async () => {
+    if (!user) return
+    setSaving(true)
+    try {
+      await markOnboardingComplete(user.uid)
+      router.replace("/concept?openUpload=1")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleFirstUploadFile = (file: File) => {
+    if (!file.name.endsWith(".txt") && !file.name.endsWith(".zip")) return
+    setFirstUploadFile(file)
+    setFirstUploadName(file.name)
   }
 
   const filledCount = [productDescription, featureAreas, roadmapFocus, knownIssues].filter(v => v.trim()).length
@@ -124,16 +160,16 @@ export default function OnboardingPage() {
         <LogoIcon size={24} />
         <div className="flex items-center gap-2">
           <div className="flex gap-1">
-            {[0, 1].map((i) => (
+            {[0, 1, 2].map((i) => (
               <div key={i} className={`h-1 rounded-full transition-all ${i < step ? "w-6 bg-neutral-900" : "w-6 bg-neutral-200"}`} />
             ))}
           </div>
-          <span className="text-xs text-neutral-400 ml-1">Step {step} of 2</span>
+          <span className="text-xs text-neutral-400 ml-1">Step {step} of 3</span>
         </div>
       </header>
 
       <main className="flex-1 max-w-2xl mx-auto w-full px-4 sm:px-6 py-10 pb-24">
-        {step === 2 ? null : (
+        {step === 2 || step === 3 ? null : (
         <div className="mb-8">
           <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-2">Workspace setup</p>
           <h1 className="text-2xl font-semibold text-neutral-900 tracking-tight">Tell Nectic about your product</h1>
@@ -260,8 +296,8 @@ export default function OnboardingPage() {
         {/* End step 1 wrapper */}
         </>)}
 
-        {/* Actions */}
-        {step === 1 ? (
+        {/* Step 1 actions */}
+        {step === 1 && (
           <div className="mt-8 flex items-center justify-between">
             <button
               onClick={() => handleStep1Next()}
@@ -277,9 +313,6 @@ export default function OnboardingPage() {
               Next →
             </button>
           </div>
-        ) : (
-          // Step 2 is rendered in a separate section below
-          null
         )}
 
         {/* Step 2 — notifications + WhatsApp send */}
@@ -346,19 +379,111 @@ export default function OnboardingPage() {
 
             <div className="flex items-center justify-between mt-8">
               <button
-                onClick={() => handleComplete(false)}
+                onClick={() => handleStep2Next()}
                 disabled={saving}
                 className="text-sm text-neutral-400 hover:text-neutral-700 transition-colors disabled:opacity-40"
               >
                 Skip — set up later
               </button>
               <button
-                onClick={() => handleComplete(false)}
+                onClick={() => handleStep2Next()}
                 disabled={saving}
                 className="flex items-center gap-2 bg-neutral-900 text-white text-sm font-semibold px-6 py-2.5 rounded-lg hover:bg-neutral-700 transition-colors disabled:opacity-40"
               >
                 {saving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : null}
-                {saving ? "Saving…" : "Start using Nectic →"}
+                {saving ? "Saving…" : "Next →"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 3 — first upload */}
+        {step === 3 && (
+          <div className="mt-0">
+            <div className="mb-8">
+              <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-2">Last step</p>
+              <h1 className="text-2xl font-semibold text-neutral-900 tracking-tight">Upload your first account</h1>
+              <p className="mt-2 text-sm text-neutral-500 leading-relaxed">
+                Export a WhatsApp conversation with a customer and upload it here. Nectic will analyze it and surface signals in under 60 seconds.
+              </p>
+            </div>
+
+            {/* Instructions card */}
+            <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden mb-5">
+              <div className="px-5 pt-4 pb-2 border-b border-neutral-100">
+                <p className="text-sm font-semibold text-neutral-800">How to export from WhatsApp</p>
+              </div>
+              <div className="px-5 py-4 space-y-3">
+                <div className="flex gap-3">
+                  <div className="w-5 h-5 rounded-full bg-neutral-900 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">1</div>
+                  <p className="text-sm text-neutral-700">Open WhatsApp → open the group or conversation with your customer</p>
+                </div>
+                <div className="flex gap-3">
+                  <div className="w-5 h-5 rounded-full bg-neutral-900 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">2</div>
+                  <p className="text-sm text-neutral-700">Tap the three dots (⋮) → More → Export chat → Without media</p>
+                </div>
+                <div className="flex gap-3">
+                  <div className="w-5 h-5 rounded-full bg-neutral-900 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">3</div>
+                  <p className="text-sm text-neutral-700">Upload the .txt or .zip file below</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Upload zone */}
+            <div
+              onClick={() => uploadInputRef.current?.click()}
+              className="border-2 border-dashed border-neutral-200 rounded-xl bg-neutral-100 p-10 text-center cursor-pointer hover:border-neutral-400 hover:bg-neutral-50 transition-all"
+            >
+              <input
+                ref={uploadInputRef}
+                type="file"
+                accept=".txt,.zip,text/plain,application/zip"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0]
+                  if (f) handleFirstUploadFile(f)
+                }}
+              />
+              {firstUploadFile ? (
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
+                    <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
+                      <polyline points="2 8 6 12 14 4" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+                  <p className="text-sm font-semibold text-neutral-900">{firstUploadName}</p>
+                  <p className="text-xs text-neutral-400">Click to change file</p>
+                </div>
+              ) : (
+                <>
+                  <div className="w-10 h-10 rounded-full bg-neutral-200 flex items-center justify-center mx-auto mb-3">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-neutral-400">
+                      <polyline points="16 16 12 12 8 16" />
+                      <line x1="12" y1="12" x2="12" y2="21" />
+                      <path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3" />
+                    </svg>
+                  </div>
+                  <p className="text-sm font-medium text-neutral-700">Drop your WhatsApp export here</p>
+                  <p className="mt-1 text-xs text-neutral-400">or click to browse · .txt or .zip</p>
+                </>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between mt-8">
+              <button
+                onClick={() => handleComplete(false)}
+                disabled={saving}
+                className="text-sm text-neutral-400 hover:text-neutral-700 transition-colors disabled:opacity-40"
+              >
+                Skip — I&apos;ll do this later
+              </button>
+              <button
+                onClick={handleAnalyzeAndComplete}
+                disabled={!firstUploadFile || saving}
+                className="flex items-center gap-2 bg-neutral-900 text-white text-sm font-semibold px-6 py-2.5 rounded-lg hover:bg-neutral-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {saving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : null}
+                {saving ? "Saving…" : "Analyze account →"}
               </button>
             </div>
           </div>

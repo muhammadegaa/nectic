@@ -19,7 +19,7 @@ import {
   type SignalActionStatus,
   type WorkspaceContext,
 } from "@/lib/concept-firestore"
-import { getAccountARR, getArrAtRisk, formatARR } from "@/lib/arr-utils"
+import { getAccountARR, getArrAtRisk, formatARR, computeArrProtected, countActionedToday } from "@/lib/arr-utils"
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -68,7 +68,6 @@ function getTopRiskSignal(account: StoredAccount): QueueSignal | null {
   const signals = account.result.riskSignals ?? []
   if (signals.length === 0) return null
 
-  // Find top open signal (prefer critical/high severity)
   const sorted = [...signals].sort((a, b) => {
     const sevOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 }
     return (sevOrder[(a as { severity?: string }).severity ?? "medium"] ?? 2) -
@@ -81,9 +80,7 @@ function getTopRiskSignal(account: StoredAccount): QueueSignal | null {
   const key = signalKey(sType, sTitle)
   const action = account.signalActions?.[key]
 
-  // Skip if already resolved
   if (action?.status === "done" || action?.status === "dismissed") {
-    // Find next open signal
     for (let i = 1; i < sorted.length; i++) {
       const sig = sorted[i]
       const t = (sig as { type?: string }).type ?? "risk"
@@ -171,6 +168,7 @@ export default function QueuePage() {
   const [workspace, setWorkspace] = useState<WorkspaceContext>({})
   const [loading, setLoading] = useState(true)
   const [queue, setQueue] = useState<QueueEntry[]>([])
+  const [statsView, setStatsView] = useState<"week" | "all">("week")
 
   useEffect(() => {
     if (!authLoading && !user) router.replace("/concept/login")
@@ -228,7 +226,6 @@ export default function QueuePage() {
   }, [user, accounts])
 
   // Revenue metrics
-  // ARR at risk: only critical/high accounts that still have open signals
   const totalArrAtRisk = accounts
     .filter((a) => {
       if (a.result.riskLevel !== "critical" && a.result.riskLevel !== "high") return false
@@ -236,15 +233,11 @@ export default function QueuePage() {
     })
     .reduce((sum, a) => sum + getArrAtRisk(a), 0)
 
-  // ARR protected: critical/high accounts where all signals are now actioned
-  const arrProtected = accounts
-    .filter((a) => {
-      if (a.result.riskLevel !== "critical" && a.result.riskLevel !== "high") return false
-      const open = countOpenSignals(a)
-      const total = (a.result.riskSignals?.length ?? 0) + (a.result.productSignals?.length ?? 0)
-      return open === 0 && total > 0
-    })
-    .reduce((sum, a) => sum + getArrAtRisk(a), 0)
+  const arrProtected = computeArrProtected(
+    accounts,
+    statsView === "week" ? { withinDays: 7 } : undefined
+  )
+  const actionedToday = countActionedToday(accounts)
 
   const urgentCount = accounts.reduce((sum, a) => {
     if (a.result.riskLevel !== "critical" && a.result.riskLevel !== "high") return sum
@@ -275,21 +268,86 @@ export default function QueuePage() {
 
         {/* Revenue header */}
         {!loading && accounts.length > 0 && (
-          <div className="grid grid-cols-3 gap-3 mb-6">
-            <div className="bg-white border border-neutral-200 rounded-xl px-4 py-3.5 shadow-sm">
-              <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-1">ARR at risk</p>
-              <p className="text-2xl font-bold text-red-600 tabular-nums">{totalArrAtRisk > 0 ? formatARR(totalArrAtRisk) : "—"}</p>
-              <p className="text-[11px] text-neutral-400 mt-0.5">{accounts.filter((a) => a.result.riskLevel === "critical" || a.result.riskLevel === "high").length} accounts</p>
+          <div className="mb-6">
+            {/* Stats view toggle */}
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Performance</p>
+              <div className="flex items-center gap-1 border border-neutral-200 rounded-lg overflow-hidden">
+                <button
+                  onClick={() => setStatsView("week")}
+                  className={`text-xs px-2.5 py-1 font-medium transition-colors ${statsView === "week" ? "bg-neutral-900 text-white" : "text-neutral-500 hover:text-neutral-700"}`}
+                >
+                  This week
+                </button>
+                <button
+                  onClick={() => setStatsView("all")}
+                  className={`text-xs px-2.5 py-1 font-medium transition-colors ${statsView === "all" ? "bg-neutral-900 text-white" : "text-neutral-500 hover:text-neutral-700"}`}
+                >
+                  All time
+                </button>
+              </div>
             </div>
-            <div className="bg-white border border-neutral-200 rounded-xl px-4 py-3.5 shadow-sm">
-              <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-1">ARR protected</p>
-              <p className="text-2xl font-bold text-emerald-600 tabular-nums">{arrProtected > 0 ? formatARR(arrProtected) : "—"}</p>
-              <p className="text-[11px] text-neutral-400 mt-0.5">signals actioned</p>
-            </div>
-            <div className="bg-white border border-neutral-200 rounded-xl px-4 py-3.5 shadow-sm">
-              <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-1">Needs action</p>
-              <p className="text-2xl font-bold text-neutral-900 tabular-nums">{queue.length}</p>
-              <p className="text-[11px] text-neutral-400 mt-0.5">accounts in queue</p>
+            <div className="grid grid-cols-4 gap-3">
+              <div className="bg-white border border-neutral-200 rounded-xl px-4 py-3.5 shadow-sm">
+                <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-1">ARR at risk</p>
+                <p className="text-2xl font-bold text-red-600 tabular-nums">
+                  <motion.span
+                    key={totalArrAtRisk}
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: "spring", stiffness: 300 }}
+                    className="inline-block"
+                  >
+                    {totalArrAtRisk > 0 ? formatARR(totalArrAtRisk) : "—"}
+                  </motion.span>
+                </p>
+                <p className="text-[11px] text-neutral-400 mt-0.5">{accounts.filter((a) => a.result.riskLevel === "critical" || a.result.riskLevel === "high").length} accounts</p>
+              </div>
+              <div className="bg-white border border-neutral-200 rounded-xl px-4 py-3.5 shadow-sm">
+                <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-1">ARR protected</p>
+                <p className="text-2xl font-bold text-emerald-600 tabular-nums">
+                  <motion.span
+                    key={`${arrProtected}-${statsView}`}
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: "spring", stiffness: 300 }}
+                    className="inline-block"
+                  >
+                    {arrProtected > 0 ? formatARR(arrProtected) : "—"}
+                  </motion.span>
+                </p>
+                <p className="text-[11px] text-neutral-400 mt-0.5">signals actioned</p>
+              </div>
+              <div className="bg-white border border-neutral-200 rounded-xl px-4 py-3.5 shadow-sm">
+                <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-1">Needs action</p>
+                <p className="text-2xl font-bold text-neutral-900 tabular-nums">
+                  <motion.span
+                    key={queue.length}
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: "spring", stiffness: 300 }}
+                    className="inline-block"
+                  >
+                    {queue.length}
+                  </motion.span>
+                </p>
+                <p className="text-[11px] text-neutral-400 mt-0.5">accounts in queue</p>
+              </div>
+              <div className="bg-white border border-neutral-200 rounded-xl px-4 py-3.5 shadow-sm">
+                <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-1">Actioned today</p>
+                <p className="text-2xl font-bold text-neutral-900 tabular-nums">
+                  <motion.span
+                    key={actionedToday}
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: "spring", stiffness: 300 }}
+                    className="inline-block"
+                  >
+                    {actionedToday > 0 ? actionedToday : "—"}
+                  </motion.span>
+                </p>
+                <p className="text-[11px] text-neutral-400 mt-0.5">signals resolved</p>
+              </div>
             </div>
           </div>
         )}
@@ -408,7 +466,6 @@ function QueueCard({
   const [askAnswer, setAskAnswer] = useState("")
   const [askLoading, setAskLoading] = useState(false)
 
-  // Pick up auto-generated draft when it arrives via polling
   useEffect(() => {
     const incoming = topSignal.action?.draftResponse ?? ""
     if (incoming && !draft) setDraft(incoming)
@@ -562,7 +619,6 @@ function QueueCard({
         <p className="text-sm font-semibold text-neutral-900 mb-2 leading-snug">{topSignal.title}</p>
         <p className="text-xs text-neutral-400 italic leading-relaxed mb-4">&ldquo;{topSignal.quote}&rdquo;</p>
 
-        {/* Why this matters */}
         {topSignal.explanation && (
           <div className="text-xs text-neutral-600 leading-relaxed bg-neutral-50 rounded-lg px-3 py-2.5 border border-neutral-100 mb-4">
             <span className="block text-[10px] font-semibold text-neutral-400 uppercase tracking-wide mb-1">Why this matters</span>
@@ -709,7 +765,6 @@ function QueueCard({
           )}
         </div>
 
-        {/* WATI connect prompt — shown when direct send not configured */}
         {!workspace.watiEndpoint && (
           <div className="mt-2 flex items-center gap-2 px-1">
             <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" className="text-[#25D366] flex-shrink-0">
@@ -721,7 +776,7 @@ function QueueCard({
           </div>
         )}
 
-        {/* Ask Nectic — single Q&A, grounded in this account's analysis */}
+        {/* Ask Nectic */}
         <div className="mt-4 border-t border-neutral-100 pt-3">
           <form
             onSubmit={async (e) => {

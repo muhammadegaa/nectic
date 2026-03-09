@@ -45,6 +45,10 @@ export interface WorkspaceContext {
   watiToken?: string
   // Notifications
   notificationEmail?: string
+  // Alert preferences
+  alertThreshold?: "critical_only" | "high_and_critical" | "all"
+  alertFrequency?: "realtime" | "daily" | "weekly" | "paused"
+  alertTimezone?: string
 }
 
 export interface HealthHistoryEntry {

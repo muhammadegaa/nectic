@@ -29,3 +29,56 @@ export function formatARR(n: number): string {
   if (n >= 1_000) return `$${Math.round(n / 1_000)}K`
   return `$${n}`
 }
+
+/**
+ * Compute ARR protected = sum of ARR from accounts where all signals are resolved (done/dismissed).
+ * If withinDays is set, only counts accounts where at least one signal was resolved within that window.
+ */
+export function computeArrProtected(
+  accounts: StoredAccount[],
+  options?: { withinDays?: number }
+): number {
+  const cutoff = options?.withinDays
+    ? Date.now() - options.withinDays * 24 * 60 * 60 * 1000
+    : null
+
+  return accounts.reduce((sum, account) => {
+    const actions = Object.values(account.signalActions ?? {})
+    const totalSignals = (account.result.riskSignals?.length ?? 0)
+    if (totalSignals === 0) return sum
+
+    const allResolved = actions.length > 0 && actions.every(
+      (a) => a.status === "done" || a.status === "dismissed"
+    )
+    if (!allResolved) return sum
+
+    if (cutoff) {
+      const hasRecentResolution = actions.some((a) => {
+        if (!a.resolvedAt) return false
+        return new Date(a.resolvedAt).getTime() >= cutoff
+      })
+      if (!hasRecentResolution) return sum
+    }
+
+    return sum + getAccountARR(account)
+  }, 0)
+}
+
+/**
+ * Count signals actioned today (status set to done or dismissed today).
+ */
+export function countActionedToday(accounts: StoredAccount[]): number {
+  const todayStr = new Date().toISOString().slice(0, 10)
+  let count = 0
+  for (const account of accounts) {
+    for (const action of Object.values(account.signalActions ?? {})) {
+      if (
+        (action.status === "done" || action.status === "dismissed") &&
+        action.resolvedAt?.startsWith(todayStr)
+      ) {
+        count++
+      }
+    }
+  }
+  return count
+}
