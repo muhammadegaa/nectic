@@ -6,10 +6,14 @@ import LogoIcon from "@/components/logo-icon"
 import { useAuth } from "@/contexts/auth-context"
 import {
   saveWorkspace,
+  saveAccount,
+  getWorkspace,
   markOnboardingComplete,
   isOnboardingComplete,
   type WorkspaceContext,
 } from "@/lib/concept-firestore"
+import { parseWhatsAppFile, formatForPrompt } from "@/lib/whatsapp-parser"
+import type { AnalysisResult } from "@/app/api/concept/analyze/route"
 
 type AutofillPhase = "idle" | "loading" | "review" | "error"
 
@@ -42,6 +46,8 @@ export default function OnboardingPage() {
 
   const [firstUploadFile, setFirstUploadFile] = useState<File | null>(null)
   const [firstUploadName, setFirstUploadName] = useState("")
+  const [analyzing, setAnalyzing] = useState(false)
+  const [analyzeError, setAnalyzeError] = useState("")
   const uploadInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -127,13 +133,69 @@ export default function OnboardingPage() {
   }
 
   const handleAnalyzeAndComplete = async () => {
-    if (!user) return
-    setSaving(true)
+    if (!user || !firstUploadFile) return
+    setAnalyzing(true)
+    setAnalyzeError("")
     try {
+      // 1. Parse the WhatsApp file
+      const parsed = await parseWhatsAppFile(firstUploadFile)
+      if (parsed.messages.length < 1) {
+        setAnalyzeError("Couldn't parse this file. Make sure it's a WhatsApp chat export (.txt or .zip).")
+        return
+      }
+
+      // 2. Load workspace context that was saved in steps 1 & 2
+      const ws = await getWorkspace(user.uid)
+
+      // 3. Default participant roles: first participant as vendor, rest as customer
+      const participantRoles: Record<string, string> = {}
+      parsed.participants.forEach((name, i) => {
+        participantRoles[name] = i === 0 ? "vendor" : "customer"
+      })
+
+      // 4. Call the analyze API
+      const conversation = formatForPrompt(parsed)
+      const res = await fetch("/api/concept/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          conversation,
+          messageCount: parsed.totalMessages,
+          participants: parsed.participants.length,
+          participantRoles,
+          context: {},
+          workspace: ws,
+        }),
+      })
+
+      const text = await res.text()
+      let data: { result?: AnalysisResult; error?: string }
+      try { data = JSON.parse(text) } catch { data = { error: text } }
+
+      if (!res.ok || !data.result) {
+        setAnalyzeError(data.error ?? "Analysis failed — please try again.")
+        return
+      }
+
+      // 5. Save the account
+      const shareToken = crypto.randomUUID()
+      await saveAccount(user.uid, {
+        fileName: firstUploadFile.name,
+        analyzedAt: new Date().toISOString(),
+        result: data.result,
+        participantRoles,
+        context: {},
+        shareToken,
+        signalActions: {},
+      })
+
+      // 6. Mark onboarding complete and go to dashboard (account already exists)
       await markOnboardingComplete(user.uid)
-      router.replace("/concept?openUpload=1")
+      router.replace("/concept")
+    } catch (err) {
+      setAnalyzeError(err instanceof Error ? err.message : "Something went wrong. Please try again.")
     } finally {
-      setSaving(false)
+      setAnalyzing(false)
     }
   }
 
@@ -469,21 +531,45 @@ export default function OnboardingPage() {
               )}
             </div>
 
-            <div className="flex items-center justify-between mt-8">
+            {analyzeError && (
+              <div className="mt-4 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+                <p className="text-sm text-red-700">{analyzeError}</p>
+                <button
+                  onClick={() => setAnalyzeError("")}
+                  className="text-xs text-red-500 mt-1 hover:text-red-700"
+                >
+                  Dismiss
+                </button>
+              </div>
+            )}
+
+            {analyzing && (
+              <div className="mt-4 bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-4 flex items-center gap-3">
+                <div className="w-4 h-4 border-2 border-neutral-300 border-t-neutral-700 rounded-full animate-spin shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-neutral-800">Analyzing your account…</p>
+                  <p className="text-xs text-neutral-400 mt-0.5">This takes up to 60 seconds. Don&apos;t close this tab.</p>
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between mt-6">
               <button
                 onClick={() => handleComplete(false)}
-                disabled={saving}
+                disabled={analyzing || saving}
                 className="text-sm text-neutral-400 hover:text-neutral-700 transition-colors disabled:opacity-40"
               >
                 Skip — I&apos;ll do this later
               </button>
               <button
                 onClick={handleAnalyzeAndComplete}
-                disabled={!firstUploadFile || saving}
+                disabled={!firstUploadFile || analyzing || saving}
                 className="flex items-center gap-2 bg-neutral-900 text-white text-sm font-semibold px-6 py-2.5 rounded-lg hover:bg-neutral-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                {saving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : null}
-                {saving ? "Saving…" : "Analyze account →"}
+                {analyzing
+                  ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Analyzing…</>
+                  : "Analyze account →"
+                }
               </button>
             </div>
           </div>
