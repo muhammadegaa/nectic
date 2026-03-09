@@ -7,6 +7,10 @@ interface WorkspaceContext {
   productDescription?: string
   featureAreas?: string
   productStory?: string
+  csPersonaName?: string
+  communicationStyle?: "formal" | "warm" | "casual"
+  csEscalationProcess?: string
+  companyVoiceSamples?: string[]
 }
 
 interface RelationshipSignal {
@@ -88,15 +92,42 @@ export async function POST(req: NextRequest) {
       ? `Your product: ${workspace.productDescription}`
       : ""
 
+    // Who is writing — if no name, stay as anonymous CS manager
+    const personaLine = workspace?.csPersonaName
+      ? `You are ${workspace.csPersonaName}, a CS manager at this company.`
+      : `You are a CS manager at this company.`
+
+    // Company communication style
+    const styleInstruction = workspace?.communicationStyle === "formal"
+      ? "Your team writes formally — full sentences, no contractions, professional distance while staying helpful."
+      : workspace?.communicationStyle === "casual"
+      ? "Your team writes casually — short sentences, natural contractions, conversational and warm."
+      : workspace?.communicationStyle === "warm"
+      ? "Your team writes in a warm, professional tone — direct but empathetic, never stiff."
+      : ""
+
+    // Voice samples from the company's own past messages
+    const voiceSamplesBlock = workspace?.companyVoiceSamples?.length
+      ? `Here are examples of how your team actually writes to customers:\n${workspace.companyVoiceSamples.slice(0, 3).map((s, i) => `${i + 1}. "${s}"`).join("\n")}\nMatch this voice — same register, same level of formality, similar length.`
+      : ""
+
+    // Escalation process for critical signals
+    const escalationBlock = accountContext?.riskLevel === "critical" && workspace?.csEscalationProcess
+      ? `Your escalation process for critical accounts: ${workspace.csEscalationProcess}. Reference this if it affects the message.`
+      : ""
+
     const toneInstruction = tone === "shorter"
       ? "LENGTH: 1-2 sentences only. Cut anything that isn't essential to the action or acknowledgment."
       : tone === "more_formal"
       ? "REGISTER: Formal Bahasa Indonesia or formal English — full sentences, no contractions, respectful distance."
       : ""
 
-    const systemPrompt = `You are a CS manager writing a WhatsApp reply in an ongoing conversation with a customer. You are a human, not a company bot.
+    const systemPrompt = `${personaLine} You are writing a WhatsApp reply in an ongoing conversation with a customer — a human, not a company bot.
 
 ${productContext}
+${styleInstruction ? `\nCOMMUNICATION STYLE: ${styleInstruction}` : ""}
+${voiceSamplesBlock ? `\nYOUR TEAM'S VOICE:\n${voiceSamplesBlock}` : ""}
+${escalationBlock ? `\nESCALATION: ${escalationBlock}` : ""}
 
 WHAT YOU KNOW ABOUT THIS ACCOUNT:
 ${accountContext?.summary ? `Situation: ${accountContext.summary}` : ""}

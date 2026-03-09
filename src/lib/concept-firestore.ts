@@ -35,6 +35,11 @@ export interface WorkspaceContext {
   knownIssues?: string
   updatedAt?: string
   productStory?: string  // one sentence: "We help X do Y" — injected into all drafts
+  // CS voice & persona — makes drafts sound like YOUR team, not a generic AI
+  csPersonaName?: string        // who is writing: "Reza", "Sarah CS", etc.
+  communicationStyle?: "formal" | "warm" | "casual"  // how your team writes
+  csEscalationProcess?: string  // what happens when a signal hits critical
+  companyVoiceSamples?: string[] // extracted vendor-side messages from past conversations
   // WATI BSP integration
   watiEndpoint?: string
   watiToken?: string

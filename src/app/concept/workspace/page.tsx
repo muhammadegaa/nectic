@@ -99,6 +99,9 @@ export default function WorkspacePage() {
     knownIssues: "",
     notificationEmail: "",
     productStory: "",
+    csPersonaName: "",
+    communicationStyle: undefined,
+    csEscalationProcess: "",
   })
   const [workspaceUpdatedAt, setWorkspaceUpdatedAt] = useState<string | undefined>()
   const [loading, setLoading] = useState(true)
@@ -122,6 +125,9 @@ export default function WorkspacePage() {
         knownIssues: ws.knownIssues ?? "",
         notificationEmail: ws.notificationEmail ?? "",
         productStory: ws.productStory ?? "",
+        csPersonaName: ws.csPersonaName ?? "",
+        communicationStyle: ws.communicationStyle,
+        csEscalationProcess: ws.csEscalationProcess ?? "",
       }
       setForm(loaded)
       latestForm.current = loaded
@@ -402,6 +408,107 @@ export default function WorkspacePage() {
                       <span className="text-[11px] text-neutral-400">Sends a sample digest to this address</span>
                     </div>
                   )}
+                </div>
+              </div>
+            </div>
+
+            {/* ── Communication voice section ───────────────────────────── */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <h2 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Communication Voice</h2>
+                <div className="flex-1 h-px bg-neutral-200" />
+              </div>
+              <p className="text-xs text-neutral-400 mb-4 leading-relaxed">
+                Tell Nectic how your team writes. Every WhatsApp draft will match your voice — not a generic AI voice.
+              </p>
+
+              {/* CSM persona name */}
+              <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden mb-4">
+                <div className="flex items-center gap-3 px-5 pt-4 pb-3 border-b border-neutral-100">
+                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors ${form.csPersonaName?.trim() ? "bg-neutral-900 text-white" : "bg-neutral-100 text-neutral-400"}`}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-xs font-medium text-neutral-400 uppercase tracking-wide">Who is writing</span>
+                    <p className="text-sm font-semibold text-neutral-800 leading-tight">CSM name</p>
+                  </div>
+                  <div className="shrink-0 hidden sm:flex items-center gap-1 text-[10px] text-neutral-400 bg-neutral-50 border border-neutral-100 px-2 py-1 rounded-md">
+                    <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M8 1l2 5h5l-4 3 1.5 5L8 11l-4.5 3L5 9 1 6h5z" fill="currentColor" opacity="0.5"/></svg>
+                    <span>Signs every draft</span>
+                  </div>
+                </div>
+                <div className="px-5 pt-3 pb-4">
+                  <p className="text-xs text-neutral-400 mb-2 leading-relaxed">First name or name + role. Drafts will be written as this person — not an anonymous CS manager.</p>
+                  <input
+                    type="text"
+                    value={form.csPersonaName ?? ""}
+                    onChange={(e) => handleChange("csPersonaName" as keyof WorkspaceContext, e.target.value)}
+                    placeholder="e.g. Reza, Sarah CS, Dian"
+                    className="w-full text-sm border border-neutral-200 rounded-lg px-4 py-2.5 text-neutral-700 placeholder:text-neutral-300 focus:outline-none focus:border-neutral-400 bg-neutral-50 transition-colors"
+                  />
+                </div>
+              </div>
+
+              {/* Communication style */}
+              <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden mb-4">
+                <div className="flex items-center gap-3 px-5 pt-4 pb-3 border-b border-neutral-100">
+                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors ${form.communicationStyle ? "bg-neutral-900 text-white" : "bg-neutral-100 text-neutral-400"}`}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-xs font-medium text-neutral-400 uppercase tracking-wide">Writing register</span>
+                    <p className="text-sm font-semibold text-neutral-800 leading-tight">How your team writes</p>
+                  </div>
+                </div>
+                <div className="px-5 pt-3 pb-4">
+                  <p className="text-xs text-neutral-400 mb-3 leading-relaxed">Drafts will match this register — same formality, same sentence length, same warmth level.</p>
+                  <div className="flex gap-2 flex-wrap">
+                    {([
+                      { value: "formal", label: "Formal", desc: "Full sentences, professional" },
+                      { value: "warm", label: "Warm & professional", desc: "Direct but empathetic" },
+                      { value: "casual", label: "Casual", desc: "Conversational, natural" },
+                    ] as const).map((opt) => (
+                      <button
+                        key={opt.value}
+                        onClick={() => handleChange("communicationStyle" as keyof WorkspaceContext, opt.value)}
+                        className={`flex flex-col items-start px-3 py-2.5 rounded-lg border text-left transition-colors ${
+                          form.communicationStyle === opt.value
+                            ? "bg-neutral-900 text-white border-neutral-900"
+                            : "text-neutral-600 border-neutral-200 hover:border-neutral-400 bg-white"
+                        }`}
+                      >
+                        <span className="text-xs font-semibold">{opt.label}</span>
+                        <span className={`text-[10px] mt-0.5 ${form.communicationStyle === opt.value ? "text-neutral-400" : "text-neutral-400"}`}>{opt.desc}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Escalation process */}
+              <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
+                <div className="flex items-center gap-3 px-5 pt-4 pb-3 border-b border-neutral-100">
+                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors ${form.csEscalationProcess?.trim() ? "bg-neutral-900 text-white" : "bg-neutral-100 text-neutral-400"}`}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-xs font-medium text-neutral-400 uppercase tracking-wide">Escalation</span>
+                    <p className="text-sm font-semibold text-neutral-800 leading-tight">Critical account process</p>
+                  </div>
+                  <div className="shrink-0 hidden sm:flex items-center gap-1 text-[10px] text-neutral-400 bg-neutral-50 border border-neutral-100 px-2 py-1 rounded-md">
+                    <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M8 1l2 5h5l-4 3 1.5 5L8 11l-4.5 3L5 9 1 6h5z" fill="currentColor" opacity="0.5"/></svg>
+                    <span>Used in critical drafts</span>
+                  </div>
+                </div>
+                <div className="px-5 pt-3 pb-4">
+                  <p className="text-xs text-neutral-400 mb-2 leading-relaxed">When a critical signal is flagged, what does your team actually do? Nectic will reference this in draft responses.</p>
+                  <textarea
+                    value={form.csEscalationProcess ?? ""}
+                    onChange={(e) => handleChange("csEscalationProcess" as keyof WorkspaceContext, e.target.value)}
+                    placeholder="e.g. Loop in account manager and schedule a call within 24h. For billing issues, escalate to finance directly. Always offer a video call for critical accounts."
+                    rows={3}
+                    className="w-full text-sm border border-neutral-200 rounded-lg px-4 py-3 text-neutral-700 placeholder:text-neutral-300 focus:outline-none focus:border-neutral-400 bg-neutral-50 resize-none leading-relaxed transition-colors"
+                  />
                 </div>
               </div>
             </div>
