@@ -117,6 +117,7 @@ export default function WorkspacePage() {
     alertThreshold: undefined,
     alertFrequency: undefined,
     alertTimezone: undefined,
+    suppressedSignalTypes: undefined,
   })
   const [workspaceUpdatedAt, setWorkspaceUpdatedAt] = useState<string | undefined>()
   const [loading, setLoading] = useState(true)
@@ -149,6 +150,7 @@ export default function WorkspacePage() {
         alertThreshold: ws.alertThreshold,
         alertFrequency: ws.alertFrequency,
         alertTimezone: ws.alertTimezone ?? "Asia/Jakarta",
+        suppressedSignalTypes: ws.suppressedSignalTypes,
       }
       setForm(loaded)
       latestForm.current = loaded
@@ -206,7 +208,7 @@ export default function WorkspacePage() {
     }, 900)
   }, [user])
 
-  const handleChange = (key: keyof WorkspaceContext, value: string) => {
+  const handleChange = (key: keyof WorkspaceContext, value: unknown) => {
     const next = { ...form, [key]: value }
     setForm(next)
     latestForm.current = next
@@ -652,6 +654,8 @@ export default function WorkspacePage() {
 
               <AlertPreferencesCard form={form} handleChange={handleChange} />
 
+              <SignalFiltersCard form={form} handleChange={handleChange} />
+
               {/* Product story */}
               <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden mb-4 mt-4">
                 <div className="flex items-center gap-3 px-5 pt-4 pb-3 border-b border-neutral-100">
@@ -861,7 +865,7 @@ function AlertPreferencesCard({
   handleChange,
 }: {
   form: WorkspaceContext
-  handleChange: (key: keyof WorkspaceContext, value: string) => void
+  handleChange: (key: keyof WorkspaceContext, value: unknown) => void
 }) {
   const hasPrefs = !!(form.alertThreshold || form.alertFrequency || form.alertTimezone)
 
@@ -963,7 +967,7 @@ function NotificationEmailCard({
   user,
 }: {
   form: WorkspaceContext
-  handleChange: (key: keyof WorkspaceContext, value: string) => void
+  handleChange: (key: keyof WorkspaceContext, value: unknown) => void
   user: { uid: string }
 }) {
   return (
@@ -1016,6 +1020,103 @@ function NotificationEmailCard({
             </button>
             <span className="text-[11px] text-neutral-400">Sends a sample digest to this address</span>
           </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─── Signal Filters Card ────────────────────────────────────────────────────────
+
+const ALL_SIGNAL_TYPES: { value: string; label: string; description: string }[] = [
+  { value: "competitor_mention", label: "Competitor mentions", description: "Customer mentions a competing product" },
+  { value: "pricing_concern", label: "Pricing concerns", description: "Pushback on price or ROI" },
+  { value: "disengagement", label: "Disengagement", description: "Decreasing activity or response rate" },
+  { value: "complaint", label: "Complaints", description: "Direct complaints about your product" },
+  { value: "escalation", label: "Escalations", description: "Customer escalating urgency or frustration" },
+  { value: "bug_report", label: "Bug reports", description: "Technical issues reported in chat" },
+  { value: "feature_request", label: "Feature requests", description: "Requests for new capabilities" },
+  { value: "praise", label: "Praise", description: "Positive feedback and satisfaction signals" },
+  { value: "support_request", label: "Support requests", description: "How-to questions and help requests" },
+]
+
+function SignalFiltersCard({
+  form,
+  handleChange,
+}: {
+  form: WorkspaceContext
+  handleChange: (key: keyof WorkspaceContext, value: unknown) => void
+}) {
+  const suppressed = form.suppressedSignalTypes ?? []
+
+  function toggle(value: string) {
+    const next = suppressed.includes(value)
+      ? suppressed.filter((v) => v !== value)
+      : [...suppressed, value]
+    handleChange("suppressedSignalTypes", next)
+  }
+
+  return (
+    <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden mb-4">
+      <div className="flex items-center gap-3 px-5 pt-4 pb-3 border-b border-neutral-100">
+        <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors ${suppressed.length > 0 ? "bg-neutral-900 text-white" : "bg-neutral-100 text-neutral-400"}`}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+            <path d="M22 3H2l8 9.46V19l4 2v-8.54z"/>
+          </svg>
+        </div>
+        <div className="flex-1 min-w-0">
+          <span className="text-xs font-medium text-neutral-400 uppercase tracking-wide">Noise reduction</span>
+          <p className="text-sm font-semibold text-neutral-800 leading-tight">Signal filters</p>
+        </div>
+        <p className="text-xs text-neutral-400 shrink-0 hidden sm:block">
+          {suppressed.length > 0 ? `${suppressed.length} hidden` : "All signal types visible"}
+        </p>
+      </div>
+
+      <div className="px-5 pt-4 pb-5">
+        <p className="text-xs text-neutral-400 mb-4 leading-relaxed">
+          Hide signal types that aren&apos;t relevant to your workflow. Hidden signals won&apos;t appear in the inbox or account pages.
+        </p>
+        <div className="space-y-2">
+          {ALL_SIGNAL_TYPES.map((st) => {
+            const isSuppressed = suppressed.includes(st.value)
+            return (
+              <button
+                key={st.value}
+                type="button"
+                onClick={() => toggle(st.value)}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border text-left transition-all ${
+                  isSuppressed
+                    ? "bg-neutral-50 border-neutral-200 opacity-60"
+                    : "bg-white border-neutral-200 hover:border-neutral-300"
+                }`}
+              >
+                <div className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 transition-colors border ${
+                  isSuppressed ? "bg-neutral-200 border-neutral-300" : "bg-neutral-900 border-neutral-900"
+                }`}>
+                  {!isSuppressed && (
+                    <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className={`text-sm font-medium ${isSuppressed ? "text-neutral-400 line-through" : "text-neutral-800"}`}>{st.label}</span>
+                  <span className="text-xs text-neutral-400 ml-2">{st.description}</span>
+                </div>
+                {isSuppressed && (
+                  <span className="text-[10px] font-medium text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded flex-shrink-0">hidden</span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+        {suppressed.length > 0 && (
+          <button
+            type="button"
+            onClick={() => handleChange("suppressedSignalTypes", [])}
+            className="mt-3 text-xs text-neutral-400 hover:text-neutral-700 transition-colors"
+          >
+            Reset — show all signal types
+          </button>
         )}
       </div>
     </div>

@@ -221,8 +221,13 @@ export default function AccountPage() {
       {/* Next best action — full-width strip below nav */}
       {account.result.recommendedAction && (() => {
         const rec = account.result.recommendedAction
-        const allRiskDone = (account.result.riskSignals ?? []).every((s) => {
-          const k = signalKey("risk", (s.explanation ?? "").slice(0, 80))
+        const suppressed = workspace.suppressedSignalTypes ?? []
+        const visibleRiskSignals = (account.result.riskSignals ?? []).filter(
+          (s) => !suppressed.includes((s as { type?: string }).type ?? "risk")
+        )
+        const allRiskDone = visibleRiskSignals.every((s) => {
+          const t = (s as { type?: string }).type ?? "risk"
+          const k = signalKey(t, (s as { title?: string }).title || (s.explanation ?? "").slice(0, 80))
           const a = account.signalActions?.[k]
           return a?.status === "done" || a?.status === "dismissed"
         })
@@ -374,10 +379,12 @@ export default function AccountPage() {
               const updatedActions = { ...account.signalActions, [key]: action }
               setAccount((prev) => prev ? { ...prev, signalActions: updatedActions } : prev)
               if (action.status === "done") {
-                const riskKeys = (account.result.riskSignals ?? []).map((s) => {
-                  const t = (s as { type?: string }).type ?? "risk"
-                  return signalKey(t, (s as { title?: string }).title || s.explanation.slice(0, 80))
-                })
+                const riskKeys = (account.result.riskSignals ?? [])
+                  .filter((s) => !(workspace.suppressedSignalTypes ?? []).includes((s as { type?: string }).type ?? "risk"))
+                  .map((s) => {
+                    const t = (s as { type?: string }).type ?? "risk"
+                    return signalKey(t, (s as { title?: string }).title || s.explanation.slice(0, 80))
+                  })
                 const allDone = riskKeys.length > 0 && riskKeys.every((k) => {
                   const a = k === key ? action : updatedActions?.[k]
                   return a?.status === "done" || a?.status === "dismissed"
@@ -575,14 +582,18 @@ function AnalysisReport({
       })()}
 
       {/* Risk signals */}
-      {result.riskSignals?.length > 0 && (
+      {(() => {
+        const suppressed = workspace.suppressedSignalTypes ?? []
+        const visible = (result.riskSignals ?? []).filter((s) => !suppressed.includes((s as { type?: string }).type ?? "risk"))
+        if (visible.length === 0) return null
+        return (
         <div className="bg-white border border-neutral-200 rounded-lg overflow-hidden">
           <div className="px-5 py-3.5 border-b border-neutral-100 flex items-center justify-between">
             <p className="text-sm font-semibold text-neutral-800">Risk signals</p>
-            <span className="text-xs text-neutral-400">{result.riskSignals.length} found</span>
+            <span className="text-xs text-neutral-400">{visible.length} found</span>
           </div>
           <div className="divide-y divide-neutral-100">
-            {result.riskSignals.map((s, i) => {
+            {visible.map((s, i) => {
               const sev = s.severity === "high" ? "border-l-red-400" : s.severity === "medium" ? "border-l-amber-400" : "border-l-neutral-300"
               const sType = (s as { type?: string }).type ?? "risk"
               const sTitle = (s as { title?: string }).title || s.explanation.slice(0, 80)
@@ -607,17 +618,22 @@ function AnalysisReport({
             })}
           </div>
         </div>
-      )}
+        )
+      })()}
 
       {/* Product signals — with Generate brief button */}
-      {result.productSignals?.length > 0 && (
+      {(() => {
+        const suppressed = workspace.suppressedSignalTypes ?? []
+        const visible = (result.productSignals ?? []).filter((s) => !suppressed.includes(s.type))
+        if (visible.length === 0) return null
+        return (
         <div className="bg-white border border-neutral-200 rounded-lg overflow-hidden">
           <div className="px-5 py-3.5 border-b border-neutral-100 flex items-center justify-between">
             <p className="text-sm font-semibold text-neutral-800">Product signals</p>
-            <span className="text-xs text-neutral-400">{result.productSignals.length} found</span>
+            <span className="text-xs text-neutral-400">{visible.length} found</span>
           </div>
           <div className="divide-y divide-neutral-100">
-            {result.productSignals.map((s, i) => {
+            {visible.map((s, i) => {
               const typeCfg = signalTypeConfig[s.type] ?? signalTypeConfig.complaint
               const priColor = s.priority === "high" ? "text-red-600" : s.priority === "medium" ? "text-amber-600" : "text-neutral-400"
               const key = signalKey(s.type, s.title)
@@ -651,7 +667,8 @@ function AnalysisReport({
             })}
           </div>
         </div>
-      )}
+        )
+      })()}
 
       {/* Relationship signals */}
       {result.relationshipSignals?.length > 0 && (

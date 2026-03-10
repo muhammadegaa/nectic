@@ -49,6 +49,8 @@ export interface WorkspaceContext {
   alertThreshold?: "critical_only" | "high_and_critical" | "all"
   alertFrequency?: "realtime" | "daily" | "weekly" | "paused"
   alertTimezone?: string
+  // Signal suppression — signal types the user has marked as "not relevant"
+  suppressedSignalTypes?: string[]
 }
 
 export interface HealthHistoryEntry {

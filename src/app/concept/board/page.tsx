@@ -64,8 +64,11 @@ const riskBadge: Record<string, string> = {
   low: "bg-emerald-50 text-emerald-700 border-emerald-200",
 }
 
-function getTopRiskSignal(account: StoredAccount): QueueSignal | null {
-  const signals = account.result.riskSignals ?? []
+function getTopRiskSignal(account: StoredAccount, suppressed: string[] = []): QueueSignal | null {
+  const signals = (account.result.riskSignals ?? []).filter((s) => {
+    const t = (s as { type?: string }).type ?? "risk"
+    return !suppressed.includes(t)
+  })
   if (signals.length === 0) return null
 
   const sorted = [...signals].sort((a, b) => {
@@ -123,13 +126,17 @@ function getTopRiskSignal(account: StoredAccount): QueueSignal | null {
   }
 }
 
-function countOpenSignals(account: StoredAccount): number {
+function countOpenSignals(account: StoredAccount, suppressed: string[] = []): number {
   const allSignals = [
-    ...(account.result.riskSignals ?? []).map((s) => {
-      const t = (s as { type?: string }).type ?? "risk"
-      return signalKey(t, (s as { title?: string }).title || s.explanation.slice(0, 80))
-    }),
-    ...(account.result.productSignals ?? []).map((s) => signalKey(s.type, s.title)),
+    ...(account.result.riskSignals ?? [])
+      .filter((s) => !suppressed.includes((s as { type?: string }).type ?? "risk"))
+      .map((s) => {
+        const t = (s as { type?: string }).type ?? "risk"
+        return signalKey(t, (s as { title?: string }).title || s.explanation.slice(0, 80))
+      }),
+    ...(account.result.productSignals ?? [])
+      .filter((s) => !suppressed.includes(s.type))
+      .map((s) => signalKey(s.type, s.title)),
   ]
   return allSignals.filter((k) => {
     const a = account.signalActions?.[k]
@@ -144,15 +151,15 @@ interface QueueEntry {
   arrAtRisk: number
 }
 
-function buildQueue(accounts: StoredAccount[]): QueueEntry[] {
+function buildQueue(accounts: StoredAccount[], suppressed: string[] = []): QueueEntry[] {
   const entries: QueueEntry[] = []
   for (const account of accounts) {
-    const topSignal = getTopRiskSignal(account)
+    const topSignal = getTopRiskSignal(account, suppressed)
     if (!topSignal) continue
     entries.push({
       account,
       topSignal,
-      openCount: countOpenSignals(account),
+      openCount: countOpenSignals(account, suppressed),
       arrAtRisk: getArrAtRisk(account),
     })
   }
@@ -179,7 +186,7 @@ export default function QueuePage() {
     Promise.all([getAccounts(user.uid), getWorkspace(user.uid)])
       .then(([accs, ws]) => {
         setAccounts(accs)
-        setQueue(buildQueue(accs))
+        setQueue(buildQueue(accs, ws.suppressedSignalTypes ?? []))
         setWorkspace(ws)
       })
       .finally(() => setLoading(false))
@@ -195,7 +202,7 @@ export default function QueuePage() {
       const accs = await getAccounts(user.uid).catch(() => null)
       if (!accs) return
       setAccounts(accs)
-      setQueue(buildQueue(accs))
+      setQueue(buildQueue(accs, workspace.suppressedSignalTypes ?? []))
     }, 8000)
     return () => clearInterval(interval)
   }, [user])
