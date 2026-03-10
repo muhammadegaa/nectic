@@ -252,7 +252,11 @@ export async function getAgentRun(uid: string): Promise<AgentRun | null> {
 }
 
 export async function saveWorkspace(uid: string, ctx: WorkspaceContext): Promise<void> {
-  await setDoc(doc(db, "users", uid), { workspace: { ...ctx, updatedAt: new Date().toISOString() } }, { merge: true })
+  // Firestore rejects undefined values — strip them before writing
+  const clean = Object.fromEntries(
+    Object.entries({ ...ctx, updatedAt: new Date().toISOString() }).filter(([, v]) => v !== undefined)
+  )
+  await setDoc(doc(db, "users", uid), { workspace: clean }, { merge: true })
 }
 
 // ─── Onboarding state ─────────────────────────────────────────────────────────

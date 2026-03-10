@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import ConceptNav from "@/components/concept-nav"
 import { useAuth } from "@/contexts/auth-context"
 import { getWorkspace, saveWorkspace, type WorkspaceContext } from "@/lib/concept-firestore"
+import { toast } from "sonner"
 
 const FIELDS: {
   key: keyof WorkspaceContext
@@ -970,6 +971,32 @@ function NotificationEmailCard({
   handleChange: (key: keyof WorkspaceContext, value: unknown) => void
   user: { uid: string }
 }) {
+  const [testSending, setTestSending] = useState(false)
+
+  async function sendTestDigest() {
+    if (testSending) return
+    setTestSending(true)
+    try {
+      const res = await fetch("/api/concept/weekly-digest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ uid: user.uid, email: form.notificationEmail }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        toast.error(`Failed to send: ${data.error ?? "unknown error"}`)
+      } else if (data.skipped) {
+        toast.error(`Not sent: ${data.reason ?? "check server config"}`)
+      } else {
+        toast.success("Test digest sent — check your inbox")
+      }
+    } catch {
+      toast.error("Network error — could not send test")
+    } finally {
+      setTestSending(false)
+    }
+  }
+
   return (
     <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
       <div className="flex items-center gap-3 px-5 pt-4 pb-3 border-b border-neutral-100">
@@ -1007,16 +1034,11 @@ function NotificationEmailCard({
         {form.notificationEmail?.trim() && (
           <div className="flex items-center gap-2 pt-1">
             <button
-              onClick={() => {
-                fetch("/api/concept/weekly-digest", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ uid: user.uid, email: form.notificationEmail }),
-                }).catch(() => {})
-              }}
-              className="text-xs font-medium px-3 py-1.5 border border-neutral-200 rounded-lg text-neutral-600 hover:bg-neutral-50 transition-colors"
+              onClick={sendTestDigest}
+              disabled={testSending}
+              className="text-xs font-medium px-3 py-1.5 border border-neutral-200 rounded-lg text-neutral-600 hover:bg-neutral-50 transition-colors disabled:opacity-50"
             >
-              Send test digest
+              {testSending ? "Sending…" : "Send test digest"}
             </button>
             <span className="text-[11px] text-neutral-400">Sends a sample digest to this address</span>
           </div>

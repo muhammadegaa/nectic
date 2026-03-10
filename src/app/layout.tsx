@@ -4,6 +4,7 @@ import { Suspense } from "react"
 import "./globals.css"
 import { AuthProvider } from "@/contexts/auth-context"
 import { Toaster } from "@/components/ui/toaster"
+import { Toaster as SonnerToaster } from "sonner"
 import { ErrorBoundary } from "@/components/error-boundary"
 import { PostHogProvider } from "@/components/posthog-provider"
 
@@ -35,6 +36,7 @@ export default function RootLayout({
               <PostHogProvider>
                 {children}
                 <Toaster />
+                <SonnerToaster position="bottom-center" richColors />
               </PostHogProvider>
             </Suspense>
           </AuthProvider>
