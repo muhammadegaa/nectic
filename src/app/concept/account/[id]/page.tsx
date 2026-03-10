@@ -372,6 +372,7 @@ export default function AccountPage() {
           fileName={account.fileName}
           analyzedAt={account.analyzedAt}
           account={account}
+          suppressedSignalTypes={workspace.suppressedSignalTypes}
           onSignalAction={async (key, action) => {
             if (!user) return
             try {
@@ -442,6 +443,7 @@ function AnalysisReport({
   fileName,
   analyzedAt,
   account,
+  suppressedSignalTypes,
   onSignalAction,
   onSaveContext,
   onReanalyzeWithContext,
@@ -450,6 +452,7 @@ function AnalysisReport({
   fileName: string
   analyzedAt: string
   account: StoredAccount
+  suppressedSignalTypes?: string[]
   onSignalAction: (key: string, action: SignalAction) => Promise<void>
   onSaveContext: (ctx: string) => Promise<void>
   onReanalyzeWithContext: (ctx: string) => Promise<void>
@@ -583,7 +586,7 @@ function AnalysisReport({
 
       {/* Risk signals */}
       {(() => {
-        const suppressed = workspace.suppressedSignalTypes ?? []
+        const suppressed = suppressedSignalTypes ?? []
         const visible = (result.riskSignals ?? []).filter((s) => !suppressed.includes((s as { type?: string }).type ?? "risk"))
         if (visible.length === 0) return null
         return (
@@ -623,7 +626,7 @@ function AnalysisReport({
 
       {/* Product signals — with Generate brief button */}
       {(() => {
-        const suppressed = workspace.suppressedSignalTypes ?? []
+        const suppressed = suppressedSignalTypes ?? []
         const visible = (result.productSignals ?? []).filter((s) => !suppressed.includes(s.type))
         if (visible.length === 0) return null
         return (
