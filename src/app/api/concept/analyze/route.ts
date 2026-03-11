@@ -144,6 +144,12 @@ const USER_PROMPT = (
     "confidence": "high" | "medium" | "low",
     "caveats": ["<e.g. 'Only 18 messages — signals may not be representative'>", "<e.g. 'Conversation went quiet after Mar 15 — issues may have moved to another channel'>"],
     "dataGaps": ["<e.g. 'Contract value unknown — cannot score renewal risk accurately'>", "<e.g. 'No customer-side messages in the last 7 days'>"]
+  },
+  "coherenceCheck": {
+    "score": <integer 0-10 — how relevant is this conversation to the workspace context? 10 = perfect match>,
+    "isRelevant": <boolean — false if score < 5>,
+    "reason": "<one sentence explaining the score>",
+    "flags": ["<e.g. 'Conversation appears to be B2C, workspace describes B2B'>, <'Language/domain mismatch'>"]
   }
 }
 
@@ -152,6 +158,8 @@ For suggestedActions: generate 2–3 steps per signal. Each step must be a speci
 Confidence rules (overall): high = 50+ messages with clear customer voice; medium = 20-49 messages OR ambiguous signals OR uncertain participant roles; low = under 20 messages OR mostly vendor-side OR very short date range.
 
 Per-signal confidenceLevel: set "high" if the signal is supported by 2+ direct customer quotes or explicit statements. Set "medium" if inferred from tone, indirect language, or a single message. Set "low" if the signal is speculative or based on absence of response rather than direct evidence. This can differ from the overall analysisQuality.confidence.
+
+Coherence scoring: Compare the conversation content against the workspace context (if provided). Score 10 if the conversation clearly matches the product domain. Score 5-9 if generally relevant. Score 1-4 if there is a significant mismatch (e.g. workspace is B2B SaaS but conversation is personal shopping, or completely different industry). Score 0 if the conversation is not a business communication at all (random CSV, personal chat, unrelated content). If no workspace context was provided, score 7 (assume relevant).
 
 CONVERSATION:
 ${conversation}`
@@ -177,6 +185,7 @@ export interface AnalysisResult {
   stats: { messageCount: number; participantCount: number; dateRange: string; languages: string[] }
   analysisQuality?: { confidence: "high" | "medium" | "low"; caveats: string[]; dataGaps: string[] }
   changesSince?: { summary: string; newRiskSignals: number; resolvedSignals: number; healthDelta: number }
+  coherenceCheck?: { score: number; isRelevant: boolean; reason: string; flags: string[] }
 }
 
 export async function POST(req: NextRequest) {
@@ -188,6 +197,7 @@ export async function POST(req: NextRequest) {
       participantRoles = {},
       context = {},
       workspace,
+      bypassCoherenceCheck = false,
     } = await req.json() as {
       conversation: string
       messageCount?: number
@@ -195,6 +205,7 @@ export async function POST(req: NextRequest) {
       participantRoles?: ParticipantRoles
       context?: AccountContext
       workspace?: WorkspaceContext
+      bypassCoherenceCheck?: boolean
     }
 
     if (!conversation || typeof conversation !== "string") {
@@ -236,6 +247,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         error: "Analysis could not be completed. Please try again — if the issue persists, try a shorter conversation.",
       }, { status: 502 })
+    }
+
+    // Gate 1: Coherence check — reject if score < 4 and workspace context exists (unless bypassed)
+    const coherenceCheck = result.coherenceCheck
+    if (
+      !bypassCoherenceCheck &&
+      coherenceCheck &&
+      coherenceCheck.score < 4 &&
+      (workspace?.productDescription || workspace?.productStory)
+    ) {
+      return NextResponse.json({
+        coherenceRejection: {
+          score: coherenceCheck.score,
+          reason: coherenceCheck.reason,
+          flags: coherenceCheck.flags ?? [],
+        }
+      }, { status: 200 })
     }
 
     if (messageCount) result.stats.messageCount = messageCount

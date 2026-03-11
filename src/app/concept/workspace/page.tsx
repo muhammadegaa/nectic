@@ -74,7 +74,7 @@ type SaveStatus = "idle" | "saving" | "saved"
 type AutofillState =
   | { phase: "idle" }
   | { phase: "loading" }
-  | { phase: "review"; productDescription: string; featureAreas: string; source: string }
+  | { phase: "review"; productDescription: string; productStory: string; featureAreas: string; roadmapFocus: string; source: string; additionalSources?: string[] }
   | { phase: "error"; message: string }
 
 function getQuarterLabel(date: Date): string {
@@ -137,6 +137,7 @@ export default function WorkspacePage() {
   const [hubspotPortalId, setHubspotPortalId] = useState<string | null>(null)
   const [attioConnected, setAttioConnected] = useState(false)
   const [attioWorkspaceId, setAttioWorkspaceId] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<"intelligence" | "voice" | "alerts" | "connections">("intelligence")
   const searchParams = useSearchParams()
 
   useEffect(() => {
@@ -267,7 +268,7 @@ export default function WorkspacePage() {
         setAutofill({ phase: "error", message: "Couldn't extract product details. Try filling in manually." })
         return
       }
-      setAutofill({ phase: "review", productDescription: data.productDescription, featureAreas: data.featureAreas, source: data.source })
+      setAutofill({ phase: "review", productDescription: data.productDescription, productStory: data.productStory ?? "", featureAreas: data.featureAreas, roadmapFocus: data.roadmapFocus ?? "", source: data.source, additionalSources: data.additionalSources })
     } catch {
       setAutofill({ phase: "error", message: "Network error — please try again." })
     }
@@ -277,6 +278,8 @@ export default function WorkspacePage() {
     if (autofill.phase !== "review") return
     if (autofill.productDescription) handleChange("productDescription", autofill.productDescription)
     if (autofill.featureAreas) handleChange("featureAreas", autofill.featureAreas)
+    if (autofill.productStory) handleChange("productStory", autofill.productStory)
+    if (autofill.roadmapFocus) handleChange("roadmapFocus", autofill.roadmapFocus)
     setAutofill({ phase: "idle" })
     setAutofillUrl("")
   }
@@ -637,15 +640,38 @@ export default function WorkspacePage() {
           </button>
         </div>
 
+        {/* Tab bar */}
+        <div className="flex gap-1 bg-neutral-100 rounded-xl p-1 mb-6">
+          {([
+            { id: "intelligence", label: "Intelligence", icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg> },
+            { id: "voice", label: "Voice", icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg> },
+            { id: "alerts", label: "Alerts", icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg> },
+            { id: "connections", label: "Connections", icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg> },
+          ] as const).map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-medium py-1.5 px-2 rounded-lg transition-all ${
+                activeTab === tab.id
+                  ? "bg-white text-neutral-900 shadow-sm"
+                  : "text-neutral-500 hover:text-neutral-700"
+              }`}
+            >
+              {tab.icon}
+              <span className="hidden sm:inline">{tab.label}</span>
+            </button>
+          ))}
+        </div>
+
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <div className="w-5 h-5 border-2 border-neutral-300 border-t-neutral-900 rounded-full animate-spin" />
           </div>
         ) : (
-          <div className="space-y-10">
+          <>
 
             {/* ── 1. Agent Intelligence ─────────────────────────────────── */}
-            <section>
+            {activeTab === "intelligence" && <section>
               <div className="flex items-center gap-3 mb-1">
                 <h2 className="text-sm font-semibold text-neutral-900">Agent Intelligence</h2>
                 <div className="flex-1 h-px bg-neutral-200" />
@@ -678,52 +704,65 @@ export default function WorkspacePage() {
                   </p>
                 )}
 
-                {/* Autofill widget — only when empty */}
-                {completionPct === 0 && (
-                  <div className="mt-3 pt-3 border-t border-neutral-100">
-                    <p className="text-xs text-neutral-500 font-medium mb-2">Quick setup — auto-fill from your website</p>
-                    {autofill.phase === "idle" || autofill.phase === "error" ? (
-                      <div className="flex gap-2">
-                        <input
-                          type="url"
-                          value={autofillUrl}
-                          onChange={(e) => setAutofillUrl(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === "Enter") handleAutofill() }}
-                          placeholder="https://yourproduct.com"
-                          className="flex-1 text-xs border border-neutral-200 rounded-lg px-3 py-2 text-neutral-700 placeholder:text-neutral-300 focus:outline-none focus:border-neutral-400 bg-white"
-                        />
-                        <button onClick={handleAutofill} disabled={!autofillUrl.trim()} className="text-xs font-medium px-3 py-2 bg-neutral-900 text-white rounded-lg hover:bg-neutral-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap">
-                          Auto-fill
-                        </button>
-                      </div>
-                    ) : autofill.phase === "loading" ? (
-                      <div className="flex items-center gap-2 text-xs text-neutral-400 py-1">
-                        <span className="w-3 h-3 border border-neutral-300 border-t-neutral-600 rounded-full animate-spin" />Fetching your site…
-                      </div>
-                    ) : autofill.phase === "review" ? (
-                      <div className="space-y-2">
-                        <p className="text-[11px] text-neutral-500">Extracted from <span className="font-medium text-neutral-700">{autofill.source}</span> — review before applying:</p>
-                        {autofill.productDescription && (
-                          <div className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
-                            <p className="text-[10px] font-medium text-blue-600 mb-1">Product description</p>
-                            <p className="text-xs text-neutral-700 leading-relaxed">{autofill.productDescription}</p>
-                          </div>
-                        )}
-                        {autofill.featureAreas && (
-                          <div className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
-                            <p className="text-[10px] font-medium text-blue-600 mb-1">Feature areas</p>
-                            <p className="text-xs text-neutral-700">{autofill.featureAreas}</p>
-                          </div>
-                        )}
-                        <div className="flex items-center gap-2 pt-1">
-                          <button onClick={applyAutofill} className="text-xs font-medium px-3 py-1.5 bg-neutral-900 text-white rounded-lg hover:bg-neutral-700 transition-colors">Apply suggestions</button>
-                          <button onClick={() => setAutofill({ phase: "idle" })} className="text-xs text-neutral-400 hover:text-neutral-600 transition-colors">Dismiss</button>
+                {/* Autofill widget — always visible */}
+                <div className="mt-3 pt-3 border-t border-neutral-100">
+                  <p className="text-xs text-neutral-500 font-medium mb-2">{completionPct === 0 ? "Quick setup — auto-fill from your website" : "Auto-fill from website"}</p>
+                  {autofill.phase === "idle" || autofill.phase === "error" ? (
+                    <div className="flex gap-2">
+                      <input
+                        type="url"
+                        value={autofillUrl}
+                        onChange={(e) => setAutofillUrl(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") handleAutofill() }}
+                        placeholder="https://yourproduct.com"
+                        className="flex-1 text-xs border border-neutral-200 rounded-lg px-3 py-2 text-neutral-700 placeholder:text-neutral-300 focus:outline-none focus:border-neutral-400 bg-white"
+                      />
+                      <button onClick={handleAutofill} disabled={!autofillUrl.trim()} className="text-xs font-medium px-3 py-2 bg-neutral-900 text-white rounded-lg hover:bg-neutral-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap">
+                        Auto-fill
+                      </button>
+                    </div>
+                  ) : autofill.phase === "loading" ? (
+                    <div className="flex items-center gap-2 text-xs text-neutral-400 py-1">
+                      <span className="w-3 h-3 border border-neutral-300 border-t-neutral-600 rounded-full animate-spin" />Fetching your site…
+                    </div>
+                  ) : autofill.phase === "review" ? (
+                    <div className="space-y-2">
+                      <p className="text-[11px] text-neutral-500">Extracted from <span className="font-medium text-neutral-700">{autofill.source}</span> — review before applying:</p>
+                      {autofill.productDescription && (
+                        <div className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+                          <p className="text-[10px] font-medium text-blue-600 mb-1">Product description</p>
+                          <p className="text-xs text-neutral-700 leading-relaxed">{autofill.productDescription}</p>
                         </div>
+                      )}
+                      {autofill.productStory && (
+                        <div className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+                          <p className="text-[10px] font-medium text-blue-600 mb-1">One-line pitch</p>
+                          <p className="text-xs text-neutral-700 leading-relaxed">{autofill.productStory}</p>
+                        </div>
+                      )}
+                      {autofill.featureAreas && (
+                        <div className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+                          <p className="text-[10px] font-medium text-blue-600 mb-1">Feature areas</p>
+                          <p className="text-xs text-neutral-700">{autofill.featureAreas}</p>
+                        </div>
+                      )}
+                      {autofill.roadmapFocus && (
+                        <div className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+                          <p className="text-[10px] font-medium text-blue-600 mb-1">Roadmap focus</p>
+                          <p className="text-xs text-neutral-700">{autofill.roadmapFocus}</p>
+                        </div>
+                      )}
+                      {autofill.additionalSources && autofill.additionalSources.length > 0 && (
+                        <p className="text-[11px] text-neutral-400">Also scanned: {autofill.additionalSources.join(", ")}</p>
+                      )}
+                      <div className="flex items-center gap-2 pt-1">
+                        <button onClick={applyAutofill} className="text-xs font-medium px-3 py-1.5 bg-neutral-900 text-white rounded-lg hover:bg-neutral-700 transition-colors">Apply suggestions</button>
+                        <button onClick={() => setAutofill({ phase: "idle" })} className="text-xs text-neutral-400 hover:text-neutral-600 transition-colors">Dismiss</button>
                       </div>
-                    ) : null}
-                    {autofill.phase === "error" && <p className="text-xs text-red-500 mt-1.5">{autofill.message}</p>}
-                  </div>
-                )}
+                    </div>
+                  ) : null}
+                  {autofill.phase === "error" && <p className="text-xs text-red-500 mt-1.5">{autofill.message}</p>}
+                </div>
               </div>
 
               {/* Product story — one-line pitch, injected into every draft */}
@@ -794,10 +833,10 @@ export default function WorkspacePage() {
                   )
                 })}
               </div>
-            </section>
+            </section>}
 
             {/* ── 2. Agent Voice ────────────────────────────────────────── */}
-            <section>
+            {activeTab === "voice" && <section>
               <div className="flex items-center gap-3 mb-1">
                 <h2 className="text-sm font-semibold text-neutral-900">Agent Voice</h2>
                 <div className="flex-1 h-px bg-neutral-200" />
@@ -892,10 +931,10 @@ export default function WorkspacePage() {
                   />
                 </div>
               </div>
-            </section>
+            </section>}
 
             {/* ── 3. Alerts ─────────────────────────────────────────────── */}
-            <section>
+            {activeTab === "alerts" && <section>
               <div className="flex items-center gap-3 mb-1">
                 <h2 className="text-sm font-semibold text-neutral-900">Alerts</h2>
                 <div className="flex-1 h-px bg-neutral-200" />
@@ -908,10 +947,10 @@ export default function WorkspacePage() {
               <div className="mt-4">
                 <SignalFiltersCard form={form} handleChange={handleChange} />
               </div>
-            </section>
+            </section>}
 
             {/* ── 4. Connections ────────────────────────────────────────── */}
-            <section>
+            {activeTab === "connections" && <section>
               <div className="flex items-center gap-3 mb-1">
                 <h2 className="text-sm font-semibold text-neutral-900">Connections</h2>
                 <div className="flex-1 h-px bg-neutral-200" />
@@ -947,32 +986,38 @@ export default function WorkspacePage() {
                     {
                       name: "Salesforce",
                       desc: "Write signals to opportunity and account records",
-                      icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-blue-500"><path d="M10.757 2.93a5.97 5.97 0 013.985 0 5.97 5.97 0 012.87 2.178 5.97 5.97 0 011.047 3.349 6.03 6.03 0 01-.52 2.415 5.03 5.03 0 012.027 1.655 5.03 5.03 0 01.833 2.838 5.04 5.04 0 01-1.484 3.548 5.04 5.04 0 01-3.55 1.472 5.04 5.04 0 01-1.943-.388 4.44 4.44 0 01-2.022 1.497 4.44 4.44 0 01-2.502.165 4.44 4.44 0 01-2.186-1.138 5.97 5.97 0 01-2.628.095 5.97 5.97 0 01-2.376-1.048 5.97 5.97 0 01-1.617-1.898A5.97 5.97 0 01.5 15.27a5.99 5.99 0 01.936-3.233 5.99 5.99 0 012.524-2.122 5.01 5.01 0 01-.218-1.463 5.01 5.01 0 011.484-3.547 5.01 5.01 0 013.549-1.472 5 5 0 011.982.407z"/></svg>,
+                      // Salesforce cloud logo (overlapping circles forming cloud shape)
+                      icon: <svg width="16" height="16" viewBox="0 0 48 48" fill="currentColor" className="text-[#00A1E0]"><path d="M20 8a9 9 0 00-8.95 8.06A7 7 0 008 22a7 7 0 007 7h20a6 6 0 000-12 6 6 0 00-.8.05A9 9 0 0020 8z"/></svg>,
                     },
                     {
                       name: "Pipedrive",
                       desc: "Update deal health and add signal notes",
-                      icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="text-green-600"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>,
+                      // Pipedrive: circle + descending stem (pipeline stage metaphor)
+                      icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-[#1A3C34]"><circle cx="12" cy="8" r="5" stroke="currentColor" strokeWidth="2"/><line x1="12" y1="13" x2="12" y2="21" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/><circle cx="12" cy="21" r="1.5" fill="currentColor"/></svg>,
                     },
                     {
                       name: "Planhat",
                       desc: "Push health scores and signal events to CS platform",
-                      icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="text-indigo-500"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>,
+                      // Planhat: area chart / health trend visualization
+                      icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#3366FF]"><polyline points="2 18 7 10 12 14 17 6 22 10"/><path d="M2 18h20" strokeOpacity="0.4"/></svg>,
                     },
                     {
                       name: "Slack",
                       desc: "Alert your CS channel when a critical signal fires",
-                      icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="text-purple-500"><path d="M14.5 10c-.83 0-1.5-.67-1.5-1.5v-5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5z"/><path d="M20.5 10H19V8.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/><path d="M9.5 14c.83 0 1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5S8 21.33 8 20.5v-5c0-.83.67-1.5 1.5-1.5z"/><path d="M3.5 14H5v1.5c0 .83-.67 1.5-1.5 1.5S2 16.33 2 15.5 2.67 14 3.5 14z"/><path d="M14 14.5c0-.83.67-1.5 1.5-1.5h5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5h-5c-.83 0-1.5-.67-1.5-1.5z"/><path d="M15.5 19H14v1.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5-.67-1.5-1.5-1.5z"/><path d="M10 9.5C10 8.67 9.33 8 8.5 8H3.5C2.67 8 2 8.67 2 9.5S2.67 11 3.5 11h5c.83 0 1.5-.67 1.5-1.5z"/><path d="M8.5 5H10V3.5C10 2.67 9.33 2 8.5 2S7 2.67 7 3.5 7.67 5 8.5 5z"/></svg>,
+                      // Slack: accurate hashtag/hash grid logo
+                      icon: <svg width="16" height="16" viewBox="0 0 24 24" className="text-[#4A154B]" fill="currentColor"><path d="M5.042 15.165a2.528 2.528 0 01-2.52 2.523A2.528 2.528 0 010 15.165a2.527 2.527 0 012.522-2.52h2.52v2.52zm1.271 0a2.527 2.527 0 012.521-2.52 2.527 2.527 0 012.521 2.52v6.313A2.528 2.528 0 018.834 24a2.528 2.528 0 01-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 01-2.521-2.52A2.528 2.528 0 018.834 0a2.527 2.527 0 012.521 2.522v2.52H8.834zm0 1.271a2.527 2.527 0 012.521 2.521 2.527 2.527 0 01-2.521 2.521H2.522A2.528 2.528 0 010 8.834a2.528 2.528 0 012.522-2.521h6.312zm10.122 2.521a2.528 2.528 0 012.522-2.521A2.528 2.528 0 0124 8.834a2.527 2.527 0 01-2.522 2.521h-2.522V8.834zm-1.268 0a2.527 2.527 0 01-2.521 2.521 2.527 2.527 0 01-2.521-2.521V2.522A2.528 2.528 0 0115.167 0a2.528 2.528 0 012.521 2.522v6.312zm-2.521 10.122a2.528 2.528 0 012.521 2.522A2.528 2.528 0 0115.167 24a2.527 2.527 0 01-2.521-2.522v-2.522h2.521zm0-1.268a2.527 2.527 0 01-2.521-2.521 2.527 2.527 0 012.521-2.521h6.313A2.528 2.528 0 0124 15.165a2.528 2.528 0 01-2.522 2.521h-6.313z"/></svg>,
                     },
                     {
                       name: "Linear",
                       desc: "Auto-create issues from product signals",
-                      icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="text-violet-500"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>,
+                      // Linear: diagonal gradient arc — their actual logomark style
+                      icon: <svg width="16" height="16" viewBox="0 0 24 24" className="text-[#5E6AD2]" fill="currentColor"><path d="M3.256 10.027c.059.31.283.535.594.535.22 0 .398-.1.507-.26l5.846-8.7c.122-.18.08-.42-.1-.543a.393.393 0 00-.545.1L3.71 9.46a.393.393 0 00-.455.567zm-.86 3.026a.392.392 0 00.16.537l14.362 7.8c.19.103.43.033.534-.158a.392.392 0 00-.159-.535L2.891 12.896a.393.393 0 00-.496.157zm1.66-1.46l14.79-4.3a.393.393 0 00.266-.49.393.393 0 00-.49-.266L4.83 10.836a.393.393 0 00.226.757zM21.667 12c0 5.334-4.333 9.667-9.667 9.667-5.334 0-9.667-4.333-9.667-9.667C2.333 6.666 6.666 2.333 12 2.333c5.334 0 9.667 4.333 9.667 9.667z"/></svg>,
                     },
                     {
                       name: "Freshdesk",
                       desc: "Log signals as support tickets automatically",
-                      icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="text-teal-500"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>,
+                      // Freshdesk: headset support icon (their support-first brand identity)
+                      icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-[#2BBBAD]"><path d="M3 18v-6a9 9 0 0118 0v6"/><path d="M21 19a2 2 0 01-2 2h-1a2 2 0 01-2-2v-3a2 2 0 012-2h3z"/><path d="M3 19a2 2 0 002 2h1a2 2 0 002-2v-3a2 2 0 00-2-2H3z"/></svg>,
                     },
                   ].map((item) => (
                     <div key={item.name} className="bg-white border border-neutral-200 rounded-xl px-4 py-3.5 flex flex-col gap-2 opacity-70">
@@ -994,12 +1039,12 @@ export default function WorkspacePage() {
                   <a href="mailto:hello@nectic.xyz" className="underline hover:text-neutral-600 transition-colors">Tell us →</a>
                 </p>
               </div>
-            </section>
+            </section>}
 
             <p className="text-xs text-neutral-400 text-center pt-2">
               Changes save automatically · context applies to all future analyses
             </p>
-          </div>
+          </>
         )}
       </main>
     </div>
@@ -1571,11 +1616,11 @@ function AttioCard({
             </div>
             <button
               onClick={onConnect}
-              className="flex items-center gap-2 bg-neutral-900 text-white text-xs font-semibold px-4 py-2.5 rounded-lg hover:bg-neutral-700 transition-colors"
+              className="flex items-center gap-2 bg-[#1A1A2E] text-white text-xs font-semibold px-4 py-2.5 rounded-lg hover:bg-[#2d2d4e] transition-colors"
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2L2 19h20L12 2z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
-                <line x1="7" y1="14" x2="17" y2="14" stroke="currentColor" strokeWidth="2"/>
+                <path d="M12 2L2 19h20L12 2z" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round"/>
+                <line x1="7" y1="14" x2="17" y2="14" stroke="currentColor" strokeWidth="2.5"/>
               </svg>
               Connect Attio
             </button>

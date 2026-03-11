@@ -100,6 +100,7 @@ export default function ConceptPage() {
   const [context, setContext] = useState<AccountContext>({})
   const [agentRun, setAgentRun] = useState<AgentRun | null>(null)
   const [matchedAccount, setMatchedAccount] = useState<StoredAccount | null>(null)
+  const [coherenceWarning, setCoherenceWarning] = useState<{ score: number; reason: string; flags: string[]; pendingConversation: string } | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -272,24 +273,23 @@ export default function ConceptPage() {
     setParticipantRoles((prev) => ({ ...prev, [name]: role }))
   }
 
-  // Fire-and-forget: push signal data to connected HubSpot portal
-  const syncToHubSpot = async (result: AnalysisResult, arrAtRisk: number) => {
-    if (!workspace.hubspotConnected) return
+  // Fire-and-forget: push signal data to connected CRM portals
+  const syncToCrm = async (result: AnalysisResult, arrAtRisk: number) => {
+    const level = result.riskLevel
+    if (level !== "critical" && level !== "high") return
     try {
       const token = await auth.currentUser?.getIdToken()
       if (!token) return
-      await fetch("/api/integrations/hubspot/sync", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          accountName: result.accountName,
-          riskLevel: result.riskLevel,
-          result,
-          arrAtRisk,
-        }),
-      })
+      const body = JSON.stringify({ accountName: result.accountName, riskLevel: level, result, arrAtRisk })
+      const headers = { "Content-Type": "application/json", Authorization: `Bearer ${token}` }
+      if (workspace.hubspotConnected) {
+        fetch("/api/integrations/hubspot/sync", { method: "POST", headers, body }).catch(() => {})
+      }
+      if (workspace.attioConnected) {
+        fetch("/api/integrations/attio/sync", { method: "POST", headers, body }).catch(() => {})
+      }
     } catch {
-      // best-effort, never block the flow
+      // best-effort
     }
   }
 
@@ -392,7 +392,7 @@ export default function ConceptPage() {
         }
         const updatedResult = data.result as AnalysisResult
         if (updatedResult.riskLevel === "critical" || updatedResult.riskLevel === "high") {
-          syncToHubSpot(updatedResult, getArrAtRisk({ result: updatedResult, context } as StoredAccount)).catch(() => {})
+          syncToCrm(updatedResult, getArrAtRisk({ result: updatedResult, context } as StoredAccount)).catch(() => {})
         }
         trackEvent("analysis_updated", {
           accountId: matchedAccount.id,
@@ -411,6 +411,7 @@ export default function ConceptPage() {
             participantRoles,
             context,
             workspace,
+            bypassCoherenceCheck: false,
           }),
         })
         const text = await res.text()
@@ -418,6 +419,19 @@ export default function ConceptPage() {
           throw new Error("Analysis timed out. Please try again — large conversations occasionally need a second attempt.")
         }
         if (!res.ok) throw new Error(data.error || "Analysis failed")
+
+        // Gate 1: coherence rejection
+        if ((data as { coherenceRejection?: unknown }).coherenceRejection) {
+          const rej = (data as { coherenceRejection: { score: number; reason: string; flags: string[] } }).coherenceRejection
+          setCoherenceWarning({
+            score: rej.score,
+            reason: rej.reason,
+            flags: rej.flags,
+            pendingConversation: conversation,
+          })
+          setConnectStage("ready")
+          return
+        }
 
         const shareToken = crypto.randomUUID()
         const saved = await saveAccount(user.uid, {
@@ -436,7 +450,7 @@ export default function ConceptPage() {
         }
         const newResult = data.result as AnalysisResult
         if (newResult.riskLevel === "critical" || newResult.riskLevel === "high") {
-          syncToHubSpot(newResult, getArrAtRisk({ result: newResult, context } as StoredAccount)).catch(() => {})
+          syncToCrm(newResult, getArrAtRisk({ result: newResult, context } as StoredAccount)).catch(() => {})
         }
         trackEvent("analysis_completed", {
           riskLevel: (data.result as AnalysisResult).riskLevel,
@@ -444,6 +458,70 @@ export default function ConceptPage() {
           messageCount: parsed.totalMessages,
         })
       }
+
+      await refreshAccounts()
+      closeConnect()
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Something went wrong"
+      trackEvent("analysis_failed", { error: message })
+      setUploadError(message)
+      setConnectStage("error")
+    }
+  }
+
+  const handleAnalyzeAnyway = async () => {
+    if (!coherenceWarning || !parsed || !user) return
+    const conversation = coherenceWarning.pendingConversation
+    setCoherenceWarning(null)
+    setConnectStage("analyzing")
+    setUploadError("")
+
+    try {
+      let data: { result?: AnalysisResult; error?: string }
+      const res = await fetch("/api/concept/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          conversation,
+          messageCount: parsed.totalMessages,
+          participants: parsed.participants.length,
+          participantRoles,
+          context,
+          workspace,
+          bypassCoherenceCheck: true,
+        }),
+      })
+      const text = await res.text()
+      try { data = JSON.parse(text) } catch {
+        throw new Error("Analysis timed out. Please try again — large conversations occasionally need a second attempt.")
+      }
+      if (!res.ok) throw new Error(data.error || "Analysis failed")
+
+      const shareToken = crypto.randomUUID()
+      const saved = await saveAccount(user.uid, {
+        fileName,
+        analyzedAt: new Date().toISOString(),
+        result: data.result as AnalysisResult,
+        participantRoles,
+        context,
+        shareToken,
+        ...(workspace.version !== undefined && { workspaceVersion: workspace.version }),
+      })
+      await mergeContactBook(user.uid, participantRoles)
+      const confidence = (data.result as AnalysisResult).analysisQuality?.confidence
+      if (confidence !== "low") {
+        autoDraftRiskSignals(user.uid, saved.id, data.result as AnalysisResult).catch(() => {})
+      }
+      const newResult = data.result as AnalysisResult
+      if (newResult.riskLevel === "critical" || newResult.riskLevel === "high") {
+        syncToCrm(newResult, getArrAtRisk({ result: newResult, context } as StoredAccount)).catch(() => {})
+      }
+      trackEvent("analysis_completed", {
+        riskLevel: (data.result as AnalysisResult).riskLevel,
+        healthScore: (data.result as AnalysisResult).healthScore,
+        messageCount: parsed.totalMessages,
+        bypassedCoherenceCheck: true,
+      })
 
       await refreshAccounts()
       closeConnect()
@@ -521,6 +599,43 @@ export default function ConceptPage() {
 
   return (
     <div className="min-h-screen bg-neutral-50">
+      {coherenceWarning && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-amber-600"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-neutral-900">Conversation may not match your workspace</h3>
+                <p className="text-xs text-neutral-500">Relevance score: {coherenceWarning.score}/10</p>
+              </div>
+            </div>
+            <p className="text-sm text-neutral-700 mb-3">{coherenceWarning.reason}</p>
+            {coherenceWarning.flags.length > 0 && (
+              <div className="bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 mb-4">
+                {coherenceWarning.flags.map((f, i) => (
+                  <p key={i} className="text-xs text-amber-800">• {f}</p>
+                ))}
+              </div>
+            )}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => { setCoherenceWarning(null) }}
+                className="flex-1 text-sm font-medium px-4 py-2.5 border border-neutral-200 rounded-xl text-neutral-700 hover:bg-neutral-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAnalyzeAnyway}
+                className="flex-1 text-sm font-medium px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-700 transition-colors"
+              >
+                Analyze anyway
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <ConceptNav
         active="accounts"
         urgentCount={urgentSignalCount}
@@ -617,7 +732,7 @@ export default function ConceptPage() {
                 <div>
                   <div className="flex items-center justify-between mb-3">
                     <h2 className="text-xs font-semibold text-neutral-400 uppercase tracking-widest">Accounts</h2>
-                    <span className="text-xs text-neutral-400">Sorted by risk</span>
+                    <ExportButton uid={user.uid} />
                   </div>
                   <motion.div
                     className="grid grid-cols-1 sm:grid-cols-2 gap-3"
@@ -792,6 +907,46 @@ function KPITile({ label, value, highlight }: { label: string; value: string; hi
       <p className={`text-xl font-bold tabular-nums leading-none mb-1 ${vColor}`}>{value}</p>
       <p className={`text-[11px] font-medium ${lColor}`}>{label}</p>
     </div>
+  )
+}
+
+// ─── Export Button ─────────────────────────────────────────────────────────────
+
+function ExportButton({ uid }: { uid: string }) {
+  const [downloading, setDownloading] = useState(false)
+
+  const handleExport = async () => {
+    setDownloading(true)
+    try {
+      const token = await auth.currentUser?.getIdToken()
+      if (!token) return
+      const res = await fetch("/api/export/accounts", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) return
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `nectic-accounts-${new Date().toISOString().slice(0, 10)}.csv`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch { /* silent */ } finally {
+      setDownloading(false)
+    }
+  }
+
+  return (
+    <button
+      onClick={handleExport}
+      disabled={downloading}
+      className="flex items-center gap-1.5 text-xs text-neutral-400 hover:text-neutral-700 transition-colors disabled:opacity-50"
+    >
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+      </svg>
+      {downloading ? "Exporting…" : "Export CSV"}
+    </button>
   )
 }
 
