@@ -68,6 +68,9 @@ export interface WorkspaceContext {
   history?: WorkspaceSnapshot[]  // last 5 snapshots (kept lean, no credentials)
   // WATI live integration — webhook token for real-time message ingestion
   webhookToken?: string     // auto-generated UUID; used to verify incoming WATI webhooks
+  // CRM integrations
+  hubspotConnected?: boolean
+  hubspotPortalId?: string
 }
 
 // ─── WATI Live Buffer ─────────────────────────────────────────────────────────

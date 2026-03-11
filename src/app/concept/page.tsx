@@ -31,6 +31,7 @@ import {
 import type { AnalysisResult } from "@/app/api/concept/analyze/route"
 import { trackEvent, identifyUser } from "@/lib/posthog"
 import { getArrAtRisk, formatARR, computeArrProtected, countActionedToday } from "@/lib/arr-utils"
+import { auth } from "@/lib/firebase"
 
 type ConnectStage = "instructions" | "upload" | "ready" | "analyzing" | "error"
 
@@ -271,6 +272,27 @@ export default function ConceptPage() {
     setParticipantRoles((prev) => ({ ...prev, [name]: role }))
   }
 
+  // Fire-and-forget: push signal data to connected HubSpot portal
+  const syncToHubSpot = async (result: AnalysisResult, arrAtRisk: number) => {
+    if (!workspace.hubspotConnected) return
+    try {
+      const token = await auth.currentUser?.getIdToken()
+      if (!token) return
+      await fetch("/api/integrations/hubspot/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          accountName: result.accountName,
+          riskLevel: result.riskLevel,
+          result,
+          arrAtRisk,
+        }),
+      })
+    } catch {
+      // best-effort, never block the flow
+    }
+  }
+
   // Fire-and-forget: auto-generate drafts for critical/high risk signals immediately after analysis
   const autoDraftRiskSignals = async (uid: string, accountId: string, result: AnalysisResult) => {
     const signalsToAuto = (result.riskSignals ?? []).filter(
@@ -368,6 +390,10 @@ export default function ConceptPage() {
         if (confidence !== "low") {
           autoDraftRiskSignals(user.uid, matchedAccount.id, data.result as AnalysisResult).catch(() => {})
         }
+        const updatedResult = data.result as AnalysisResult
+        if (updatedResult.riskLevel === "critical" || updatedResult.riskLevel === "high") {
+          syncToHubSpot(updatedResult, getArrAtRisk({ result: updatedResult, context } as StoredAccount)).catch(() => {})
+        }
         trackEvent("analysis_updated", {
           accountId: matchedAccount.id,
           riskLevel: (data.result as AnalysisResult).riskLevel,
@@ -407,6 +433,10 @@ export default function ConceptPage() {
         const confidence = (data.result as AnalysisResult).analysisQuality?.confidence
         if (confidence !== "low") {
           autoDraftRiskSignals(user.uid, saved.id, data.result as AnalysisResult).catch(() => {})
+        }
+        const newResult = data.result as AnalysisResult
+        if (newResult.riskLevel === "critical" || newResult.riskLevel === "high") {
+          syncToHubSpot(newResult, getArrAtRisk({ result: newResult, context } as StoredAccount)).catch(() => {})
         }
         trackEvent("analysis_completed", {
           riskLevel: (data.result as AnalysisResult).riskLevel,

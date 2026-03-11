@@ -6,6 +6,8 @@ import ConceptNav from "@/components/concept-nav"
 import { useAuth } from "@/contexts/auth-context"
 import { getWorkspace, saveWorkspace, type WorkspaceContext } from "@/lib/concept-firestore"
 import { toast } from "sonner"
+import { auth } from "@/lib/firebase"
+import { useSearchParams } from "next/navigation"
 
 const FIELDS: {
   key: keyof WorkspaceContext
@@ -131,6 +133,9 @@ export default function WorkspacePage() {
   const [wizardMode, setWizardMode] = useState<boolean>(false)
   const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1)
   const [webhookToken, setWebhookToken] = useState<string | null>(null)
+  const [hubspotConnected, setHubspotConnected] = useState(false)
+  const [hubspotPortalId, setHubspotPortalId] = useState<string | null>(null)
+  const searchParams = useSearchParams()
 
   useEffect(() => {
     if (!authLoading && !user) router.replace("/concept/login")
@@ -158,6 +163,8 @@ export default function WorkspacePage() {
       latestForm.current = loaded
       setWorkspaceUpdatedAt(ws.updatedAt)
       if (ws.webhookToken) setWebhookToken(ws.webhookToken)
+      if (ws.hubspotConnected) setHubspotConnected(true)
+      if (ws.hubspotPortalId) setHubspotPortalId(ws.hubspotPortalId)
       setLoading(false)
 
       if (!ws.productDescription && !ws.communicationStyle && typeof window !== "undefined") {
@@ -166,6 +173,43 @@ export default function WorkspacePage() {
       }
     })
   }, [user])
+
+  // Handle OAuth callback results
+  useEffect(() => {
+    if (searchParams.get("hubspot_connected") === "1") {
+      toast.success("HubSpot connected — risk signals will now sync automatically")
+      setHubspotConnected(true)
+    }
+    const hsErr = searchParams.get("hubspot_error")
+    if (hsErr) toast.error(`HubSpot connection failed: ${hsErr}`)
+  }, [searchParams])
+
+  const handleHubSpotConnect = async () => {
+    if (!user) return
+    try {
+      const token = await auth.currentUser?.getIdToken()
+      if (!token) return
+      window.location.href = `/api/integrations/hubspot/connect?token=${encodeURIComponent(token)}`
+    } catch {
+      toast.error("Couldn't start HubSpot connection")
+    }
+  }
+
+  const handleHubSpotDisconnect = async () => {
+    if (!user) return
+    try {
+      const token = await auth.currentUser?.getIdToken()
+      await fetch("/api/integrations/hubspot/disconnect", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      setHubspotConnected(false)
+      setHubspotPortalId(null)
+      toast.success("HubSpot disconnected")
+    } catch {
+      toast.error("Disconnect failed — try again")
+    }
+  }
 
   const handleAutofill = async () => {
     const url = autofillUrl.trim()
@@ -698,6 +742,23 @@ export default function WorkspacePage() {
               <WatiWebhookCard webhookToken={webhookToken} />
             </div>
 
+            {/* ── CRM integrations section ──────────────────────────────── */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <h2 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">CRM Integrations</h2>
+                <div className="flex-1 h-px bg-neutral-200" />
+              </div>
+              <p className="text-xs text-neutral-400 mb-4 leading-relaxed">
+                When Nectic detects a critical or high-risk signal, it writes structured data directly to your CRM — making WhatsApp a first-class signal source alongside your other customer data.
+              </p>
+              <HubSpotCard
+                connected={hubspotConnected}
+                portalId={hubspotPortalId}
+                onConnect={handleHubSpotConnect}
+                onDisconnect={handleHubSpotDisconnect}
+              />
+            </div>
+
             {/* ── Communication voice section ───────────────────────────── */}
             <div>
               <div className="flex items-center gap-2 mb-3">
@@ -1228,6 +1289,119 @@ function SignalFiltersCard({
           >
             Reset — show all signal types
           </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─── HubSpot Integration Card ─────────────────────────────────────────────────
+
+function HubSpotCard({
+  connected,
+  portalId,
+  onConnect,
+  onDisconnect,
+}: {
+  connected: boolean
+  portalId: string | null
+  onConnect: () => void
+  onDisconnect: () => void
+}) {
+  const [confirming, setConfirming] = useState(false)
+
+  const FIELDS_WRITTEN = [
+    { name: "nectic_risk_level", desc: "critical / high / medium / low" },
+    { name: "nectic_signal_summary", desc: "Top signal title from WhatsApp analysis" },
+    { name: "nectic_last_signal_date", desc: "Date of last detected signal" },
+    { name: "nectic_arr_at_risk", desc: "Estimated ARR at risk (USD)" },
+    { name: "nectic_health_score", desc: "0–10 account health score" },
+  ]
+
+  return (
+    <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden mb-4">
+      <div className="flex items-center gap-3 px-5 pt-4 pb-3 border-b border-neutral-100">
+        {/* HubSpot logo */}
+        <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors ${connected ? "bg-[#FF7A59]" : "bg-neutral-100"}`}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className={connected ? "text-white" : "text-neutral-400"}>
+            <path d="M18.164 7.93V5.084a2.198 2.198 0 10-2.234 0V7.93a6.249 6.249 0 00-3.056 1.658L7.32 6.146a2.462 2.462 0 10-.912 1.498l5.427 3.359a6.25 6.25 0 000 4.995l-5.427 3.359a2.462 2.462 0 10.912 1.498l5.554-3.443a6.25 6.25 0 109.29-9.482zm-1.117 9.32a3.746 3.746 0 110-7.492 3.746 3.746 0 010 7.492z" fill="currentColor"/>
+          </svg>
+        </div>
+        <div className="flex-1 min-w-0">
+          <span className="text-xs font-medium text-neutral-400 uppercase tracking-wide">CRM sync</span>
+          <p className="text-sm font-semibold text-neutral-800 leading-tight">HubSpot</p>
+        </div>
+        {connected ? (
+          <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded flex-shrink-0">Connected</span>
+        ) : (
+          <span className="text-[10px] font-medium text-neutral-400 bg-neutral-50 border border-neutral-200 px-2 py-1 rounded flex-shrink-0">Not connected</span>
+        )}
+      </div>
+
+      <div className="px-5 pt-4 pb-5">
+        {connected ? (
+          <div className="space-y-4">
+            {portalId && (
+              <p className="text-xs text-neutral-500">
+                Connected to portal <span className="font-mono font-semibold text-neutral-700">{portalId}</span>
+              </p>
+            )}
+
+            <div>
+              <p className="text-xs font-semibold text-neutral-700 mb-2">Fields Nectic writes to your company records:</p>
+              <div className="space-y-1.5">
+                {FIELDS_WRITTEN.map((f) => (
+                  <div key={f.name} className="flex items-start gap-2">
+                    <span className="font-mono text-[10px] bg-neutral-100 text-neutral-600 px-1.5 py-0.5 rounded flex-shrink-0 mt-0.5">{f.name}</span>
+                    <span className="text-xs text-neutral-500">{f.desc}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <p className="text-xs text-neutral-400 leading-relaxed">
+              On every critical or high-risk analysis, Nectic searches HubSpot for a matching company by name and updates these fields. Your existing HubSpot automations can then fire — deal stage changes, task creation, Slack notifications.
+            </p>
+
+            {!confirming ? (
+              <button
+                onClick={() => setConfirming(true)}
+                className="text-xs text-neutral-400 hover:text-red-600 transition-colors"
+              >
+                Disconnect HubSpot
+              </button>
+            ) : (
+              <div className="flex items-center gap-3">
+                <p className="text-xs text-neutral-600">Disconnect and stop syncing?</p>
+                <button onClick={onDisconnect} className="text-xs font-semibold text-red-600 hover:text-red-800 transition-colors">Disconnect</button>
+                <button onClick={() => setConfirming(false)} className="text-xs text-neutral-400 hover:text-neutral-700 transition-colors">Cancel</button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <p className="text-xs text-neutral-500 leading-relaxed">
+              Connect HubSpot to make WhatsApp signals visible in your CRM. When Nectic detects a risk signal, it automatically updates the matching company record — no manual data entry.
+            </p>
+            <div className="bg-neutral-50 border border-neutral-200 rounded-lg p-3 space-y-1.5">
+              {FIELDS_WRITTEN.map((f) => (
+                <div key={f.name} className="flex items-start gap-2">
+                  <span className="font-mono text-[10px] bg-white text-neutral-600 px-1.5 py-0.5 rounded border border-neutral-200 flex-shrink-0 mt-0.5">{f.name}</span>
+                  <span className="text-xs text-neutral-400">{f.desc}</span>
+                </div>
+              ))}
+            </div>
+            <p className="text-[10px] text-neutral-400">Requires: <span className="font-medium">crm.objects.companies.read/write</span> scope. No data is read from HubSpot — Nectic only writes.</p>
+            <button
+              onClick={onConnect}
+              className="flex items-center gap-2 bg-[#FF7A59] text-white text-xs font-semibold px-4 py-2.5 rounded-lg hover:bg-[#e85f40] transition-colors"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M18.164 7.93V5.084a2.198 2.198 0 10-2.234 0V7.93a6.249 6.249 0 00-3.056 1.658L7.32 6.146a2.462 2.462 0 10-.912 1.498l5.427 3.359a6.25 6.25 0 000 4.995l-5.427 3.359a2.462 2.462 0 10.912 1.498l5.554-3.443a6.25 6.25 0 109.29-9.482zm-1.117 9.32a3.746 3.746 0 110-7.492 3.746 3.746 0 010 7.492z"/>
+              </svg>
+              Connect HubSpot
+            </button>
+          </div>
         )}
       </div>
     </div>
