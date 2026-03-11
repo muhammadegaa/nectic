@@ -67,6 +67,16 @@ export async function POST(req: NextRequest) {
 
     const { messageCount, needsAnalysis } = await appendToWatiBuffer(uid, waId, message, contactName)
 
+    // When threshold hit: kick off the flush cron immediately (fire-and-forget).
+    // This avoids waiting until the daily cron for active conversations.
+    if (needsAnalysis) {
+      const flushUrl = new URL(req.url)
+      flushUrl.pathname = "/api/cron/flush-wati-buffers"
+      fetch(flushUrl.toString(), {
+        headers: { authorization: `Bearer ${process.env.CRON_SECRET}` },
+      }).catch(() => {})
+    }
+
     return NextResponse.json({
       ok: true,
       buffered: messageCount,
