@@ -138,6 +138,14 @@ export default function WorkspacePage() {
   const [attioConnected, setAttioConnected] = useState(false)
   const [attioWorkspaceId, setAttioWorkspaceId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<"intelligence" | "voice" | "alerts" | "connections">("intelligence")
+  const [waStatus, setWaStatus] = useState<"none" | "pending_qr" | "connected" | "reconnecting" | "disconnected">("none")
+  const [waQrCode, setWaQrCode] = useState<string | null>(null)
+  const [waPhone, setWaPhone] = useState<string | null>(null)
+  const [waGroups, setWaGroups] = useState<{ jid: string; name: string; participantCount: number }[]>([])
+  const [waMonitored, setWaMonitored] = useState<string[]>([])
+  const [waConnecting, setWaConnecting] = useState(false)
+  const [waShowGroupPicker, setWaShowGroupPicker] = useState(false)
+  const waPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const searchParams = useSearchParams()
 
   useEffect(() => {
@@ -171,6 +179,7 @@ export default function WorkspacePage() {
       if (ws.attioConnected) setAttioConnected(true)
       if (ws.attioWorkspaceId) setAttioWorkspaceId(ws.attioWorkspaceId)
       setLoading(false)
+      // WhatsApp Direct status is polled on mount via pollWaStatus — no need to seed here
 
       if (!ws.productDescription && !ws.communicationStyle && typeof window !== "undefined") {
         const dismissed = localStorage.getItem("nectic_workspace_wizard_dismissed")
@@ -246,6 +255,101 @@ export default function WorkspacePage() {
       toast.success("Attio disconnected")
     } catch {
       toast.error("Disconnect failed — try again")
+    }
+  }
+
+  // ── WhatsApp Direct ─────────────────────────────────────────────────────────
+
+  const pollWaStatus = useCallback(async () => {
+    if (!user) return
+    try {
+      const token = await auth.currentUser?.getIdToken()
+      const res = await fetch("/api/whatsapp/status", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) return
+      const data = await res.json()
+      setWaStatus(data.status ?? "none")
+      setWaQrCode(data.qrCode ?? null)
+      if (data.phoneNumber) setWaPhone(data.phoneNumber)
+      if (data.groups?.length > 0) setWaGroups(data.groups)
+      if (data.monitoredGroups?.length > 0) setWaMonitored(data.monitoredGroups)
+      // Stop polling once connected or disconnected
+      if (data.status === "connected" || data.status === "disconnected" || data.status === "none") {
+        if (waPollRef.current) clearInterval(waPollRef.current)
+        if (data.status === "connected") {
+          setWaConnecting(false)
+          setWaShowGroupPicker(true)
+        }
+      }
+    } catch {}
+  }, [user])
+
+  // On mount: check existing WA status
+  useEffect(() => {
+    if (user) pollWaStatus()
+    return () => { if (waPollRef.current) clearInterval(waPollRef.current) }
+  }, [user, pollWaStatus])
+
+  const handleWaConnect = async () => {
+    if (!user) return
+    setWaConnecting(true)
+    setWaStatus("pending_qr")
+    try {
+      const token = await auth.currentUser?.getIdToken()
+      const res = await fetch("/api/whatsapp/session", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) {
+        const d = await res.json()
+        toast.error(d.error ?? "Could not start WhatsApp connection")
+        setWaConnecting(false)
+        return
+      }
+      // Start polling for QR code
+      if (waPollRef.current) clearInterval(waPollRef.current)
+      waPollRef.current = setInterval(pollWaStatus, 2000)
+    } catch {
+      toast.error("Network error — try again")
+      setWaConnecting(false)
+    }
+  }
+
+  const handleWaDisconnect = async () => {
+    if (!user) return
+    try {
+      const token = await auth.currentUser?.getIdToken()
+      await fetch("/api/whatsapp/session", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      setWaStatus("none")
+      setWaQrCode(null)
+      setWaPhone(null)
+      setWaGroups([])
+      setWaMonitored([])
+      setWaShowGroupPicker(false)
+      toast.success("WhatsApp disconnected")
+    } catch {
+      toast.error("Disconnect failed — try again")
+    }
+  }
+
+  const handleWaToggleGroup = async (jid: string) => {
+    const next = waMonitored.includes(jid)
+      ? waMonitored.filter(j => j !== jid)
+      : [...waMonitored, jid]
+    setWaMonitored(next)
+    try {
+      const token = await auth.currentUser?.getIdToken()
+      await fetch("/api/whatsapp/monitor", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ groupJids: next }),
+      })
+    } catch {
+      toast.error("Could not save group selection")
     }
   }
 
@@ -959,7 +1063,22 @@ export default function WorkspacePage() {
                 Connect your data sources and CRMs. Nectic writes WhatsApp signals into your existing tools — no manual data entry.
               </p>
 
-              {/* WATI live */}
+              {/* WhatsApp Direct — primary ingestion */}
+              <WhatsAppDirectCard
+                status={waStatus}
+                qrCode={waQrCode}
+                phone={waPhone}
+                groups={waGroups}
+                monitored={waMonitored}
+                connecting={waConnecting}
+                showGroupPicker={waShowGroupPicker}
+                onConnect={handleWaConnect}
+                onDisconnect={handleWaDisconnect}
+                onToggleGroup={handleWaToggleGroup}
+                onDoneGroupPicker={() => setWaShowGroupPicker(false)}
+              />
+
+              {/* WATI live — for teams already using WATI BSP */}
               <WatiWebhookCard webhookToken={webhookToken} />
 
               {/* Active CRM integrations */}
@@ -1624,6 +1743,203 @@ function AttioCard({
               </svg>
               Connect Attio
             </button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─── WhatsApp Direct Card ─────────────────────────────────────────────────────
+
+function WhatsAppDirectCard({
+  status,
+  qrCode,
+  phone,
+  groups,
+  monitored,
+  connecting,
+  showGroupPicker,
+  onConnect,
+  onDisconnect,
+  onToggleGroup,
+  onDoneGroupPicker,
+}: {
+  status: "none" | "pending_qr" | "connected" | "reconnecting" | "disconnected"
+  qrCode: string | null
+  phone: string | null
+  groups: { jid: string; name: string; participantCount: number }[]
+  monitored: string[]
+  connecting: boolean
+  showGroupPicker: boolean
+  onConnect: () => void
+  onDisconnect: () => void
+  onToggleGroup: (jid: string) => void
+  onDoneGroupPicker: () => void
+}) {
+  const isConnected = status === "connected"
+  const isPendingQR = status === "pending_qr"
+
+  return (
+    <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden mb-4">
+      {/* Header */}
+      <div className="flex items-center gap-3 px-5 pt-4 pb-3 border-b border-neutral-100">
+        <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors ${isConnected ? "bg-[#25D366]" : "bg-neutral-100"}`}>
+          {/* WhatsApp logo */}
+          <svg width="15" height="15" viewBox="0 0 24 24" fill={isConnected ? "white" : "#9ca3af"}>
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+          </svg>
+        </div>
+        <div className="flex-1 min-w-0">
+          <span className="text-xs font-medium text-neutral-400 uppercase tracking-wide">Direct connection</span>
+          <p className="text-sm font-semibold text-neutral-800 leading-tight">WhatsApp Direct</p>
+        </div>
+        {isConnected && (
+          <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full flex-shrink-0">Connected</span>
+        )}
+        {status === "reconnecting" && (
+          <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full flex-shrink-0">Reconnecting…</span>
+        )}
+      </div>
+
+      <div className="px-5 pt-4 pb-5">
+        {/* ── Not connected ── */}
+        {(status === "none" || status === "disconnected") && !isPendingQR && (
+          <div className="space-y-4">
+            <p className="text-xs text-neutral-500 leading-relaxed">
+              Connect your WhatsApp account directly. Nectic monitors your selected group chats in real time — no WATI account needed. Scan once, stay connected.
+            </p>
+            <div className="flex items-start gap-2 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2.5">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-amber-500 mt-0.5 shrink-0"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <p className="text-[11px] text-amber-800 leading-relaxed">Beta — uses WhatsApp Web protocol. Your account won&apos;t be used to send messages. Disconnect anytime from this page or your phone&apos;s linked devices.</p>
+            </div>
+            <button
+              onClick={onConnect}
+              disabled={connecting}
+              className="flex items-center gap-2 bg-[#25D366] text-white text-xs font-semibold px-4 py-2.5 rounded-lg hover:bg-[#1ebe5d] transition-colors disabled:opacity-50"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+              {connecting ? "Starting…" : "Connect WhatsApp"}
+            </button>
+          </div>
+        )}
+
+        {/* ── QR code modal ── */}
+        {isPendingQR && (
+          <div className="space-y-4">
+            <p className="text-xs text-neutral-500 leading-relaxed">
+              Open WhatsApp on your phone → <strong>Settings → Linked Devices → Link a Device</strong> → scan this QR code.
+            </p>
+            <div className="flex items-center justify-center">
+              {qrCode ? (
+                <div className="border border-neutral-200 rounded-xl p-3 bg-white inline-block">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={qrCode} alt="WhatsApp QR code" width={200} height={200} className="rounded-lg" />
+                </div>
+              ) : (
+                <div className="w-[200px] h-[200px] border border-neutral-200 rounded-xl bg-neutral-50 flex items-center justify-center">
+                  <div className="w-5 h-5 border-2 border-neutral-300 border-t-neutral-700 rounded-full animate-spin" />
+                </div>
+              )}
+            </div>
+            <p className="text-[11px] text-neutral-400 text-center">QR code refreshes automatically · keep this page open</p>
+            <button onClick={onDisconnect} className="text-xs text-neutral-400 hover:text-neutral-700 transition-colors block mx-auto">Cancel</button>
+          </div>
+        )}
+
+        {/* ── Connected + group picker ── */}
+        {isConnected && (
+          <div className="space-y-4">
+            {phone && (
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-full bg-[#25D366] flex items-center justify-center">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+                <p className="text-xs text-neutral-700">Connected as <span className="font-semibold">+{phone}</span></p>
+              </div>
+            )}
+
+            {/* Group picker */}
+            {showGroupPicker ? (
+              <div>
+                <p className="text-xs font-semibold text-neutral-700 mb-2">
+                  Select groups to monitor ({monitored.length} selected)
+                </p>
+                <p className="text-[11px] text-neutral-400 mb-3">Nectic will analyze these groups when conversations reach 30+ messages or go quiet for 4 hours.</p>
+                <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+                  {groups.length === 0 ? (
+                    <p className="text-xs text-neutral-400 py-4 text-center">No groups found — make sure you&apos;re in at least one WhatsApp group</p>
+                  ) : (
+                    groups.map((g) => {
+                      const isOn = monitored.includes(g.jid)
+                      return (
+                        <button
+                          key={g.jid}
+                          onClick={() => onToggleGroup(g.jid)}
+                          className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg border text-left transition-colors ${
+                            isOn
+                              ? "bg-neutral-900 border-neutral-900 text-white"
+                              : "bg-white border-neutral-200 text-neutral-700 hover:border-neutral-400"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${isOn ? "bg-white/20 text-white" : "bg-neutral-100 text-neutral-500"}`}>
+                              {g.name.slice(0, 2).toUpperCase()}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs font-medium truncate">{g.name}</p>
+                              <p className={`text-[10px] ${isOn ? "text-neutral-300" : "text-neutral-400"}`}>{g.participantCount} participants</p>
+                            </div>
+                          </div>
+                          {isOn && (
+                            <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><polyline points="2 8 6 12 14 4" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                          )}
+                        </button>
+                      )
+                    })
+                  )}
+                </div>
+                <button
+                  onClick={onDoneGroupPicker}
+                  className="mt-3 w-full text-xs font-semibold bg-neutral-900 text-white py-2.5 rounded-lg hover:bg-neutral-700 transition-colors"
+                >
+                  Done — monitor {monitored.length} group{monitored.length !== 1 ? "s" : ""}
+                </button>
+              </div>
+            ) : (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-semibold text-neutral-700">Monitored groups</p>
+                  <button onClick={() => onDoneGroupPicker()} className="text-[11px] text-neutral-400 hover:text-neutral-700 transition-colors">Edit</button>
+                </div>
+                {monitored.length === 0 ? (
+                  <button
+                    onClick={() => onDoneGroupPicker()}
+                    className="w-full text-xs text-neutral-400 border border-dashed border-neutral-300 rounded-lg py-3 hover:border-neutral-500 hover:text-neutral-600 transition-colors"
+                  >
+                    + Select groups to monitor
+                  </button>
+                ) : (
+                  <div className="space-y-1.5">
+                    {groups.filter(g => monitored.includes(g.jid)).map(g => (
+                      <div key={g.jid} className="flex items-center gap-2 px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-lg">
+                        <div className="w-6 h-6 rounded-full bg-neutral-200 flex items-center justify-center text-[9px] font-bold text-neutral-600 flex-shrink-0">
+                          {g.name.slice(0, 2).toUpperCase()}
+                        </div>
+                        <p className="text-xs text-neutral-700 truncate">{g.name}</p>
+                        <span className="text-[10px] text-neutral-400 ml-auto flex-shrink-0">{g.participantCount} members</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="pt-1 border-t border-neutral-100">
+              <button onClick={onDisconnect} className="text-xs text-neutral-400 hover:text-red-600 transition-colors">
+                Disconnect WhatsApp
+              </button>
+            </div>
           </div>
         )}
       </div>

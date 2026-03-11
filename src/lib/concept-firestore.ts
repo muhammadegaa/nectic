@@ -73,6 +73,9 @@ export interface WorkspaceContext {
   hubspotPortalId?: string
   attioConnected?: boolean
   attioWorkspaceId?: string
+  // WhatsApp Direct (Baileys bridge) — status read from whatsappBridge/{uid} collection
+  whatsappDirectConnected?: boolean
+  whatsappDirectPhone?: string
 }
 
 // ─── WATI Live Buffer ─────────────────────────────────────────────────────────
