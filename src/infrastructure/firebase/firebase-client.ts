@@ -19,7 +19,7 @@ import {
   User as FirebaseUser
 } from 'firebase/auth'
 import {
-  getFirestore,
+  initializeFirestore,
   Timestamp,
   serverTimestamp
 } from 'firebase/firestore'
@@ -39,7 +39,11 @@ const app: FirebaseApp = getApps().length === 0
   : getApps()[0]
 
 const auth = getAuth(app)
-const db = getFirestore(app)
+// ignoreUndefinedProperties: silently drops undefined values at any depth
+// instead of throwing — fixes "Unsupported field value: undefined" across all writes
+const db = initializeFirestore(app, {
+  ignoreUndefinedProperties: true,
+})
 const googleProvider = new GoogleAuthProvider()
 
 // Set persistence to localStorage IMMEDIATELY after auth initialization
