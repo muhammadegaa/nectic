@@ -11,6 +11,7 @@ import { parseWhatsAppFile, formatForPrompt, type WaParsed } from "@/lib/whatsap
 import {
   getAccounts,
   saveAccount,
+  updateAccount,
   deleteAccount,
   aggregateSignals,
   prefillFromContactBook,
@@ -97,6 +98,7 @@ export default function ConceptPage() {
   const [classifying, setClassifying] = useState(false)
   const [context, setContext] = useState<AccountContext>({})
   const [agentRun, setAgentRun] = useState<AgentRun | null>(null)
+  const [matchedAccount, setMatchedAccount] = useState<StoredAccount | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -139,6 +141,7 @@ export default function ConceptPage() {
     setAiSuggestedRoles(new Set())
     setClassifying(false)
     setContext({})
+    setMatchedAccount(null)
     setShowConnect(true)
   }
 
@@ -162,6 +165,7 @@ export default function ConceptPage() {
       setAiSuggestedRoles(new Set())
       setClassifying(false)
       setContext({})
+      setMatchedAccount(null)
       if (inputRef.current) inputRef.current.value = ""
     }, 200)
   }
@@ -230,6 +234,26 @@ export default function ConceptPage() {
           setClassifying(false)
         }
       }
+
+      // Account matching — find existing account with >50% participant overlap
+      // Uses the prefilled roles (not waiting for AI classification) for speed
+      const uploadedNames = new Set(p.participants.map((n) => n.toLowerCase().trim()))
+      let bestMatch: StoredAccount | null = null
+      let bestOverlap = 0
+      for (const acc of accounts) {
+        const accNames = Object.keys(acc.participantRoles ?? {}).map((n) => n.toLowerCase().trim())
+        if (accNames.length === 0) continue
+        const overlap = accNames.filter((n) => uploadedNames.has(n)).length
+        const overlapRatio = overlap / Math.max(accNames.length, uploadedNames.size)
+        if (overlapRatio > 0.5 && overlapRatio > bestOverlap) {
+          bestOverlap = overlapRatio
+          bestMatch = acc
+        }
+      }
+      setMatchedAccount(bestMatch)
+      if (bestMatch) {
+        setContext(bestMatch.context ?? {})
+      }
     } catch (err: unknown) {
       setUploadError(err instanceof Error ? err.message : "Failed to read file.")
       setConnectStage("error")
@@ -291,62 +315,107 @@ export default function ConceptPage() {
     setConnectStage("analyzing")
     setUploadError("")
 
-    // Upload guard: warn when no customer messages detected after role assignment
+    // Hard-block: require at least one customer participant with messages
     const customerNames = Object.entries(participantRoles)
       .filter(([, r]) => r === "customer")
       .map(([n]) => n)
     const customerMsgCount = parsed.messages.filter((m) => customerNames.includes(m.sender)).length
-    if (customerNames.length > 0 && customerMsgCount < 3) {
-      toast.warning("Very few customer messages detected — double-check participant roles for accuracy")
+    if (customerNames.length === 0 || customerMsgCount < 3) {
+      setUploadError(
+        customerNames.length === 0
+          ? "No customer participants labelled. Mark at least one person as \"Customer\" in the Who's who section."
+          : "Too few customer messages detected. Make sure customer participants are correctly labelled."
+      )
+      setConnectStage("error")
+      return
     }
 
     try {
       const conversation = formatForPrompt(parsed)
-      const res = await fetch("/api/concept/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          conversation,
-          messageCount: parsed.totalMessages,
-          participants: parsed.participants.length,
+
+      let data: { result?: AnalysisResult; error?: string }
+
+      if (matchedAccount) {
+        // Re-analysis path: inject prior context for longitudinal memory
+        const res = await fetch("/api/concept/reanalyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            priorAnalysis: matchedAccount.result,
+            conversation,
+            messageCount: parsed.totalMessages,
+            participantRoles,
+            signalActions: matchedAccount.signalActions ?? null,
+            workspace,
+          }),
+        })
+        const text = await res.text()
+        try { data = JSON.parse(text) } catch {
+          throw new Error("Analysis timed out. Please try again.")
+        }
+        if (!res.ok) throw new Error(data.error || "Re-analysis failed")
+
+        await updateAccount(user.uid, matchedAccount.id, {
+          fileName,
+          analyzedAt: new Date().toISOString(),
+          result: data.result as AnalysisResult,
           participantRoles,
           context,
-          workspace,
-        }),
-      })
+          ...(workspace.version !== undefined && { workspaceVersion: workspace.version }),
+        })
+        await mergeContactBook(user.uid, participantRoles)
+        const confidence = (data.result as AnalysisResult).analysisQuality?.confidence
+        if (confidence !== "low") {
+          autoDraftRiskSignals(user.uid, matchedAccount.id, data.result as AnalysisResult).catch(() => {})
+        }
+        trackEvent("analysis_updated", {
+          accountId: matchedAccount.id,
+          riskLevel: (data.result as AnalysisResult).riskLevel,
+          messageCount: parsed.totalMessages,
+        })
+      } else {
+        // New account path
+        const res = await fetch("/api/concept/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            conversation,
+            messageCount: parsed.totalMessages,
+            participants: parsed.participants.length,
+            participantRoles,
+            context,
+            workspace,
+          }),
+        })
+        const text = await res.text()
+        try { data = JSON.parse(text) } catch {
+          throw new Error("Analysis timed out. Please try again — large conversations occasionally need a second attempt.")
+        }
+        if (!res.ok) throw new Error(data.error || "Analysis failed")
 
-      const text = await res.text()
-      let data: { result?: AnalysisResult; error?: string }
-      try {
-        data = JSON.parse(text)
-      } catch {
-        throw new Error("Analysis timed out. Please try again — large conversations occasionally need a second attempt.")
-      }
-      if (!res.ok) throw new Error(data.error || "Analysis failed")
-
-      const shareToken = crypto.randomUUID()
-      const saved = await saveAccount(user.uid, {
-        fileName,
-        analyzedAt: new Date().toISOString(),
-        result: data.result as AnalysisResult,
-        participantRoles,
-        context,
-        shareToken,
-        ...(workspace.version !== undefined && { workspaceVersion: workspace.version }),
-      })
-      await mergeContactBook(user.uid, participantRoles)
-      // Auto-draft responses for critical/high risk — skip when AI is uncertain (low confidence = likely bad input)
-      const confidence = (data.result as AnalysisResult).analysisQuality?.confidence
-      if (confidence !== "low") {
-        autoDraftRiskSignals(user.uid, saved.id, data.result as AnalysisResult).catch(() => {})
+        const shareToken = crypto.randomUUID()
+        const saved = await saveAccount(user.uid, {
+          fileName,
+          analyzedAt: new Date().toISOString(),
+          result: data.result as AnalysisResult,
+          participantRoles,
+          context,
+          shareToken,
+          ...(workspace.version !== undefined && { workspaceVersion: workspace.version }),
+        })
+        await mergeContactBook(user.uid, participantRoles)
+        const confidence = (data.result as AnalysisResult).analysisQuality?.confidence
+        if (confidence !== "low") {
+          autoDraftRiskSignals(user.uid, saved.id, data.result as AnalysisResult).catch(() => {})
+        }
+        trackEvent("analysis_completed", {
+          riskLevel: (data.result as AnalysisResult).riskLevel,
+          healthScore: (data.result as AnalysisResult).healthScore,
+          messageCount: parsed.totalMessages,
+        })
       }
 
       await refreshAccounts()
-      trackEvent("analysis_completed", {
-        riskLevel: (data.result as AnalysisResult).riskLevel,
-        healthScore: (data.result as AnalysisResult).healthScore,
-        messageCount: parsed.totalMessages,
-      })
       closeConnect()
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Something went wrong"
@@ -416,6 +485,9 @@ export default function ConceptPage() {
 
   const savedThisMonth = computeArrProtected(accounts, { withinDays: 30 })
   const actionedToday = countActionedToday(accounts)
+  const staleCount = workspace.version !== undefined
+    ? accounts.filter((a) => a.workspaceVersion !== undefined && a.workspaceVersion < workspace.version!).length
+    : 0
 
   return (
     <div className="min-h-screen bg-neutral-50">
@@ -498,6 +570,17 @@ export default function ConceptPage() {
                     </div>
                     <span className="text-amber-600 text-sm group-hover:translate-x-0.5 transition-transform">→</span>
                   </Link>
+                )}
+
+                {/* Stale context banner — shown when workspace was updated after analysis */}
+                {staleCount > 0 && (
+                  <button onClick={openConnect} className="w-full flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 hover:bg-blue-100 transition-colors group text-left">
+                    <div>
+                      <p className="text-xs font-semibold text-blue-800">{staleCount} account{staleCount !== 1 ? "s" : ""} analyzed with outdated workspace context</p>
+                      <p className="text-xs text-blue-600 mt-0.5">Re-upload their chats to get updated signals based on your new workspace settings.</p>
+                    </div>
+                    <span className="text-blue-500 text-sm group-hover:translate-x-0.5 transition-transform flex-shrink-0 ml-3">→</span>
+                  </button>
                 )}
 
                 {/* Account list — sorted by risk */}
@@ -591,6 +674,7 @@ export default function ConceptPage() {
           aiSuggestedRoles={aiSuggestedRoles}
           classifying={classifying}
           context={context}
+          matchedAccount={matchedAccount}
           onClose={closeConnect}
           onContinueToUpload={() => setConnectStage("upload")}
           onBackToInstructions={() => setConnectStage("instructions")}
@@ -602,7 +686,7 @@ export default function ConceptPage() {
           onSetRole={setRole}
           onContextChange={setContext}
           onAnalyze={analyze}
-          onRetry={() => { setConnectStage("upload"); setUploadError(""); if (inputRef.current) inputRef.current.value = "" }}
+          onRetry={() => { setConnectStage("upload"); setUploadError(""); setMatchedAccount(null); if (inputRef.current) inputRef.current.value = "" }}
         />
       )}
 
@@ -881,7 +965,7 @@ function ConsentFooter({ onAnalyze, onRetry }: { onAnalyze: () => void; onRetry:
 
 function ConnectModal({
   stage, parsed, fileName, error, dragging, inputRef,
-  participantRoles, aiSuggestedRoles, classifying, context,
+  participantRoles, aiSuggestedRoles, classifying, context, matchedAccount,
   onClose, onContinueToUpload, onBackToInstructions,
   onDrop, onDragOver, onDragLeave, onFileSelect, onInputChange,
   onSetRole, onContextChange, onAnalyze, onRetry,
@@ -896,6 +980,7 @@ function ConnectModal({
   aiSuggestedRoles: Set<string>
   classifying: boolean
   context: AccountContext
+  matchedAccount: StoredAccount | null
   onClose: () => void
   onContinueToUpload: () => void
   onBackToInstructions: () => void
@@ -912,8 +997,8 @@ function ConnectModal({
   const subtitleMap: Record<ConnectStage, string> = {
     instructions: "Export a group chat to get started",
     upload: "Drop your export file",
-    ready: "Review before analysis",
-    analyzing: "Analysing…",
+    ready: matchedAccount ? `Updating ${matchedAccount.result.accountName}` : "Review before analysis",
+    analyzing: matchedAccount ? `Updating ${matchedAccount.result.accountName}…` : "Analysing…",
     error: "Something went wrong",
   }
 
@@ -977,6 +1062,21 @@ function ConnectModal({
 
             {stage === "ready" && parsed && (
               <div className="space-y-5">
+                {/* Account match banner */}
+                {matchedAccount && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 flex items-start gap-3">
+                    <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-blue-600">
+                        <path d="M12 2v10M12 12l4-4M12 12l-4-4" /><circle cx="12" cy="18" r="2" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-blue-800">Continuing analysis of {matchedAccount.result.accountName}</p>
+                      <p className="text-xs text-blue-600 mt-0.5">Nectic recognised participants from a previous upload. Signals and health history will be updated — no duplicate account created.</p>
+                    </div>
+                  </div>
+                )}
+
                 {/* Parsed stats */}
                 <div>
                   <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-3">File parsed</p>
@@ -1102,11 +1202,16 @@ function ConnectModal({
               <div className="py-8 text-center">
                 <div className="w-12 h-12 border-2 border-neutral-200 border-t-neutral-900 rounded-full animate-spin mx-auto mb-4" />
                 <p className="text-sm font-semibold text-neutral-900">
-                  {parsed ? `Analysing ${parsed.totalMessages} messages` : fileName ? `Analysing ${fileName}…` : "Analysing conversation…"}
+                  {matchedAccount
+                    ? `Updating ${matchedAccount.result.accountName} with ${parsed?.totalMessages ?? 0} new messages`
+                    : parsed ? `Analysing ${parsed.totalMessages} messages` : "Analysing conversation…"}
                 </p>
                 <p className="mt-1 text-xs text-neutral-400">Usually takes about 15–30 seconds</p>
                 <div className="mt-5 space-y-2 text-left">
-                  {["Identifying customer voice…", "Extracting risk signals…", "Grouping product signals…", "Scoring account health…"].map((s, i) => (
+                  {(matchedAccount
+                    ? ["Comparing with prior analysis…", "Detecting signal changes…", "Updating health score…", "Preserving prior context…"]
+                    : ["Identifying customer voice…", "Extracting risk signals…", "Grouping product signals…", "Scoring account health…"]
+                  ).map((s, i) => (
                     <div key={i} className="flex items-center gap-2">
                       <div className="w-1.5 h-1.5 rounded-full bg-neutral-300 animate-pulse" style={{ animationDelay: `${i * 350}ms` }} />
                       <p className="text-xs text-neutral-500">{s}</p>
