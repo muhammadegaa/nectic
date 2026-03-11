@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getAdminDb } from "@/infrastructure/firebase/firebase-server"
 import type { WatiBuffer, WatiBufferMessage, WorkspaceContext, AccountContext, ParticipantRoles } from "@/lib/concept-firestore"
+import { findHubSpotCompany, writeSignalToHubSpot, refreshHubSpotToken, type HubSpotTokens } from "@/lib/hubspot"
+import { findAttioCompany, writeSignalToAttio, type AttioTokens } from "@/lib/attio"
+import type { AnalysisResult } from "@/app/api/concept/analyze/route"
 
 export const maxDuration = 60
 
@@ -28,6 +31,56 @@ function buildRoles(buffer: WatiBuffer): ParticipantRoles {
     }
   }
   return roles
+}
+
+// Server-side CRM sync — called after WATI auto-analysis.
+// Reads tokens from Firestore directly (no client auth available in cron context).
+async function syncCrmServer(
+  adminDb: ReturnType<typeof getAdminDb>,
+  uid: string,
+  userData: Record<string, unknown>,
+  result: AnalysisResult,
+  arrAtRisk: number
+): Promise<void> {
+  const riskLevel = result.riskLevel
+  if (riskLevel !== "critical" && riskLevel !== "high") return
+
+  const topSignal = result.riskSignals?.[0]
+  const signalSummary = topSignal
+    ? `[${riskLevel.toUpperCase()}] ${(topSignal as { title?: string }).title ?? topSignal.explanation?.slice(0, 100) ?? "Risk signal"}`
+    : `[${riskLevel.toUpperCase()}] Risk signals detected via WhatsApp`
+
+  const payload = { riskLevel, signalSummary, arrAtRisk, healthScore: result.healthScore ?? 5 }
+  const accountName = result.accountName ?? ""
+
+  // HubSpot
+  const hs = userData.hubspotIntegration as (HubSpotTokens & { connectedAt?: string }) | undefined
+  if (hs?.accessToken && accountName) {
+    let accessToken = hs.accessToken
+    if (hs.expiresAt < Date.now() + 5 * 60 * 1000) {
+      try {
+        const refreshed = await refreshHubSpotToken(hs.refreshToken)
+        accessToken = refreshed.access_token
+        await adminDb.collection("users").doc(uid).set(
+          { hubspotIntegration: { accessToken: refreshed.access_token, refreshToken: refreshed.refresh_token, expiresAt: Date.now() + refreshed.expires_in * 1000 } },
+          { merge: true }
+        )
+      } catch { /* non-fatal */ }
+    }
+    try {
+      const companyId = await findHubSpotCompany(accessToken, accountName)
+      if (companyId) await writeSignalToHubSpot(accessToken, companyId, payload)
+    } catch { /* non-fatal */ }
+  }
+
+  // Attio
+  const at = userData.attioIntegration as AttioTokens | undefined
+  if (at?.accessToken && accountName) {
+    try {
+      const companyId = await findAttioCompany(at.accessToken, accountName)
+      if (companyId) await writeSignalToAttio(at.accessToken, companyId, payload)
+    } catch { /* non-fatal */ }
+  }
 }
 
 // Vercel cron — fires every 30 min
@@ -130,8 +183,17 @@ export async function GET(req: NextRequest) {
             continue
           }
 
-          const data = await res.json() as { result?: Record<string, unknown> }
+          const data = await res.json() as { result?: AnalysisResult }
           if (!data.result) continue
+
+          // CRM sync — server-side, fire-and-forget
+          const arrAtRisk = (() => {
+            const tier = (matchedAccount as Record<string, unknown> | undefined)?.context as AccountContext | undefined
+            if (tier?.annualValue) return tier.annualValue
+            const t = tier?.contractTier
+            return t === "enterprise" ? 24000 : t === "growth" ? 9600 : 3600
+          })()
+          syncCrmServer(adminDb, uid, userData, data.result, arrAtRisk).catch(() => {})
 
           const shareToken = crypto.randomUUID()
           const now_iso = new Date().toISOString()
