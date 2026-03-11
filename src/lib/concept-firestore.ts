@@ -28,6 +28,18 @@ export interface AccountContext {
   watiPhone?: string    // phone number for WATI-imported accounts (enables send-back)
 }
 
+// Snapshot of analysis-affecting workspace fields, saved when they change
+export interface WorkspaceSnapshot {
+  version: number
+  changedFields: string[]
+  savedAt: string
+  productDescription?: string
+  productStory?: string
+  featureAreas?: string
+  roadmapFocus?: string
+  knownIssues?: string
+}
+
 export interface WorkspaceContext {
   productDescription?: string
   featureAreas?: string
@@ -51,6 +63,9 @@ export interface WorkspaceContext {
   alertTimezone?: string
   // Signal suppression — signal types the user has marked as "not relevant"
   suppressedSignalTypes?: string[]
+  // Context versioning — tracks when analysis-affecting fields change
+  version?: number          // bumped whenever product/feature/roadmap fields change
+  history?: WorkspaceSnapshot[]  // last 5 snapshots (kept lean, no credentials)
 }
 
 export interface HealthHistoryEntry {
@@ -85,6 +100,10 @@ export interface StoredAccount {
   signalActions?: Record<string, SignalAction>
   healthHistory?: HealthHistoryEntry[]
   lastAlertSentAt?: string // ISO string — written by /api/concept/notify on alert send
+  // Context versioning — which workspace version was active when this was analyzed
+  workspaceVersion?: number
+  // Last 3 analysis results, newest first — enables longitudinal signal tracking
+  analysisHistory?: AnalysisResult[]
 }
 
 export type { SignalActionStatus, SignalAction } from "@/lib/signal-utils"
@@ -160,7 +179,11 @@ export async function saveAccount(
     score: data.result.healthScore ?? 5,
     date: data.analyzedAt,
   }]
-  const withHistory = { ...data, healthHistory: initialHistory }
+  const withHistory = {
+    ...data,
+    healthHistory: initialHistory,
+    analysisHistory: [data.result],  // seed with first result
+  }
   await setDoc(ref, { ...withHistory, _createdAt: serverTimestamp() })
   // Mirror shareToken → sharedAccounts for lookup without uid
   await setDoc(doc(db, "sharedAccounts", data.shareToken), {
@@ -181,7 +204,8 @@ export async function updateAccount(
   // When result is being updated, append to healthHistory
   if (data.result?.healthScore !== undefined) {
     const existing = await getDoc(ref)
-    const prev = existing.exists() ? (existing.data().healthHistory as HealthHistoryEntry[] | undefined) ?? [] : []
+    const existingData = existing.exists() ? existing.data() : {}
+    const prev = (existingData.healthHistory as HealthHistoryEntry[] | undefined) ?? []
     const newEntry: HealthHistoryEntry = {
       score: data.result.healthScore,
       date: new Date().toISOString(),
@@ -190,7 +214,10 @@ export async function updateAccount(
     const today = newEntry.date.slice(0, 10)
     const filtered = prev.filter((h) => h.date.slice(0, 10) !== today)
     const updatedHistory = [...filtered, newEntry].slice(-20) // keep last 20 data points
-    await setDoc(ref, { ...data, healthHistory: updatedHistory, _updatedAt: serverTimestamp() }, { merge: true })
+    // Maintain last 3 full analysis results for longitudinal context
+    const prevAnalysisHistory = (existingData.analysisHistory as AnalysisResult[] | undefined) ?? []
+    const updatedAnalysisHistory = [data.result, ...prevAnalysisHistory].slice(0, 3)
+    await setDoc(ref, { ...data, healthHistory: updatedHistory, analysisHistory: updatedAnalysisHistory, _updatedAt: serverTimestamp() }, { merge: true })
   } else {
     await setDoc(ref, { ...data, _updatedAt: serverTimestamp() }, { merge: true })
   }
@@ -251,10 +278,48 @@ export async function getAgentRun(uid: string): Promise<AgentRun | null> {
   return (snap.data().lastAgentRun as AgentRun) ?? null
 }
 
+// Fields that directly affect AI analysis quality — changes here mean old analyses used different context
+const ANALYSIS_SIGNIFICANT_FIELDS = ["productDescription", "productStory", "featureAreas", "roadmapFocus", "knownIssues"] as const
+
 export async function saveWorkspace(uid: string, ctx: WorkspaceContext): Promise<void> {
-  // Firestore rejects undefined values — strip them before writing
+  const existing = await getWorkspace(uid)
+  const isFirstSave = Object.keys(existing).length === 0
+
+  // Detect which analysis-affecting fields changed
+  const changedFields = isFirstSave
+    ? []
+    : ANALYSIS_SIGNIFICANT_FIELDS.filter(
+        (f) => ctx[f] !== undefined && ctx[f] !== existing[f]
+      )
+
+  let version = existing.version ?? 1
+  let history = existing.history ?? []
+
+  if (changedFields.length > 0 && !isFirstSave) {
+    // Snapshot the old values before overwriting
+    const snapshot: WorkspaceSnapshot = {
+      version,
+      changedFields,
+      savedAt: new Date().toISOString(),
+      productDescription: existing.productDescription,
+      productStory: existing.productStory,
+      featureAreas: existing.featureAreas,
+      roadmapFocus: existing.roadmapFocus,
+      knownIssues: existing.knownIssues,
+    }
+    version = version + 1
+    history = [snapshot, ...history].slice(0, 5) // keep last 5 snapshots
+  }
+
+  // Strip undefined + history/version from ctx to avoid type conflicts, then merge back
+  const { history: _h, version: _v, ...ctxWithoutMeta } = ctx
   const clean = Object.fromEntries(
-    Object.entries({ ...ctx, updatedAt: new Date().toISOString() }).filter(([, v]) => v !== undefined)
+    Object.entries({
+      ...ctxWithoutMeta,
+      version,
+      history,
+      updatedAt: new Date().toISOString(),
+    }).filter(([, v]) => v !== undefined)
   )
   await setDoc(doc(db, "users", uid), { workspace: clean }, { merge: true })
 }

@@ -137,6 +137,7 @@ export default function AccountPage() {
         fileName: reanalyzeFile.name,
         participantRoles: reanalyzeRoles,
         updatedAt: new Date().toISOString(),
+        workspaceVersion: workspace.version,
       })
       await mergeContactBook(user.uid, reanalyzeRoles)
       const updated = await getAccount(user.uid, id)
@@ -246,6 +247,40 @@ export default function AccountPage() {
           </div>
         )
       })()}
+
+      {/* Context drift warning — workspace was updated since this analysis */}
+      {workspace.version !== undefined
+        && account.workspaceVersion !== undefined
+        && account.workspaceVersion < workspace.version
+        && (
+        <div className="bg-amber-50 border-b border-amber-200 px-4 sm:px-6 py-2 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-amber-500 text-xs flex-shrink-0">⚠</span>
+            <p className="text-xs text-amber-700">
+              Your workspace context was updated after this analysis — signals may not reflect your current product description.
+            </p>
+          </div>
+          <button
+            onClick={() => setShowReanalyze(true)}
+            className="text-xs font-semibold text-amber-700 hover:text-amber-900 flex-shrink-0 transition-colors"
+          >
+            Re-analyze →
+          </button>
+        </div>
+      )}
+
+      {/* Low confidence warning — AI flagged this analysis as uncertain */}
+      {account.result.analysisQuality?.confidence === "low" && (
+        <div className="bg-neutral-100 border-b border-neutral-200 px-4 sm:px-6 py-2 flex items-center gap-2">
+          <span className="text-neutral-400 text-xs flex-shrink-0">◌</span>
+          <p className="text-xs text-neutral-500">
+            Low confidence analysis — fewer than 20 messages or mostly vendor-side. Signals may not be representative.
+            {account.result.analysisQuality.caveats?.length > 0 && (
+              <span className="ml-1 italic">{account.result.analysisQuality.caveats[0]}</span>
+            )}
+          </p>
+        </div>
+      )}
 
       {/* Re-analysis file picker (hidden) */}
       <input

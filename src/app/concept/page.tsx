@@ -291,6 +291,15 @@ export default function ConceptPage() {
     setConnectStage("analyzing")
     setUploadError("")
 
+    // Upload guard: warn when no customer messages detected after role assignment
+    const customerNames = Object.entries(participantRoles)
+      .filter(([, r]) => r === "customer")
+      .map(([n]) => n)
+    const customerMsgCount = parsed.messages.filter((m) => customerNames.includes(m.sender)).length
+    if (customerNames.length > 0 && customerMsgCount < 3) {
+      toast.warning("Very few customer messages detected — double-check participant roles for accuracy")
+    }
+
     try {
       const conversation = formatForPrompt(parsed)
       const res = await fetch("/api/concept/analyze", {
@@ -323,10 +332,14 @@ export default function ConceptPage() {
         participantRoles,
         context,
         shareToken,
+        workspaceVersion: workspace.version,
       })
       await mergeContactBook(user.uid, participantRoles)
-      // Auto-draft responses for critical/high risk signals immediately — no CS action required to unblock
-      autoDraftRiskSignals(user.uid, saved.id, data.result as AnalysisResult).catch(() => {})
+      // Auto-draft responses for critical/high risk — skip when AI is uncertain (low confidence = likely bad input)
+      const confidence = (data.result as AnalysisResult).analysisQuality?.confidence
+      if (confidence !== "low") {
+        autoDraftRiskSignals(user.uid, saved.id, data.result as AnalysisResult).catch(() => {})
+      }
 
       await refreshAccounts()
       trackEvent("analysis_completed", {
@@ -509,6 +522,7 @@ export default function ConceptPage() {
                       >
                         <AccountCard
                           account={account}
+                          currentWorkspaceVersion={workspace.version}
                           onDelete={() => setDeletingId(account.id)}
                           confirmingDelete={deletingId === account.id}
                           onConfirmDelete={() => handleDelete(account.id)}
@@ -1137,8 +1151,8 @@ function Step({ number, title, description }: { number: number; title: string; d
 
 // ─── Account card ─────────────────────────────────────────────────────────────
 
-function AccountCard({ account, onDelete, confirmingDelete, onConfirmDelete, onCancelDelete }: {
-  account: StoredAccount; onDelete: () => void; confirmingDelete: boolean; onConfirmDelete: () => void; onCancelDelete: () => void
+function AccountCard({ account, currentWorkspaceVersion, onDelete, confirmingDelete, onConfirmDelete, onCancelDelete }: {
+  account: StoredAccount; currentWorkspaceVersion?: number; onDelete: () => void; confirmingDelete: boolean; onConfirmDelete: () => void; onCancelDelete: () => void
 }) {
   const risk = riskConfig[account.result.riskLevel] ?? riskConfig.medium
   const topRisk = account.result.riskSignals?.[0]
@@ -1161,6 +1175,10 @@ function AccountCard({ account, onDelete, confirmingDelete, onConfirmDelete, onC
 
   const daysSinceUpdate = Math.floor((Date.now() - new Date(account.updatedAt ?? account.analyzedAt).getTime()) / (1000 * 60 * 60 * 24))
   const isStale = daysSinceUpdate >= 14 && (isCritical || isHigh)
+  const isContextDrifted = currentWorkspaceVersion !== undefined
+    && account.workspaceVersion !== undefined
+    && account.workspaceVersion < currentWorkspaceVersion
+  const isLowConfidence = account.result.analysisQuality?.confidence === "low"
   const scoreBarColor = isCritical ? "bg-red-500" : isHigh ? "bg-orange-400" : account.result.riskLevel === "medium" ? "bg-amber-400" : "bg-emerald-500"
 
   const healthDelta = changesSince?.healthDelta ?? 0
@@ -1188,6 +1206,16 @@ function AccountCard({ account, onDelete, confirmingDelete, onConfirmDelete, onC
               {isStale && (
                 <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-500 border border-neutral-200" title={`Last analysed ${daysSinceUpdate} days ago — re-analyse to get current picture`}>
                   {daysSinceUpdate}d stale
+                </span>
+              )}
+              {isContextDrifted && !isStale && (
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-200" title="Workspace context was updated after this analysis — results may not reflect your current product">
+                  Context updated
+                </span>
+              )}
+              {isLowConfidence && (
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-neutral-50 text-neutral-400 border border-neutral-200" title="AI had low confidence in this analysis — consider re-uploading with more messages">
+                  Low confidence
                 </span>
               )}
               {isSaved && (

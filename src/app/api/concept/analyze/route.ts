@@ -239,9 +239,10 @@ export async function POST(req: NextRequest) {
     if (workspace?.notificationEmail) {
       const notifyUrl = new URL(req.url)
       notifyUrl.pathname = "/api/concept/notify"
+      const confidence = result.analysisQuality?.confidence
 
-      // Fire risk alert for critical/high accounts
-      if (result.riskLevel === "critical" || result.riskLevel === "high") {
+      // Fire risk alert for critical/high accounts — skip when confidence is low (likely garbage input)
+      if ((result.riskLevel === "critical" || result.riskLevel === "high") && confidence !== "low") {
         fetch(notifyUrl.toString(), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -257,8 +258,8 @@ export async function POST(req: NextRequest) {
         }).catch(() => {})
       }
 
-      // Fire competitor alert — independent of riskLevel
-      if (result.competitorMentions?.length > 0) {
+      // Fire competitor alert — independent of riskLevel, but skip low confidence
+      if (result.competitorMentions?.length > 0 && confidence !== "low") {
         fetch(notifyUrl.toString(), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
