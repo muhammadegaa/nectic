@@ -135,6 +135,8 @@ export default function WorkspacePage() {
   const [webhookToken, setWebhookToken] = useState<string | null>(null)
   const [hubspotConnected, setHubspotConnected] = useState(false)
   const [hubspotPortalId, setHubspotPortalId] = useState<string | null>(null)
+  const [attioConnected, setAttioConnected] = useState(false)
+  const [attioWorkspaceId, setAttioWorkspaceId] = useState<string | null>(null)
   const searchParams = useSearchParams()
 
   useEffect(() => {
@@ -165,6 +167,8 @@ export default function WorkspacePage() {
       if (ws.webhookToken) setWebhookToken(ws.webhookToken)
       if (ws.hubspotConnected) setHubspotConnected(true)
       if (ws.hubspotPortalId) setHubspotPortalId(ws.hubspotPortalId)
+      if (ws.attioConnected) setAttioConnected(true)
+      if (ws.attioWorkspaceId) setAttioWorkspaceId(ws.attioWorkspaceId)
       setLoading(false)
 
       if (!ws.productDescription && !ws.communicationStyle && typeof window !== "undefined") {
@@ -182,6 +186,12 @@ export default function WorkspacePage() {
     }
     const hsErr = searchParams.get("hubspot_error")
     if (hsErr) toast.error(`HubSpot connection failed: ${hsErr}`)
+    if (searchParams.get("attio_connected") === "1") {
+      toast.success("Attio connected — risk signals will now sync automatically")
+      setAttioConnected(true)
+    }
+    const attioErr = searchParams.get("attio_error")
+    if (attioErr) toast.error(`Attio connection failed: ${attioErr}`)
   }, [searchParams])
 
   const handleHubSpotConnect = async () => {
@@ -206,6 +216,33 @@ export default function WorkspacePage() {
       setHubspotConnected(false)
       setHubspotPortalId(null)
       toast.success("HubSpot disconnected")
+    } catch {
+      toast.error("Disconnect failed — try again")
+    }
+  }
+
+  const handleAttioConnect = async () => {
+    if (!user) return
+    try {
+      const token = await auth.currentUser?.getIdToken()
+      if (!token) return
+      window.location.href = `/api/integrations/attio/connect?token=${encodeURIComponent(token)}`
+    } catch {
+      toast.error("Couldn't start Attio connection")
+    }
+  }
+
+  const handleAttioDisconnect = async () => {
+    if (!user) return
+    try {
+      const token = await auth.currentUser?.getIdToken()
+      await fetch("/api/integrations/attio/disconnect", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      setAttioConnected(false)
+      setAttioWorkspaceId(null)
+      toast.success("Attio disconnected")
     } catch {
       toast.error("Disconnect failed — try again")
     }
@@ -584,105 +621,20 @@ export default function WorkspacePage() {
 
       <main className="max-w-2xl mx-auto px-4 sm:px-6 py-8 pb-24 sm:pb-12">
 
-        {/* Header + calibration state */}
-        <div className="mb-8">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h1 className="text-xl font-semibold text-neutral-900">Product Intelligence</h1>
-              <p className="text-sm text-neutral-500 mt-1 leading-relaxed max-w-md">
-                Every field below is injected into each analysis, brief, and PM chat. The more specific you are, the more your AI thinks like someone who actually knows your product.
-              </p>
-            </div>
-            <button
-              onClick={openWizard}
-              className="text-xs text-neutral-400 hover:text-neutral-700 transition-colors whitespace-nowrap shrink-0 mt-1"
-            >
-              Setup guide
-            </button>
+        {/* Page header */}
+        <div className="mb-8 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-xl font-semibold text-neutral-900">Workspace settings</h1>
+            <p className="text-sm text-neutral-500 mt-1 leading-relaxed max-w-md">
+              Configure how Nectic understands your product, sounds when it drafts, and where it sends data.
+            </p>
           </div>
-
-          {/* Calibration bar */}
-          {!loading && (
-            <div className="mt-5 bg-white border border-neutral-200 rounded-xl px-5 py-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${completionPct === 100 ? "bg-emerald-500" : completionPct > 0 ? "bg-amber-400" : "bg-neutral-300"}`} />
-                  <span className={`text-sm font-semibold ${qualityColor}`}>{qualityLabel}</span>
-                </div>
-                <span className="text-xs text-neutral-400">{filledCount} / {FIELDS.length} fields</span>
-              </div>
-              <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all duration-500 ${completionPct === 100 ? "bg-emerald-500" : completionPct >= 50 ? "bg-amber-400" : "bg-neutral-300"}`}
-                  style={{ width: `${completionPct}%` }}
-                />
-              </div>
-              {completionPct < 100 && (
-                <p className="text-xs text-neutral-400 mt-2.5">
-                  {completionPct === 0
-                    ? "Fill in your product context to unlock higher-quality analysis."
-                    : `${FIELDS.length - filledCount} field${FIELDS.length - filledCount !== 1 ? "s" : ""} remaining — each one improves signal accuracy.`}
-                </p>
-              )}
-              {completionPct === 100 && (
-                <p className="text-xs text-emerald-600 mt-2.5 font-medium">
-                  All context loaded — your AI has full product awareness.
-                </p>
-              )}
-              {completionPct < 100 && completionPct === 0 && (
-                <div className="mt-3 pt-3 border-t border-neutral-100">
-                  <p className="text-xs text-neutral-500 font-medium mb-2">Quick setup — auto-fill from your website</p>
-                  {autofill.phase === "idle" || autofill.phase === "error" ? (
-                    <div className="flex gap-2">
-                      <input
-                        type="url"
-                        value={autofillUrl}
-                        onChange={(e) => setAutofillUrl(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === "Enter") handleAutofill() }}
-                        placeholder="https://yourproduct.com"
-                        className="flex-1 text-xs border border-neutral-200 rounded-lg px-3 py-2 text-neutral-700 placeholder:text-neutral-300 focus:outline-none focus:border-neutral-400 bg-white"
-                      />
-                      <button
-                        onClick={handleAutofill}
-                        disabled={!autofillUrl.trim()}
-                        className="text-xs font-medium px-3 py-2 bg-neutral-900 text-white rounded-lg hover:bg-neutral-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
-                      >
-                        Auto-fill
-                      </button>
-                    </div>
-                  ) : autofill.phase === "loading" ? (
-                    <div className="flex items-center gap-2 text-xs text-neutral-400 py-1">
-                      <span className="w-3 h-3 border border-neutral-300 border-t-neutral-600 rounded-full animate-spin" />
-                      Fetching your site…
-                    </div>
-                  ) : autofill.phase === "review" ? (
-                    <div className="space-y-2">
-                      <p className="text-[11px] text-neutral-500">Extracted from <span className="font-medium text-neutral-700">{autofill.source}</span> — review before applying:</p>
-                      {autofill.productDescription && (
-                        <div className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
-                          <p className="text-[10px] font-medium text-blue-600 mb-1">Product description</p>
-                          <p className="text-xs text-neutral-700 leading-relaxed">{autofill.productDescription}</p>
-                        </div>
-                      )}
-                      {autofill.featureAreas && (
-                        <div className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
-                          <p className="text-[10px] font-medium text-blue-600 mb-1">Feature areas</p>
-                          <p className="text-xs text-neutral-700">{autofill.featureAreas}</p>
-                        </div>
-                      )}
-                      <div className="flex items-center gap-2 pt-1">
-                        <button onClick={applyAutofill} className="text-xs font-medium px-3 py-1.5 bg-neutral-900 text-white rounded-lg hover:bg-neutral-700 transition-colors">Apply suggestions</button>
-                        <button onClick={() => setAutofill({ phase: "idle" })} className="text-xs text-neutral-400 hover:text-neutral-600 transition-colors">Dismiss</button>
-                      </div>
-                    </div>
-                  ) : null}
-                  {autofill.phase === "error" && (
-                    <p className="text-xs text-red-500 mt-1.5">{autofill.message}</p>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
+          <button
+            onClick={openWizard}
+            className="text-xs text-neutral-400 hover:text-neutral-700 transition-colors whitespace-nowrap shrink-0 mt-1"
+          >
+            Setup guide
+          </button>
         </div>
 
         {loading ? (
@@ -690,36 +642,104 @@ export default function WorkspacePage() {
             <div className="w-5 h-5 border-2 border-neutral-300 border-t-neutral-900 rounded-full animate-spin" />
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-10">
 
-            {/* ── Alerts & digest section ────────────────────────────────── */}
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <h2 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Alerts &amp; Digest</h2>
+            {/* ── 1. Agent Intelligence ─────────────────────────────────── */}
+            <section>
+              <div className="flex items-center gap-3 mb-1">
+                <h2 className="text-sm font-semibold text-neutral-900">Agent Intelligence</h2>
                 <div className="flex-1 h-px bg-neutral-200" />
+                <button onClick={openWizard} className="text-[11px] text-neutral-400 hover:text-neutral-600 transition-colors shrink-0">Setup guide</button>
+              </div>
+              <p className="text-xs text-neutral-400 mb-4 leading-relaxed">
+                Everything here is injected into every analysis and AI draft. The more specific you are, the more Nectic thinks like someone who actually knows your product.
+              </p>
+
+              {/* Calibration bar */}
+              <div className="bg-white border border-neutral-200 rounded-xl px-5 py-4 mb-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${completionPct === 100 ? "bg-emerald-500" : completionPct > 0 ? "bg-amber-400" : "bg-neutral-300"}`} />
+                    <span className={`text-sm font-semibold ${qualityColor}`}>{qualityLabel}</span>
+                  </div>
+                  <span className="text-xs text-neutral-400">{filledCount} / {FIELDS.length} fields filled</span>
+                </div>
+                <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${completionPct === 100 ? "bg-emerald-500" : completionPct >= 50 ? "bg-amber-400" : "bg-neutral-300"}`}
+                    style={{ width: `${Math.max(completionPct, 4)}%` }}
+                  />
+                </div>
+                {completionPct === 100 ? (
+                  <p className="text-xs text-emerald-600 mt-2.5 font-medium">All context loaded — your agent has full product awareness.</p>
+                ) : (
+                  <p className="text-xs text-neutral-400 mt-2.5">
+                    {completionPct === 0 ? "Fill in your product context to unlock higher-quality analysis." : `${FIELDS.length - filledCount} field${FIELDS.length - filledCount !== 1 ? "s" : ""} remaining — each one improves signal accuracy.`}
+                  </p>
+                )}
+
+                {/* Autofill widget — only when empty */}
+                {completionPct === 0 && (
+                  <div className="mt-3 pt-3 border-t border-neutral-100">
+                    <p className="text-xs text-neutral-500 font-medium mb-2">Quick setup — auto-fill from your website</p>
+                    {autofill.phase === "idle" || autofill.phase === "error" ? (
+                      <div className="flex gap-2">
+                        <input
+                          type="url"
+                          value={autofillUrl}
+                          onChange={(e) => setAutofillUrl(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter") handleAutofill() }}
+                          placeholder="https://yourproduct.com"
+                          className="flex-1 text-xs border border-neutral-200 rounded-lg px-3 py-2 text-neutral-700 placeholder:text-neutral-300 focus:outline-none focus:border-neutral-400 bg-white"
+                        />
+                        <button onClick={handleAutofill} disabled={!autofillUrl.trim()} className="text-xs font-medium px-3 py-2 bg-neutral-900 text-white rounded-lg hover:bg-neutral-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap">
+                          Auto-fill
+                        </button>
+                      </div>
+                    ) : autofill.phase === "loading" ? (
+                      <div className="flex items-center gap-2 text-xs text-neutral-400 py-1">
+                        <span className="w-3 h-3 border border-neutral-300 border-t-neutral-600 rounded-full animate-spin" />Fetching your site…
+                      </div>
+                    ) : autofill.phase === "review" ? (
+                      <div className="space-y-2">
+                        <p className="text-[11px] text-neutral-500">Extracted from <span className="font-medium text-neutral-700">{autofill.source}</span> — review before applying:</p>
+                        {autofill.productDescription && (
+                          <div className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+                            <p className="text-[10px] font-medium text-blue-600 mb-1">Product description</p>
+                            <p className="text-xs text-neutral-700 leading-relaxed">{autofill.productDescription}</p>
+                          </div>
+                        )}
+                        {autofill.featureAreas && (
+                          <div className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+                            <p className="text-[10px] font-medium text-blue-600 mb-1">Feature areas</p>
+                            <p className="text-xs text-neutral-700">{autofill.featureAreas}</p>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2 pt-1">
+                          <button onClick={applyAutofill} className="text-xs font-medium px-3 py-1.5 bg-neutral-900 text-white rounded-lg hover:bg-neutral-700 transition-colors">Apply suggestions</button>
+                          <button onClick={() => setAutofill({ phase: "idle" })} className="text-xs text-neutral-400 hover:text-neutral-600 transition-colors">Dismiss</button>
+                        </div>
+                      </div>
+                    ) : null}
+                    {autofill.phase === "error" && <p className="text-xs text-red-500 mt-1.5">{autofill.message}</p>}
+                  </div>
+                )}
               </div>
 
-              <AlertPreferencesCard form={form} handleChange={handleChange} />
-
-              <SignalFiltersCard form={form} handleChange={handleChange} />
-
-              {/* Product story */}
-              <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden mb-4 mt-4">
+              {/* Product story — one-line pitch, injected into every draft */}
+              <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden mb-4">
                 <div className="flex items-center gap-3 px-5 pt-4 pb-3 border-b border-neutral-100">
-                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors ${form.productStory?.trim() ? "bg-neutral-900 text-white" : "bg-neutral-100 text-neutral-400"}`}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${form.productStory?.trim() ? "bg-neutral-900 text-white" : "bg-neutral-100 text-neutral-400"}`}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
                   </div>
                   <div className="flex-1 min-w-0">
                     <span className="text-xs font-medium text-neutral-400 uppercase tracking-wide">Company story</span>
                     <p className="text-sm font-semibold text-neutral-800 leading-tight">One-line pitch</p>
                   </div>
-                  <div className="shrink-0 hidden sm:flex items-center gap-1 text-[10px] text-neutral-400 bg-neutral-50 border border-neutral-100 px-2 py-1 rounded-md">
-                    <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M8 1l2 5h5l-4 3 1.5 5L8 11l-4.5 3L5 9 1 6h5z" fill="currentColor" opacity="0.5"/></svg>
-                    <span>Injected into every AI draft</span>
-                  </div>
+                  <span className="text-[10px] text-neutral-400 bg-neutral-50 border border-neutral-100 px-2 py-1 rounded hidden sm:block">In every draft</span>
                 </div>
                 <div className="px-5 pt-3 pb-4">
-                  <p className="text-xs text-neutral-400 mb-2 leading-relaxed">One sentence. &quot;We help [who] do [what].&quot; This is injected into every WhatsApp draft so responses sound like they come from your company.</p>
+                  <p className="text-xs text-neutral-400 mb-2 leading-relaxed">"We help [who] do [what]." Injected into every WhatsApp draft so responses sound like they come from your company, not a generic AI.</p>
                   <input
                     type="text"
                     value={form.productStory ?? ""}
@@ -730,43 +750,60 @@ export default function WorkspacePage() {
                 </div>
               </div>
 
-              <NotificationEmailCard form={form} handleChange={handleChange} user={user} />
-            </div>
-
-            {/* ── Live integration section ──────────────────────────────── */}
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <h2 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Live Integration</h2>
-                <div className="flex-1 h-px bg-neutral-200" />
+              {/* Product context fields */}
+              <div className="space-y-4">
+                {FIELDS.map((field, i) => {
+                  const isFilled = !!(form[field.key] as string)?.trim()
+                  return (
+                    <div key={field.key} className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
+                      <div className="flex items-center gap-3 px-5 pt-4 pb-3 border-b border-neutral-100">
+                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors ${isFilled ? "bg-neutral-900 text-white" : "bg-neutral-100 text-neutral-400"}`}>
+                          {field.icon}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-medium text-neutral-400 uppercase tracking-wide">{i + 1} · {field.sublabel}</span>
+                            {isFilled && <svg width="12" height="12" viewBox="0 0 16 16" fill="none" className="text-emerald-500 shrink-0"><polyline points="2 8 6 12 14 4" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                          </div>
+                          <p className="text-sm font-semibold text-neutral-800 leading-tight">{field.label}</p>
+                        </div>
+                        <div className="shrink-0 hidden sm:flex items-center gap-1 text-[10px] text-neutral-400 bg-neutral-50 border border-neutral-100 px-2 py-1 rounded-md max-w-[160px]">
+                          <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M8 1l2 5h5l-4 3 1.5 5L8 11l-4.5 3L5 9 1 6h5z" fill="currentColor" opacity="0.5"/></svg>
+                          <span className="truncate">{field.unlocks}</span>
+                        </div>
+                      </div>
+                      {field.key === "roadmapFocus" && isFilled && isRoadmapStale(workspaceUpdatedAt) && (
+                        <div className="mx-5 mt-3">
+                          <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-amber-500 mt-0.5 shrink-0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                            <p className="text-xs text-amber-800 leading-relaxed">Last updated in <span className="font-semibold">{getQuarterLabel(new Date(workspaceUpdatedAt!))}</span>. A new quarter has started — is this roadmap still current?</p>
+                          </div>
+                        </div>
+                      )}
+                      <div className="px-5 pt-3 pb-4">
+                        <p className="text-xs text-neutral-400 mb-2 leading-relaxed">{field.hint}</p>
+                        <textarea
+                          value={(form[field.key] as string) ?? ""}
+                          onChange={(e) => handleChange(field.key, e.target.value)}
+                          placeholder={field.placeholder}
+                          rows={field.rows}
+                          className="w-full text-sm border border-neutral-200 rounded-lg px-4 py-3 text-neutral-700 placeholder:text-neutral-300 focus:outline-none focus:border-neutral-400 bg-neutral-50 resize-none leading-relaxed transition-colors"
+                        />
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
-              <WatiWebhookCard webhookToken={webhookToken} />
-            </div>
+            </section>
 
-            {/* ── CRM integrations section ──────────────────────────────── */}
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <h2 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">CRM Integrations</h2>
+            {/* ── 2. Agent Voice ────────────────────────────────────────── */}
+            <section>
+              <div className="flex items-center gap-3 mb-1">
+                <h2 className="text-sm font-semibold text-neutral-900">Agent Voice</h2>
                 <div className="flex-1 h-px bg-neutral-200" />
               </div>
               <p className="text-xs text-neutral-400 mb-4 leading-relaxed">
-                When Nectic detects a critical or high-risk signal, it writes structured data directly to your CRM — making WhatsApp a first-class signal source alongside your other customer data.
-              </p>
-              <HubSpotCard
-                connected={hubspotConnected}
-                portalId={hubspotPortalId}
-                onConnect={handleHubSpotConnect}
-                onDisconnect={handleHubSpotDisconnect}
-              />
-            </div>
-
-            {/* ── Communication voice section ───────────────────────────── */}
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <h2 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Communication Voice</h2>
-                <div className="flex-1 h-px bg-neutral-200" />
-              </div>
-              <p className="text-xs text-neutral-400 mb-4 leading-relaxed">
-                Tell Nectic how your team writes. Every WhatsApp draft will match your voice — not a generic AI voice.
+                Tell Nectic how your team writes. Every WhatsApp draft will sound like your team — not a generic AI.
               </p>
 
               {/* CSM persona name */}
@@ -779,10 +816,7 @@ export default function WorkspacePage() {
                     <span className="text-xs font-medium text-neutral-400 uppercase tracking-wide">Who is writing</span>
                     <p className="text-sm font-semibold text-neutral-800 leading-tight">CSM name</p>
                   </div>
-                  <div className="shrink-0 hidden sm:flex items-center gap-1 text-[10px] text-neutral-400 bg-neutral-50 border border-neutral-100 px-2 py-1 rounded-md">
-                    <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M8 1l2 5h5l-4 3 1.5 5L8 11l-4.5 3L5 9 1 6h5z" fill="currentColor" opacity="0.5"/></svg>
-                    <span>Signs every draft</span>
-                  </div>
+                  <span className="text-[10px] text-neutral-400 bg-neutral-50 border border-neutral-100 px-2 py-1 rounded hidden sm:block">Signs every draft</span>
                 </div>
                 <div className="px-5 pt-3 pb-4">
                   <p className="text-xs text-neutral-400 mb-2 leading-relaxed">First name or name + role. Drafts will be written as this person — not an anonymous CS manager.</p>
@@ -858,68 +892,109 @@ export default function WorkspacePage() {
                   />
                 </div>
               </div>
-            </div>
+            </section>
 
-            {/* ── Product intelligence section ──────────────────────────── */}
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <h2 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Product Intelligence</h2>
+            {/* ── 3. Alerts ─────────────────────────────────────────────── */}
+            <section>
+              <div className="flex items-center gap-3 mb-1">
+                <h2 className="text-sm font-semibold text-neutral-900">Alerts</h2>
                 <div className="flex-1 h-px bg-neutral-200" />
               </div>
+              <p className="text-xs text-neutral-400 mb-4 leading-relaxed">
+                Control when Nectic notifies you and which signal types matter to your team.
+              </p>
+              <AlertPreferencesCard form={form} handleChange={handleChange} />
+              <NotificationEmailCard form={form} handleChange={handleChange} user={user} />
+              <div className="mt-4">
+                <SignalFiltersCard form={form} handleChange={handleChange} />
+              </div>
+            </section>
 
-              <div className="space-y-4">
-                {FIELDS.map((field, i) => {
-                  const isFilled = !!(form[field.key] as string)?.trim()
-                  return (
-                    <div
-                      key={field.key}
-                      className={`bg-white border rounded-xl overflow-hidden transition-all duration-200 ${isFilled ? "border-neutral-200 shadow-sm" : "border-neutral-200"}`}
-                    >
-                      <div className="flex items-center gap-3 px-5 pt-4 pb-3 border-b border-neutral-100">
-                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors ${isFilled ? "bg-neutral-900 text-white" : "bg-neutral-100 text-neutral-400"}`}>
-                          {field.icon}
+            {/* ── 4. Connections ────────────────────────────────────────── */}
+            <section>
+              <div className="flex items-center gap-3 mb-1">
+                <h2 className="text-sm font-semibold text-neutral-900">Connections</h2>
+                <div className="flex-1 h-px bg-neutral-200" />
+              </div>
+              <p className="text-xs text-neutral-400 mb-4 leading-relaxed">
+                Connect your data sources and CRMs. Nectic writes WhatsApp signals into your existing tools — no manual data entry.
+              </p>
+
+              {/* WATI live */}
+              <WatiWebhookCard webhookToken={webhookToken} />
+
+              {/* Active CRM integrations */}
+              <div className="mt-2 space-y-3">
+                <HubSpotCard
+                  connected={hubspotConnected}
+                  portalId={hubspotPortalId}
+                  onConnect={handleHubSpotConnect}
+                  onDisconnect={handleHubSpotDisconnect}
+                />
+                <AttioCard
+                  connected={attioConnected}
+                  workspaceId={attioWorkspaceId}
+                  onConnect={handleAttioConnect}
+                  onDisconnect={handleAttioDisconnect}
+                />
+              </div>
+
+              {/* Coming soon integrations */}
+              <div className="mt-6">
+                <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-3">Coming soon</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {[
+                    {
+                      name: "Salesforce",
+                      desc: "Write signals to opportunity and account records",
+                      icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-blue-500"><path d="M10.757 2.93a5.97 5.97 0 013.985 0 5.97 5.97 0 012.87 2.178 5.97 5.97 0 011.047 3.349 6.03 6.03 0 01-.52 2.415 5.03 5.03 0 012.027 1.655 5.03 5.03 0 01.833 2.838 5.04 5.04 0 01-1.484 3.548 5.04 5.04 0 01-3.55 1.472 5.04 5.04 0 01-1.943-.388 4.44 4.44 0 01-2.022 1.497 4.44 4.44 0 01-2.502.165 4.44 4.44 0 01-2.186-1.138 5.97 5.97 0 01-2.628.095 5.97 5.97 0 01-2.376-1.048 5.97 5.97 0 01-1.617-1.898A5.97 5.97 0 01.5 15.27a5.99 5.99 0 01.936-3.233 5.99 5.99 0 012.524-2.122 5.01 5.01 0 01-.218-1.463 5.01 5.01 0 011.484-3.547 5.01 5.01 0 013.549-1.472 5 5 0 011.982.407z"/></svg>,
+                    },
+                    {
+                      name: "Pipedrive",
+                      desc: "Update deal health and add signal notes",
+                      icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="text-green-600"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>,
+                    },
+                    {
+                      name: "Planhat",
+                      desc: "Push health scores and signal events to CS platform",
+                      icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="text-indigo-500"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>,
+                    },
+                    {
+                      name: "Slack",
+                      desc: "Alert your CS channel when a critical signal fires",
+                      icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="text-purple-500"><path d="M14.5 10c-.83 0-1.5-.67-1.5-1.5v-5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5z"/><path d="M20.5 10H19V8.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/><path d="M9.5 14c.83 0 1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5S8 21.33 8 20.5v-5c0-.83.67-1.5 1.5-1.5z"/><path d="M3.5 14H5v1.5c0 .83-.67 1.5-1.5 1.5S2 16.33 2 15.5 2.67 14 3.5 14z"/><path d="M14 14.5c0-.83.67-1.5 1.5-1.5h5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5h-5c-.83 0-1.5-.67-1.5-1.5z"/><path d="M15.5 19H14v1.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5-.67-1.5-1.5-1.5z"/><path d="M10 9.5C10 8.67 9.33 8 8.5 8H3.5C2.67 8 2 8.67 2 9.5S2.67 11 3.5 11h5c.83 0 1.5-.67 1.5-1.5z"/><path d="M8.5 5H10V3.5C10 2.67 9.33 2 8.5 2S7 2.67 7 3.5 7.67 5 8.5 5z"/></svg>,
+                    },
+                    {
+                      name: "Linear",
+                      desc: "Auto-create issues from product signals",
+                      icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="text-violet-500"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>,
+                    },
+                    {
+                      name: "Freshdesk",
+                      desc: "Log signals as support tickets automatically",
+                      icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="text-teal-500"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>,
+                    },
+                  ].map((item) => (
+                    <div key={item.name} className="bg-white border border-neutral-200 rounded-xl px-4 py-3.5 flex flex-col gap-2 opacity-70">
+                      <div className="flex items-center justify-between">
+                        <div className="w-7 h-7 rounded-lg bg-neutral-50 border border-neutral-100 flex items-center justify-center">
+                          {item.icon}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-medium text-neutral-400 uppercase tracking-wide">{i + 1} · {field.sublabel}</span>
-                            {isFilled && (
-                              <svg width="12" height="12" viewBox="0 0 16 16" fill="none" className="text-emerald-500 shrink-0"><polyline points="2 8 6 12 14 4" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                            )}
-                          </div>
-                          <p className="text-sm font-semibold text-neutral-800 leading-tight">{field.label}</p>
-                        </div>
-                        <div className="shrink-0 hidden sm:flex items-center gap-1 text-[10px] text-neutral-400 bg-neutral-50 border border-neutral-100 px-2 py-1 rounded-md max-w-[160px]">
-                          <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M8 1l2 5h5l-4 3 1.5 5L8 11l-4.5 3L5 9 1 6h5z" fill="currentColor" opacity="0.5"/></svg>
-                          <span className="truncate">{field.unlocks}</span>
-                        </div>
+                        <span className="text-[10px] font-semibold text-neutral-400 bg-neutral-100 px-1.5 py-0.5 rounded">Soon</span>
                       </div>
-
-                      {field.key === "roadmapFocus" && isFilled && isRoadmapStale(workspaceUpdatedAt) && (
-                        <div className="mx-5 mt-3">
-                          <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-amber-500 mt-0.5 shrink-0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                            <p className="text-xs text-amber-800 leading-relaxed">
-                              Last updated in <span className="font-semibold">{getQuarterLabel(new Date(workspaceUpdatedAt!))}</span>. A new quarter has started — is this roadmap still current?
-                            </p>
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="px-5 pt-3 pb-4">
-                        <p className="text-xs text-neutral-400 mb-2 leading-relaxed">{field.hint}</p>
-                        <textarea
-                          value={(form[field.key] as string) ?? ""}
-                          onChange={(e) => handleChange(field.key, e.target.value)}
-                          placeholder={field.placeholder}
-                          rows={field.rows}
-                          className="w-full text-sm border border-neutral-200 rounded-lg px-4 py-3 text-neutral-700 placeholder:text-neutral-300 focus:outline-none focus:border-neutral-400 bg-neutral-50 resize-none leading-relaxed transition-colors"
-                        />
+                      <div>
+                        <p className="text-xs font-semibold text-neutral-700">{item.name}</p>
+                        <p className="text-[11px] text-neutral-400 leading-relaxed mt-0.5">{item.desc}</p>
                       </div>
                     </div>
-                  )
-                })}
+                  ))}
+                </div>
+                <p className="text-[11px] text-neutral-400 mt-3 text-center">
+                  Want an integration prioritised?{" "}
+                  <a href="mailto:hello@nectic.xyz" className="underline hover:text-neutral-600 transition-colors">Tell us →</a>
+                </p>
               </div>
-            </div>
+            </section>
 
             <p className="text-xs text-neutral-400 text-center pt-2">
               Changes save automatically · context applies to all future analyses
@@ -1400,6 +1475,109 @@ function HubSpotCard({
                 <path d="M18.164 7.93V5.084a2.198 2.198 0 10-2.234 0V7.93a6.249 6.249 0 00-3.056 1.658L7.32 6.146a2.462 2.462 0 10-.912 1.498l5.427 3.359a6.25 6.25 0 000 4.995l-5.427 3.359a2.462 2.462 0 10.912 1.498l5.554-3.443a6.25 6.25 0 109.29-9.482zm-1.117 9.32a3.746 3.746 0 110-7.492 3.746 3.746 0 010 7.492z"/>
               </svg>
               Connect HubSpot
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─── Attio Integration Card ───────────────────────────────────────────────────
+
+function AttioCard({
+  connected,
+  workspaceId,
+  onConnect,
+  onDisconnect,
+}: {
+  connected: boolean
+  workspaceId: string | null
+  onConnect: () => void
+  onDisconnect: () => void
+}) {
+  const [confirming, setConfirming] = useState(false)
+
+  const FIELDS_WRITTEN = [
+    { name: "nectic_risk_level", desc: "critical / high / medium / low" },
+    { name: "nectic_signal_summary", desc: "Top signal title from WhatsApp analysis" },
+    { name: "nectic_health_score", desc: "0–10 account health score" },
+    { name: "nectic_arr_at_risk", desc: "Estimated ARR at risk (USD)" },
+    { name: "nectic_last_signal_date", desc: "Date of last detected signal" },
+  ]
+
+  return (
+    <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
+      <div className="flex items-center gap-3 px-5 pt-4 pb-3 border-b border-neutral-100">
+        <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors ${connected ? "bg-neutral-900" : "bg-neutral-100"}`}>
+          {/* Attio wordmark-style A */}
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className={connected ? "text-white" : "text-neutral-400"}>
+            <path d="M12 2L2 19h20L12 2z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
+            <line x1="7" y1="14" x2="17" y2="14" stroke="currentColor" strokeWidth="2"/>
+          </svg>
+        </div>
+        <div className="flex-1 min-w-0">
+          <span className="text-xs font-medium text-neutral-400 uppercase tracking-wide">CRM sync</span>
+          <p className="text-sm font-semibold text-neutral-800 leading-tight">Attio</p>
+        </div>
+        {connected ? (
+          <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded flex-shrink-0">Connected</span>
+        ) : (
+          <span className="text-[10px] font-medium text-neutral-400 bg-neutral-50 border border-neutral-200 px-2 py-1 rounded flex-shrink-0">Not connected</span>
+        )}
+      </div>
+
+      <div className="px-5 pt-4 pb-5">
+        {connected ? (
+          <div className="space-y-4">
+            {workspaceId && (
+              <p className="text-xs text-neutral-500">Workspace <span className="font-mono font-semibold text-neutral-700">{workspaceId}</span></p>
+            )}
+            <div>
+              <p className="text-xs font-semibold text-neutral-700 mb-2">Attributes Nectic writes to your company records:</p>
+              <div className="space-y-1.5">
+                {FIELDS_WRITTEN.map((f) => (
+                  <div key={f.name} className="flex items-start gap-2">
+                    <span className="font-mono text-[10px] bg-neutral-100 text-neutral-600 px-1.5 py-0.5 rounded flex-shrink-0 mt-0.5">{f.name}</span>
+                    <span className="text-xs text-neutral-500">{f.desc}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {!confirming ? (
+              <button onClick={() => setConfirming(true)} className="text-xs text-neutral-400 hover:text-red-600 transition-colors">
+                Disconnect Attio
+              </button>
+            ) : (
+              <div className="flex items-center gap-3">
+                <p className="text-xs text-neutral-600">Disconnect and stop syncing?</p>
+                <button onClick={onDisconnect} className="text-xs font-semibold text-red-600 hover:text-red-800 transition-colors">Disconnect</button>
+                <button onClick={() => setConfirming(false)} className="text-xs text-neutral-400 hover:text-neutral-700 transition-colors">Cancel</button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <p className="text-xs text-neutral-500 leading-relaxed">
+              Connect Attio to make WhatsApp signals visible in your CRM. Nectic automatically updates matching company records when it detects critical or high-risk signals.
+            </p>
+            <div className="bg-neutral-50 border border-neutral-200 rounded-lg p-3 space-y-1.5">
+              {FIELDS_WRITTEN.map((f) => (
+                <div key={f.name} className="flex items-start gap-2">
+                  <span className="font-mono text-[10px] bg-white text-neutral-600 px-1.5 py-0.5 rounded border border-neutral-200 flex-shrink-0 mt-0.5">{f.name}</span>
+                  <span className="text-xs text-neutral-400">{f.desc}</span>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={onConnect}
+              className="flex items-center gap-2 bg-neutral-900 text-white text-xs font-semibold px-4 py-2.5 rounded-lg hover:bg-neutral-700 transition-colors"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                <path d="M12 2L2 19h20L12 2z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
+                <line x1="7" y1="14" x2="17" y2="14" stroke="currentColor" strokeWidth="2"/>
+              </svg>
+              Connect Attio
             </button>
           </div>
         )}
