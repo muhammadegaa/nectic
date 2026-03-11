@@ -2,11 +2,20 @@
 
 export type SignalActionStatus = "open" | "in_progress" | "done" | "dismissed"
 
+// Why a signal was marked done — feeds the closed feedback loop
+export type ResolvedReason =
+  | "customer_confirmed"  // customer said issue resolved
+  | "issue_fixed"         // we shipped the fix
+  | "workaround_given"    // gave customer a workaround
+  | "false_positive"      // agent was wrong, not a real risk
+  | "no_action_needed"    // signal existed but needed no response
+
 export interface SignalAction {
   status: SignalActionStatus
   note?: string
   draftResponse?: string
   resolvedAt?: string
+  resolvedReason?: ResolvedReason
   updatedAt: string
 }
 
@@ -38,7 +47,8 @@ export function buildSignalActionsBlock(
     const match = allSignals.find((s) => signalKey(s.type, s.title) === key)
     const label = match ? `[${match.type}] "${match.title}"` : `[signal] ${key}`
     const notePart = action.note ? `. Note: "${action.note}"` : ""
-    lines.push(`- ${label} → Status: ${action.status}${notePart}`)
+    const reasonPart = action.resolvedReason ? ` [reason: ${action.resolvedReason}]` : ""
+    lines.push(`- ${label} → Status: ${action.status}${reasonPart}${notePart}`)
   }
   if (!lines.length) return ""
   return `\nPRIOR ACTIONS ON SIGNALS:\n${lines.join("\n")}\n`

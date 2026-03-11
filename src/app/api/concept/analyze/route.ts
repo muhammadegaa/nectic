@@ -89,8 +89,10 @@ const USER_PROMPT = (
   "riskSignals": [
     {
       "title": "<write this like a sharp colleague flagging it in Slack — name the actual situation, not a category. BAD: 'engagement below threshold' / 'delivery issue causing frustration'. GOOD: 'hasn't logged in since the integration broke' / 'waiting 2 weeks for refund with no update' / 'went quiet after we missed the go-live date'. Max 8 words. Be specific.>",
-      "quote": "<exact quote from a customer-side participant>",
-      "explanation": "<why this is a risk signal — 1-2 sentences>",
+      "quote": "<the single most important exact quote from a customer-side participant>",
+      "evidence": ["<second supporting quote if present>", "<third supporting quote if present — omit if fewer than 2 additional quotes>"],
+      "explanation": "<why this is a risk signal — 1-2 sentences connecting the evidence to the risk conclusion>",
+      "confidenceLevel": "high" | "medium" | "low",
       "severity": "low" | "medium" | "high",
       "date": "<date from conversation>",
       "suggestedActions": [
@@ -108,6 +110,7 @@ const USER_PROMPT = (
       "title": "<the Jira ticket title a PM would actually write — name the specific failure or request, not the category. BAD: 'API performance issue' / 'user management complaint'. GOOD: 'bulk export times out on files over 50 rows' / 'can't reassign tasks without losing history'. Max 8 words.>",
       "problemStatement": "<the underlying customer problem in one sentence, not the feature request itself>",
       "quote": "<exact quote from a customer-side participant>",
+      "confidenceLevel": "high" | "medium" | "low",
       "priority": "low" | "medium" | "high",
       "pmAction": "<what the PM should do with this>",
       "suggestedActions": [
@@ -146,7 +149,9 @@ const USER_PROMPT = (
 
 For suggestedActions: generate 2–3 steps per signal. Each step must be a specific, executable task (not generic like "review the issue" or "follow up"). Owner must match the action (CS for relationship/communication tasks, PM for product decisions, Engineering for technical fixes, Sales for commercial ones). Timeline must match severity/urgency.
 
-Confidence rules: high = 50+ messages with clear customer voice; medium = 20-49 messages OR ambiguous signals OR uncertain participant roles; low = under 20 messages OR mostly vendor-side OR very short date range.
+Confidence rules (overall): high = 50+ messages with clear customer voice; medium = 20-49 messages OR ambiguous signals OR uncertain participant roles; low = under 20 messages OR mostly vendor-side OR very short date range.
+
+Per-signal confidenceLevel: set "high" if the signal is supported by 2+ direct customer quotes or explicit statements. Set "medium" if inferred from tone, indirect language, or a single message. Set "low" if the signal is speculative or based on absence of response rather than direct evidence. This can differ from the overall analysisQuality.confidence.
 
 CONVERSATION:
 ${conversation}`
@@ -164,8 +169,8 @@ export interface AnalysisResult {
   riskLevel: "low" | "medium" | "high" | "critical"
   summary: string
   sentimentTrend: "improving" | "stable" | "declining"
-  riskSignals: { title?: string; quote: string; explanation: string; severity: string; date: string; suggestedActions?: SuggestedAction[] }[]
-  productSignals: { type: string; title: string; problemStatement?: string; quote: string; priority: string; pmAction: string; suggestedActions?: SuggestedAction[] }[]
+  riskSignals: { title?: string; quote: string; evidence?: string[]; explanation: string; confidenceLevel?: "high" | "medium" | "low"; severity: string; date: string; suggestedActions?: SuggestedAction[] }[]
+  productSignals: { type: string; title: string; problemStatement?: string; quote: string; confidenceLevel?: "high" | "medium" | "low"; priority: string; pmAction: string; suggestedActions?: SuggestedAction[] }[]
   relationshipSignals: { observation: string; implication: string }[]
   competitorMentions: string[]
   recommendedAction: { what: string; owner: string; urgency: string }

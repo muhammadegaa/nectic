@@ -6,7 +6,8 @@ import Link from "next/link"
 import LogoIcon from "@/components/logo-icon"
 import { HealthSparkline } from "@/components/health-sparkline"
 import { useAuth } from "@/contexts/auth-context"
-import { getAccount, deleteAccount, updateAccount, prefillFromContactBook, mergeContactBook, saveSignalAction, signalKey, getWorkspace, type StoredAccount, type ParticipantRole, type ParticipantRoles, type SignalAction, type SignalActionStatus, type WorkspaceContext } from "@/lib/concept-firestore"
+import { getAccount, deleteAccount, updateAccount, prefillFromContactBook, mergeContactBook, saveSignalAction, logSaveEvent, signalKey, getWorkspace, type StoredAccount, type ParticipantRole, type ParticipantRoles, type SignalAction, type SignalActionStatus, type ResolvedReason, type SaveEvent, type WorkspaceContext } from "@/lib/concept-firestore"
+import { getAccountARR } from "@/lib/arr-utils"
 import { trackEvent } from "@/lib/posthog"
 import { parseWhatsAppFile, formatForPrompt, type WaParsed } from "@/lib/whatsapp-parser"
 import type { AnalysisResult, SuggestedAction } from "@/app/api/concept/analyze/route"
@@ -414,7 +415,33 @@ export default function AccountPage() {
               await saveSignalAction(user.uid, account.id, key, action)
               const updatedActions = { ...account.signalActions, [key]: action }
               setAccount((prev) => prev ? { ...prev, signalActions: updatedActions } : prev)
-              if (action.status === "done") {
+              if (action.status === "done" && action.resolvedReason) {
+                // Log the save event — this is the closed feedback loop
+                const currentHealth = account.result.healthScore ?? 5
+                const arrValue = getAccountARR(account)
+                // Find signal title/type from key prefix
+                const allSignals = [
+                  ...(account.result.riskSignals ?? []).map((s) => ({
+                    type: (s as { type?: string }).type ?? "risk",
+                    title: (s as { title?: string }).title || s.explanation.slice(0, 80),
+                  })),
+                  ...(account.result.productSignals ?? []).map((s) => ({ type: s.type, title: s.title })),
+                  ...(account.result.relationshipSignals ?? []).map((s) => ({ type: "relationship", title: s.observation })),
+                ]
+                const matched = allSignals.find((s) => signalKey(s.type, s.title) === key)
+                const saveEvent: SaveEvent = {
+                  signalKey: key,
+                  signalTitle: matched?.title ?? key,
+                  signalType: matched?.type ?? "risk",
+                  riskLevel: account.result.riskLevel,
+                  arrValue,
+                  resolvedAt: new Date().toISOString(),
+                  resolvedReason: action.resolvedReason,
+                  healthBefore: currentHealth,
+                }
+                logSaveEvent(user.uid, account.id, saveEvent).catch(() => {})
+              }
+              if (action.status === "done" || action.status === "dismissed") {
                 const riskKeys = (account.result.riskSignals ?? [])
                   .filter((s) => !(workspace.suppressedSignalTypes ?? []).includes((s as { type?: string }).type ?? "risk"))
                   .map((s) => {
@@ -636,13 +663,34 @@ function AnalysisReport({
               const sType = (s as { type?: string }).type ?? "risk"
               const sTitle = (s as { title?: string }).title || s.explanation.slice(0, 80)
               const key = signalKey(sType, sTitle)
+              const sigConfidence = (s as { confidenceLevel?: string }).confidenceLevel
+              const extraEvidence = (s as { evidence?: string[] }).evidence?.filter(Boolean) ?? []
               return (
                 <div key={i} className={`p-5 border-l-4 ${sev}`}>
-                  <div className="bg-neutral-50 rounded px-3 py-2 text-sm text-neutral-600 italic border border-neutral-100 mb-2">
+                  <div className="flex items-center gap-2 mb-2">
+                    {sTitle && (s as { title?: string }).title && (
+                      <p className="text-sm font-semibold text-neutral-800 flex-1">{sTitle}</p>
+                    )}
+                    {sigConfidence && sigConfidence !== "high" && (
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full border flex-shrink-0 ${sigConfidence === "low" ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-neutral-100 text-neutral-500 border-neutral-200"}`}>
+                        {sigConfidence === "low" ? "Low confidence" : "Medium confidence"}
+                      </span>
+                    )}
+                  </div>
+                  <div className="bg-neutral-50 rounded px-3 py-2 text-sm text-neutral-600 italic border border-neutral-100 mb-1">
                     &ldquo;{s.quote}&rdquo;
                     {s.date && <span className="ml-2 text-xs text-neutral-400 not-italic">{s.date}</span>}
                   </div>
-                  <p className="text-xs text-neutral-600 leading-relaxed mb-3">{s.explanation}</p>
+                  {extraEvidence.length > 0 && (
+                    <div className="space-y-1 mb-1">
+                      {extraEvidence.map((q, qi) => (
+                        <div key={qi} className="bg-neutral-50 rounded px-3 py-1.5 text-xs text-neutral-500 italic border border-neutral-100">
+                          &ldquo;{q}&rdquo;
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <p className="text-xs text-neutral-600 leading-relaxed mb-3 mt-2">{s.explanation}</p>
                   {(s as { suggestedActions?: SuggestedAction[] }).suggestedActions?.length ? (
                     <SuggestedActionsList actions={(s as { suggestedActions?: SuggestedAction[] }).suggestedActions!} />
                   ) : null}
@@ -930,6 +978,14 @@ const ACTION_OPTIONS: { value: SignalActionStatus; label: string; color: string 
   { value: "dismissed", label: "Dismissed", color: "bg-neutral-50 text-neutral-400 border-neutral-200" },
 ]
 
+const RESOLVED_REASON_OPTIONS: { value: ResolvedReason; label: string }[] = [
+  { value: "customer_confirmed", label: "Customer confirmed resolved" },
+  { value: "issue_fixed", label: "We shipped the fix" },
+  { value: "workaround_given", label: "Gave customer a workaround" },
+  { value: "false_positive", label: "Agent was wrong — not a real risk" },
+  { value: "no_action_needed", label: "Didn't need action" },
+]
+
 function SignalActionControl({
   signalKey: key,
   action,
@@ -941,17 +997,23 @@ function SignalActionControl({
 }) {
   const [status, setStatus] = useState<SignalActionStatus>(action?.status ?? "open")
   const [note, setNote] = useState(action?.note ?? "")
+  const [resolvedReason, setResolvedReason] = useState<ResolvedReason | undefined>(action?.resolvedReason)
   const [expanded, setExpanded] = useState(!!action?.note)
   const [saving, setSaving] = useState(false)
 
-  const current = ACTION_OPTIONS.find((o) => o.value === status)!
-
   const handleStatusChange = async (next: SignalActionStatus) => {
     setStatus(next)
+    if (next !== "done") setResolvedReason(undefined)
     setSaving(true)
     trackEvent("signal_actioned", { status: next })
     try {
-      await onUpdate(key, { status: next, note: note || undefined, updatedAt: new Date().toISOString() })
+      await onUpdate(key, {
+        status: next,
+        note: note || undefined,
+        resolvedReason: next === "done" ? resolvedReason : undefined,
+        updatedAt: new Date().toISOString(),
+        ...(next === "done" || next === "dismissed" ? { resolvedAt: new Date().toISOString() } : {}),
+      })
       if (next !== "open") setExpanded(true)
     } catch {
       setStatus(status)
@@ -960,10 +1022,26 @@ function SignalActionControl({
     }
   }
 
+  const handleReasonChange = async (reason: ResolvedReason) => {
+    setResolvedReason(reason)
+    setSaving(true)
+    try {
+      await onUpdate(key, {
+        status,
+        note: note || undefined,
+        resolvedReason: reason,
+        resolvedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      })
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const handleNoteSave = async () => {
     setSaving(true)
     try {
-      await onUpdate(key, { status, note: note || undefined, updatedAt: new Date().toISOString() })
+      await onUpdate(key, { status, note: note || undefined, resolvedReason, updatedAt: new Date().toISOString() })
     } finally {
       setSaving(false)
     }
@@ -997,6 +1075,21 @@ function SignalActionControl({
         )}
         {saving && <span className="text-xs text-neutral-300">saving…</span>}
       </div>
+      {/* Resolved reason — required context when marking done */}
+      {status === "done" && (
+        <div className="mt-2">
+          <select
+            value={resolvedReason ?? ""}
+            onChange={(e) => e.target.value && handleReasonChange(e.target.value as ResolvedReason)}
+            className="text-xs border border-neutral-200 rounded-lg px-2.5 py-1.5 text-neutral-700 focus:outline-none focus:border-neutral-400 bg-white w-full max-w-xs"
+          >
+            <option value="" disabled>Why was this resolved?</option>
+            {RESOLVED_REASON_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </div>
+      )}
       {expanded && status !== "open" && (
         <div className="mt-2 flex gap-2">
           <input

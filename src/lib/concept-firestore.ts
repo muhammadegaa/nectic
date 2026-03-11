@@ -71,6 +71,8 @@ export interface WorkspaceContext {
   // CRM integrations
   hubspotConnected?: boolean
   hubspotPortalId?: string
+  attioConnected?: boolean
+  attioWorkspaceId?: string
 }
 
 // ─── WATI Live Buffer ─────────────────────────────────────────────────────────
@@ -132,11 +134,30 @@ export interface StoredAccount {
   workspaceVersion?: number
   // Last 3 analysis results, newest first — enables longitudinal signal tracking
   analysisHistory?: AnalysisResult[]
+  // Closed feedback loop — immutable log of every resolved signal
+  // Powers: "ARR protected" drilldown, false-positive rate, agent accuracy over time
+  saveEvents?: SaveEvent[]
 }
 
-export type { SignalActionStatus, SignalAction } from "@/lib/signal-utils"
+export type { SignalActionStatus, SignalAction, ResolvedReason } from "@/lib/signal-utils"
 export { signalKey, buildSignalActionsBlock } from "@/lib/signal-utils"
-import type { SignalAction } from "@/lib/signal-utils"
+import type { SignalAction, ResolvedReason } from "@/lib/signal-utils"
+
+// ─── Save Events ──────────────────────────────────────────────────────────────
+// Immutable log of each resolved signal. Powers the closed feedback loop:
+// "agent detected X → CS actioned → outcome Y → ARR protected"
+
+export interface SaveEvent {
+  signalKey: string
+  signalTitle: string
+  signalType: string         // "risk" | "product" | "relationship"
+  riskLevel: string          // account risk level at time of resolution
+  arrValue: number           // ARR of the account in USD
+  resolvedAt: string         // ISO string
+  resolvedReason: ResolvedReason
+  healthBefore: number       // health score before resolution
+  healthAfter?: number       // health score after (set by recalculation)
+}
 
 export async function saveSignalAction(
   uid: string,
@@ -146,6 +167,20 @@ export async function saveSignalAction(
 ): Promise<void> {
   const ref = doc(accountsRef(uid), accountId)
   await setDoc(ref, { signalActions: { [key]: action } }, { merge: true })
+}
+
+export async function logSaveEvent(
+  uid: string,
+  accountId: string,
+  event: SaveEvent
+): Promise<void> {
+  const ref = doc(accountsRef(uid), accountId)
+  const snap = await getDoc(ref)
+  if (!snap.exists()) return
+  const existing = (snap.data().saveEvents as SaveEvent[] | undefined) ?? []
+  // Deduplicate: if same signalKey already resolved, update in place
+  const deduped = existing.filter((e) => e.signalKey !== event.signalKey)
+  await setDoc(ref, { saveEvents: [...deduped, event] }, { merge: true })
 }
 
 export async function recalculateHealthFromResolutions(
