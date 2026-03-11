@@ -137,7 +137,7 @@ export default function AccountPage() {
         fileName: reanalyzeFile.name,
         participantRoles: reanalyzeRoles,
         updatedAt: new Date().toISOString(),
-        workspaceVersion: workspace.version,
+        ...(workspace.version !== undefined && { workspaceVersion: workspace.version }),
       })
       await mergeContactBook(user.uid, reanalyzeRoles)
       const updated = await getAccount(user.uid, id)

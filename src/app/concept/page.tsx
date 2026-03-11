@@ -332,7 +332,7 @@ export default function ConceptPage() {
         participantRoles,
         context,
         shareToken,
-        workspaceVersion: workspace.version,
+        ...(workspace.version !== undefined && { workspaceVersion: workspace.version }),
       })
       await mergeContactBook(user.uid, participantRoles)
       // Auto-draft responses for critical/high risk — skip when AI is uncertain (low confidence = likely bad input)

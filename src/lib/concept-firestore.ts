@@ -66,6 +66,31 @@ export interface WorkspaceContext {
   // Context versioning — tracks when analysis-affecting fields change
   version?: number          // bumped whenever product/feature/roadmap fields change
   history?: WorkspaceSnapshot[]  // last 5 snapshots (kept lean, no credentials)
+  // WATI live integration — webhook token for real-time message ingestion
+  webhookToken?: string     // auto-generated UUID; used to verify incoming WATI webhooks
+}
+
+// ─── WATI Live Buffer ─────────────────────────────────────────────────────────
+// Stores incoming WhatsApp messages per customer until analysis threshold is met.
+// Stored at users/{uid}/watiBuffer/{waId}
+
+export interface WatiBufferMessage {
+  id: string
+  text: string
+  senderName: string
+  isCustomer: boolean  // false = our agent sent it
+  timestamp: string    // ISO
+}
+
+export interface WatiBuffer {
+  waId: string           // customer phone number
+  contactName: string
+  messages: WatiBufferMessage[]
+  firstMessageAt: string
+  lastMessageAt: string
+  needsAnalysis?: boolean  // set true when count threshold hit
+  analysisTriggeredAt?: string
+  accountId?: string     // if matched to existing account by watiPhone
 }
 
 export interface HealthHistoryEntry {
@@ -184,7 +209,9 @@ export async function saveAccount(
     healthHistory: initialHistory,
     analysisHistory: [data.result],  // seed with first result
   }
-  await setDoc(ref, { ...withHistory, _createdAt: serverTimestamp() })
+  // Strip undefined values — Firestore rejects them
+  const clean = Object.fromEntries(Object.entries(withHistory).filter(([, v]) => v !== undefined))
+  await setDoc(ref, { ...clean, _createdAt: serverTimestamp() })
   // Mirror shareToken → sharedAccounts for lookup without uid
   await setDoc(doc(db, "sharedAccounts", data.shareToken), {
     uid,
@@ -311,17 +338,86 @@ export async function saveWorkspace(uid: string, ctx: WorkspaceContext): Promise
     history = [snapshot, ...history].slice(0, 5) // keep last 5 snapshots
   }
 
-  // Strip undefined + history/version from ctx to avoid type conflicts, then merge back
-  const { history: _h, version: _v, ...ctxWithoutMeta } = ctx
+  // Auto-generate webhookToken on first save — immutable once created
+  const webhookToken = existing.webhookToken ?? crypto.randomUUID()
+  const isNewToken = !existing.webhookToken
+
+  // Strip meta fields from ctx to avoid stale overrides, then merge back
+  const { history: _h, version: _v, webhookToken: _wt, ...ctxWithoutMeta } = ctx
   const clean = Object.fromEntries(
     Object.entries({
       ...ctxWithoutMeta,
       version,
       history,
+      webhookToken,
       updatedAt: new Date().toISOString(),
     }).filter(([, v]) => v !== undefined)
   )
   await setDoc(doc(db, "users", uid), { workspace: clean }, { merge: true })
+
+  // Write reverse-lookup record so webhook handler can find uid by token
+  if (isNewToken) {
+    await setDoc(doc(db, "webhookTokens", webhookToken), { uid })
+  }
+}
+
+// ─── WATI Buffer CRUD ─────────────────────────────────────────────────────────
+
+function watiBufferRef(uid: string) {
+  return collection(db, "users", uid, "watiBuffer")
+}
+
+export async function appendToWatiBuffer(
+  uid: string,
+  waId: string,
+  message: WatiBufferMessage,
+  contactName: string
+): Promise<{ messageCount: number; needsAnalysis: boolean }> {
+  const ref = doc(watiBufferRef(uid), waId)
+  const snap = await getDoc(ref)
+  const now = message.timestamp
+
+  if (snap.exists()) {
+    const buf = snap.data() as WatiBuffer
+    const updated = [...buf.messages, message]
+    const needsAnalysis = updated.length >= 30
+    await setDoc(ref, {
+      ...buf,
+      messages: updated,
+      lastMessageAt: now,
+      ...(needsAnalysis && { needsAnalysis: true }),
+    })
+    return { messageCount: updated.length, needsAnalysis }
+  } else {
+    await setDoc(ref, {
+      waId,
+      contactName,
+      messages: [message],
+      firstMessageAt: now,
+      lastMessageAt: now,
+    })
+    return { messageCount: 1, needsAnalysis: false }
+  }
+}
+
+export async function getWatiBuffers(uid: string): Promise<WatiBuffer[]> {
+  const snap = await getDocs(watiBufferRef(uid))
+  return snap.docs.map((d) => d.data() as WatiBuffer)
+}
+
+export async function clearWatiBuffer(uid: string, waId: string): Promise<void> {
+  await deleteDoc(doc(watiBufferRef(uid), waId))
+}
+
+export async function getUidFromWebhookToken(token: string): Promise<string | null> {
+  const snap = await getDoc(doc(db, "webhookTokens", token))
+  if (!snap.exists()) return null
+  return (snap.data() as { uid: string }).uid ?? null
+}
+
+export async function findAccountByWatiPhone(uid: string, waId: string): Promise<StoredAccount | null> {
+  const accounts = await getAccounts(uid)
+  return accounts.find((a) => a.context?.watiPhone === waId) ?? null
 }
 
 // ─── Onboarding state ─────────────────────────────────────────────────────────
