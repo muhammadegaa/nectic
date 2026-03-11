@@ -6,7 +6,7 @@ import Link from "next/link"
 import LogoIcon from "@/components/logo-icon"
 import { HealthSparkline } from "@/components/health-sparkline"
 import { useAuth } from "@/contexts/auth-context"
-import { getAccount, deleteAccount, updateAccount, prefillFromContactBook, mergeContactBook, saveSignalAction, logSaveEvent, signalKey, getWorkspace, type StoredAccount, type ParticipantRole, type ParticipantRoles, type SignalAction, type SignalActionStatus, type ResolvedReason, type SaveEvent, type WorkspaceContext } from "@/lib/concept-firestore"
+import { getAccount, deleteAccount, updateAccount, prefillFromContactBook, mergeContactBook, saveSignalAction, logSaveEvent, recalculateHealthFromResolutions, signalKey, getWorkspace, type StoredAccount, type ParticipantRole, type ParticipantRoles, type SignalAction, type SignalActionStatus, type ResolvedReason, type SaveEvent, type WorkspaceContext } from "@/lib/concept-firestore"
 import { getAccountARR } from "@/lib/arr-utils"
 import { trackEvent } from "@/lib/posthog"
 import { parseWhatsAppFile, formatForPrompt, type WaParsed } from "@/lib/whatsapp-parser"
@@ -416,10 +416,15 @@ export default function AccountPage() {
               const updatedActions = { ...account.signalActions, [key]: action }
               setAccount((prev) => prev ? { ...prev, signalActions: updatedActions } : prev)
               if (action.status === "done" && action.resolvedReason) {
-                // Log the save event — this is the closed feedback loop
-                const currentHealth = account.result.healthScore ?? 5
+                // Recalculate health first so we can record healthAfter in the save event
+                const healthBefore = account.result.healthScore ?? 5
                 const arrValue = getAccountARR(account)
-                // Find signal title/type from key prefix
+                const healthAfter = await recalculateHealthFromResolutions(user.uid, account.id).catch(() => null)
+                // Reflect updated health score in local state
+                if (healthAfter !== null) {
+                  setAccount((prev) => prev ? { ...prev, result: { ...prev.result, healthScore: healthAfter } } : prev)
+                }
+                // Find signal title/type from key
                 const allSignals = [
                   ...(account.result.riskSignals ?? []).map((s) => ({
                     type: (s as { type?: string }).type ?? "risk",
@@ -437,7 +442,8 @@ export default function AccountPage() {
                   arrValue,
                   resolvedAt: new Date().toISOString(),
                   resolvedReason: action.resolvedReason,
-                  healthBefore: currentHealth,
+                  healthBefore,
+                  ...(healthAfter !== null ? { healthAfter } : {}),
                 }
                 logSaveEvent(user.uid, account.id, saveEvent).catch(() => {})
               }

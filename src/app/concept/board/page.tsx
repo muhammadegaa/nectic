@@ -17,6 +17,7 @@ import {
   type StoredAccount,
   type SignalAction,
   type SignalActionStatus,
+  type SaveEvent,
   type WorkspaceContext,
 } from "@/lib/concept-firestore"
 import { getAccountARR, getArrAtRisk, formatARR, computeArrProtected, countActionedToday } from "@/lib/arr-utils"
@@ -27,6 +28,7 @@ interface QueueSignal {
   accountId: string
   accountName: string
   riskLevel: string
+  analysisConfidence?: "high" | "medium" | "low"
   watiPhone?: string
   type: string
   title: string
@@ -39,6 +41,8 @@ interface QueueSignal {
 }
 
 const riskOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 }
+const riskWeight: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1 }
+const confidenceWeight: Record<string, number> = { high: 1.0, medium: 0.75, low: 0.4 }
 
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime()
@@ -114,6 +118,7 @@ function getTopRiskSignal(account: StoredAccount, suppressed: string[] = []): Qu
     accountId: account.id,
     accountName: account.result.accountName,
     riskLevel: account.result.riskLevel,
+    analysisConfidence: account.result.analysisQuality?.confidence,
     watiPhone: account.context?.watiPhone,
     type: sType,
     title: sTitle,
@@ -163,7 +168,15 @@ function buildQueue(accounts: StoredAccount[], suppressed: string[] = []): Queue
       arrAtRisk: getArrAtRisk(account),
     })
   }
-  return entries.sort((a, b) => (riskOrder[a.account.result.riskLevel] ?? 3) - (riskOrder[b.account.result.riskLevel] ?? 3))
+  // Confidence-weighted sort: a critical account with low-confidence analysis
+  // should not blindly outrank a high account with high-confidence analysis.
+  return entries.sort((a, b) => {
+    const scoreA = (riskWeight[a.account.result.riskLevel] ?? 1) * (confidenceWeight[a.topSignal.analysisConfidence ?? "high"] ?? 1)
+    const scoreB = (riskWeight[b.account.result.riskLevel] ?? 1) * (confidenceWeight[b.topSignal.analysisConfidence ?? "high"] ?? 1)
+    if (scoreB !== scoreA) return scoreB - scoreA
+    // Tiebreak: more ARR at risk first
+    return b.arrAtRisk - a.arrAtRisk
+  })
 }
 
 // ─── Page ───────────────────────────────────────────────────────────────────────
@@ -356,6 +369,7 @@ export default function QueuePage() {
                 <p className="text-[11px] text-neutral-400 mt-0.5">signals resolved</p>
               </div>
             </div>
+            <SavesPanel accounts={accounts} statsView={statsView} />
           </div>
         )}
 
@@ -837,5 +851,121 @@ function QueueCard({
         </div>
       </div>
     </motion.div>
+  )
+}
+
+// ─── Saves Panel ────────────────────────────────────────────────────────────────
+// Closed feedback loop made visible. Every resolved signal, who resolved it,
+// health before/after, ARR value. This is the "agent did X → outcome Y" story.
+
+const REASON_LABEL: Record<string, string> = {
+  customer_confirmed: "Customer confirmed",
+  issue_fixed: "Issue fixed",
+  workaround_given: "Workaround given",
+  false_positive: "False positive",
+  no_action_needed: "No action needed",
+}
+
+const REASON_COLOR: Record<string, string> = {
+  customer_confirmed: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  issue_fixed: "bg-blue-50 text-blue-700 border-blue-200",
+  workaround_given: "bg-amber-50 text-amber-700 border-amber-200",
+  false_positive: "bg-red-50 text-red-600 border-red-200",
+  no_action_needed: "bg-neutral-100 text-neutral-500 border-neutral-200",
+}
+
+function SavesPanel({ accounts, statsView }: { accounts: StoredAccount[]; statsView: "week" | "all" }) {
+  const [expanded, setExpanded] = useState(false)
+
+  type EnrichedSaveEvent = SaveEvent & { accountName: string; accountId: string }
+
+  const allEvents: EnrichedSaveEvent[] = accounts
+    .flatMap((a) =>
+      (a.saveEvents ?? []).map((e) => ({
+        ...e,
+        accountName: a.result.accountName,
+        accountId: a.id,
+      }))
+    )
+    .sort((a, b) => new Date(b.resolvedAt).getTime() - new Date(a.resolvedAt).getTime())
+
+  const filtered = statsView === "week"
+    ? allEvents.filter((e) => (Date.now() - new Date(e.resolvedAt).getTime()) / 86400000 <= 7)
+    : allEvents
+
+  const arrTotal = filtered
+    .filter((e) => e.resolvedReason !== "false_positive")
+    .reduce((sum, e) => sum + (e.arrValue ?? 0), 0)
+
+  const falsePositiveCount = filtered.filter((e) => e.resolvedReason === "false_positive").length
+
+  if (filtered.length === 0) return null
+
+  return (
+    <div className="mt-6">
+      <button
+        onClick={() => setExpanded((v) => !v)}
+        className="w-full flex items-center justify-between group"
+      >
+        <div className="flex items-center gap-2">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
+          <p className="text-xs font-semibold text-neutral-700">
+            {filtered.length} signal{filtered.length !== 1 ? "s" : ""} resolved — {formatARR(arrTotal)} ARR protected
+          </p>
+          {falsePositiveCount > 0 && (
+            <span className="text-[10px] text-neutral-400">· {falsePositiveCount} false positive{falsePositiveCount !== 1 ? "s" : ""}</span>
+          )}
+        </div>
+        <svg
+          width="12" height="12" viewBox="0 0 16 16" fill="none"
+          className={`text-neutral-400 transition-transform ${expanded ? "rotate-180" : ""}`}
+        >
+          <polyline points="3 6 8 11 13 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="mt-3 bg-white border border-neutral-200 rounded-xl divide-y divide-neutral-100">
+              {filtered.map((e, i) => (
+                <div key={i} className="px-4 py-3 flex items-start gap-3">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-1.5 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                      <Link
+                        href={`/concept/account/${e.accountId}`}
+                        className="text-xs font-semibold text-neutral-800 hover:underline truncate"
+                      >
+                        {e.accountName}
+                      </Link>
+                      <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full border flex-shrink-0 ${REASON_COLOR[e.resolvedReason] ?? "bg-neutral-100 text-neutral-500 border-neutral-200"}`}>
+                        {REASON_LABEL[e.resolvedReason] ?? e.resolvedReason}
+                      </span>
+                    </div>
+                    <p className="text-xs text-neutral-500 truncate">{e.signalTitle}</p>
+                    <div className="flex items-center gap-3 mt-1">
+                      {e.healthBefore !== undefined && e.healthAfter !== undefined && (
+                        <span className="text-[10px] text-neutral-400">
+                          Health {e.healthBefore.toFixed(1)} → <span className="text-emerald-600 font-medium">{e.healthAfter.toFixed(1)}</span>
+                        </span>
+                      )}
+                      <span className="text-[10px] text-neutral-400">{formatARR(e.arrValue)}</span>
+                      <span className="text-[10px] text-neutral-400">{timeAgo(e.resolvedAt)}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   )
 }
