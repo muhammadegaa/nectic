@@ -12,6 +12,7 @@ import {
   User
 } from 'firebase/auth'
 import {
+  initializeFirestore,
   getFirestore,
   Timestamp,
   collection,
@@ -35,7 +36,14 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0]
 const auth = getAuth(app)
-const db = getFirestore(app)
+// initializeFirestore must be called before any getFirestore() to apply settings.
+// Falls back to getFirestore on hot-reload when already initialised.
+let db: ReturnType<typeof getFirestore>
+try {
+  db = initializeFirestore(app, { ignoreUndefinedProperties: true })
+} catch {
+  db = getFirestore(app)
+}
 const googleProvider = new GoogleAuthProvider()
 
 // Auth functions
