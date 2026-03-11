@@ -248,7 +248,7 @@ export async function POST(req: NextRequest) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "Nectic <digest@nectic.app>",
+        from: "Nectic <digest@nectic.xyz>",
         to: [email],
         subject,
         html,

@@ -168,7 +168,7 @@ Write only the message.`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "Nectic <alerts@nectic.app>",
+        from: "Nectic <alerts@nectic.xyz>",
         to: [email],
         subject,
         html: htmlBody,
