@@ -8,7 +8,6 @@ import makeWASocket, {
   useMultiFileAuthState,
   DisconnectReason,
   fetchLatestBaileysVersion,
-  makeInMemoryStore,
   proto,
   getContentType,
 } from "@whiskeysockets/baileys"
@@ -223,6 +222,12 @@ export async function stopSession(uid: string, cleanStorage = true): Promise<voi
 
 export async function setMonitoredGroups(uid: string, groupJids: string[]): Promise<void> {
   await upsertSession(uid, { monitoredGroups: groupJids })
+}
+
+export async function sendMessage(uid: string, jid: string, text: string): Promise<void> {
+  const sock = activeSockets.get(uid)
+  if (!sock) throw new Error("No active session for this user — rescan QR to reconnect")
+  await sock.sendMessage(jid, { text })
 }
 
 async function fetchGroups(sock: ReturnType<typeof makeWASocket>): Promise<WhatsAppGroup[]> {
