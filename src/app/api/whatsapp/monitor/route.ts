@@ -4,7 +4,7 @@
  * Body: { groupJids: string[] }
  */
 import { NextRequest, NextResponse } from "next/server"
-import { adminAuth } from "@/lib/firebase-admin"
+import { getAdminAuth } from "@/infrastructure/firebase/firebase-server"
 
 const BRIDGE_URL = process.env.WA_BRIDGE_URL ?? process.env.WHATSAPP_BRIDGE_URL ?? ""
 const BRIDGE_SECRET = process.env.WA_BRIDGE_SECRET ?? process.env.WHATSAPP_BRIDGE_SECRET ?? ""
@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
 
     let uid: string
     try {
-      const decoded = await adminAuth.verifyIdToken(token)
+      const decoded = await getAdminAuth().verifyIdToken(token)
       uid = decoded.uid
     } catch {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 })

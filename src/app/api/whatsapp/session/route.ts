@@ -4,7 +4,7 @@
  * Auth: Firebase ID token in Authorization header.
  */
 import { NextRequest, NextResponse } from "next/server"
-import { adminAuth } from "@/lib/firebase-admin"
+import { getAdminAuth } from "@/infrastructure/firebase/firebase-server"
 import { getWorkspace } from "@/lib/concept-firestore"
 
 const BRIDGE_URL = process.env.WA_BRIDGE_URL ?? process.env.WHATSAPP_BRIDGE_URL ?? ""
@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
 
     let uid: string
     try {
-      const decoded = await adminAuth.verifyIdToken(token)
+      const decoded = await getAdminAuth().verifyIdToken(token)
       uid = decoded.uid
     } catch {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 })
@@ -59,7 +59,7 @@ export async function DELETE(req: NextRequest) {
 
     let uid: string
     try {
-      const decoded = await adminAuth.verifyIdToken(token)
+      const decoded = await getAdminAuth().verifyIdToken(token)
       uid = decoded.uid
     } catch {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 })
