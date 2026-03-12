@@ -219,7 +219,7 @@ export async function GET(req: NextRequest) {
               participantRoles,
               context: { watiPhone: buffer.waId },
               shareToken,
-              healthHistory: [{ score: (data.result as Record<string, unknown>).healthScore ?? 5, date: now_iso }],
+              healthHistory: [{ score: (data.result as unknown as Record<string, unknown>).healthScore ?? 5, date: now_iso }],
               analysisHistory: [data.result],
               ...(workspace.version !== undefined && { workspaceVersion: workspace.version }),
             })
