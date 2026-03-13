@@ -11,6 +11,7 @@ import {
   recalculateHealthFromResolutions,
   signalKey,
   getWorkspace,
+  saveDraftExample,
   type StoredAccount,
   type WorkspaceContext,
 } from "@/lib/concept-firestore"
@@ -39,6 +40,7 @@ function ActionPageInner() {
   const [workspace, setWorkspace] = useState<WorkspaceContext>({})
   const [loading, setLoading] = useState(true)
   const [draft, setDraft] = useState("")
+  const [originalDraft, setOriginalDraft] = useState("")
   const [draftLoading, setDraftLoading] = useState(false)
   const [showEvidence, setShowEvidence] = useState(false)
   const [sending, setSending] = useState(false)
@@ -64,7 +66,10 @@ function ActionPageInner() {
           const title = (topSignal as { title?: string }).title || topSignal.explanation.slice(0, 80)
           const key = signalKey(t, title)
           const existing = acc?.signalActions?.[key]?.draftResponse
-          if (existing) setDraft(existing)
+          if (existing) {
+            setDraft(existing)
+            setOriginalDraft(existing)
+          }
         }
       })
       .finally(() => setLoading(false))
@@ -112,6 +117,7 @@ function ActionPageInner() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? "Draft failed")
       setDraft(data.draft)
+      if (!originalDraft) setOriginalDraft(data.draft)
       // Save draft to Firestore
       if (user && topSignalKey) {
         await saveSignalAction(user.uid, accountId, topSignalKey, {
@@ -148,6 +154,9 @@ function ActionPageInner() {
         updatedAt: resolvedAt,
       })
       await recalculateHealthFromResolutions(user.uid, accountId)
+      if (originalDraft && draft !== originalDraft) {
+        saveDraftExample(user.uid, originalDraft, draft, topSignalType).catch(() => {})
+      }
       setDoneMode("sent")
       setDone(true)
     } catch (err) {
@@ -168,6 +177,9 @@ function ActionPageInner() {
       updatedAt: resolvedAt,
     })
     await recalculateHealthFromResolutions(user.uid, accountId)
+    if (originalDraft && draft !== originalDraft) {
+      saveDraftExample(user.uid, originalDraft, draft, topSignalType).catch(() => {})
+    }
     setDoneMode("copied")
     setDone(true)
   }
