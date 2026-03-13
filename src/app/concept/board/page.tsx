@@ -425,6 +425,7 @@ export default function QueuePage() {
                       entry={entry}
                       workspace={workspace}
                       onUpdate={(key, action) => updateSignalAction(entry.account.id, key, action)}
+                      getIdToken={() => user?.getIdToken() ?? Promise.resolve(undefined)}
                     />
                   ))}
                 </motion.div>
@@ -452,6 +453,7 @@ export default function QueuePage() {
                       entry={entry}
                       workspace={workspace}
                       onUpdate={(key, action) => updateSignalAction(entry.account.id, key, action)}
+                      getIdToken={() => user?.getIdToken() ?? Promise.resolve(undefined)}
                     />
                   ))}
                 </motion.div>
@@ -470,10 +472,12 @@ function QueueCard({
   entry,
   workspace,
   onUpdate,
+  getIdToken,
 }: {
   entry: QueueEntry
   workspace: WorkspaceContext
   onUpdate: (key: string, action: SignalAction) => void
+  getIdToken: () => Promise<string | undefined>
 }) {
   const { account, topSignal, openCount, arrAtRisk } = entry
   const risk = account.result.riskLevel
@@ -535,7 +539,7 @@ function QueueCard({
     try {
       let res: Response
       if (canSendViaBaileys) {
-        const token = await user?.getIdToken()
+        const token = await getIdToken()
         res = await fetch("/api/whatsapp/send", {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
