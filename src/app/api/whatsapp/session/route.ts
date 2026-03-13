@@ -26,11 +26,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "WhatsApp bridge not configured" }, { status: 503 })
     }
 
-    // Get webhook token for this user
-    const userSnap = await getAdminDb().collection("users").doc(uid).get()
-    const webhookToken = userSnap.exists ? (userSnap.data()?.workspace?.webhookToken as string | undefined) : undefined
+    // Get or auto-create webhook token for this user
+    const db = getAdminDb()
+    const userSnap = await db.collection("users").doc(uid).get()
+    let webhookToken = userSnap.exists ? (userSnap.data()?.workspace?.webhookToken as string | undefined) : undefined
     if (!webhookToken) {
-      return NextResponse.json({ error: "Save workspace settings first to generate a webhook token" }, { status: 400 })
+      webhookToken = crypto.randomUUID()
+      await db.collection("users").doc(uid).set(
+        { workspace: { webhookToken } },
+        { merge: true }
+      )
+      await db.collection("webhookTokens").doc(webhookToken).set({ uid })
     }
 
     const res = await fetch(`${BRIDGE_URL}/session/${uid}/start`, {
