@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
-import { useRouter } from "next/navigation"
+import { useEffect, useState, useCallback, useRef } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
 import { toast } from "sonner"
@@ -184,6 +184,9 @@ function buildQueue(accounts: StoredAccount[], suppressed: string[] = []): Queue
 export default function QueuePage() {
   const { user, loading: authLoading, signOut } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const focusAccountId = searchParams.get("account")
+  const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map())
   const [accounts, setAccounts] = useState<StoredAccount[]>([])
   const [workspace, setWorkspace] = useState<WorkspaceContext>({})
   const [loading, setLoading] = useState(true)
@@ -204,6 +207,17 @@ export default function QueuePage() {
       })
       .finally(() => setLoading(false))
   }, [user])
+
+  // Deep-link from email alert: ?account=ID → scroll to that card
+  useEffect(() => {
+    if (!focusAccountId || loading) return
+    const el = cardRefs.current.get(focusAccountId)
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" })
+      el.classList.add("ring-2", "ring-neutral-900", "ring-offset-2")
+      setTimeout(() => el.classList.remove("ring-2", "ring-neutral-900", "ring-offset-2"), 3000)
+    }
+  }, [focusAccountId, loading])
 
   // Refresh every 8s for 90s after load — picks up auto-generated drafts
   useEffect(() => {
@@ -439,6 +453,7 @@ export default function QueuePage() {
                       workspace={workspace}
                       onUpdate={(key, action) => updateSignalAction(entry.account.id, key, action)}
                       getIdToken={() => user?.getIdToken() ?? Promise.resolve(undefined)}
+                      cardRef={(el) => { if (el) cardRefs.current.set(entry.account.id, el); else cardRefs.current.delete(entry.account.id) }}
                     />
                   ))}
                 </motion.div>
@@ -467,6 +482,7 @@ export default function QueuePage() {
                       workspace={workspace}
                       onUpdate={(key, action) => updateSignalAction(entry.account.id, key, action)}
                       getIdToken={() => user?.getIdToken() ?? Promise.resolve(undefined)}
+                      cardRef={(el) => { if (el) cardRefs.current.set(entry.account.id, el); else cardRefs.current.delete(entry.account.id) }}
                     />
                   ))}
                 </motion.div>
@@ -486,11 +502,13 @@ function QueueCard({
   workspace,
   onUpdate,
   getIdToken,
+  cardRef,
 }: {
   entry: QueueEntry
   workspace: WorkspaceContext
   onUpdate: (key: string, action: SignalAction) => void
   getIdToken: () => Promise<string | undefined>
+  cardRef?: (el: HTMLDivElement | null) => void
 }) {
   const { account, topSignal, openCount, arrAtRisk } = entry
   const risk = account.result.riskLevel
@@ -610,11 +628,12 @@ function QueueCard({
 
   return (
     <motion.div
+      ref={cardRef}
       variants={{
         hidden: { y: 16, opacity: 0 },
         show: { y: 0, opacity: 1, transition: { duration: 0.35, ease: [0.16, 1, 0.3, 1] } },
       }}
-      className="bg-white border border-neutral-200 rounded-xl overflow-hidden shadow-sm"
+      className="bg-white border border-neutral-200 rounded-xl overflow-hidden shadow-sm transition-shadow"
     >
       {/* Card header */}
       <div className="flex items-center gap-3 px-5 py-3.5 border-b border-neutral-100 bg-neutral-50">

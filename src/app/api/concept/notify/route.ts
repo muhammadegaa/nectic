@@ -76,9 +76,10 @@ Write only the message.`,
       } catch { /* non-fatal — draft is optional */ }
     }
 
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://app.nectic.xyz"
     const accountUrl = accountId
-      ? `https://nectic.vercel.app/concept/account/${accountId}`
-      : "https://nectic.vercel.app/concept/board"
+      ? `${appUrl}/concept/board?account=${accountId}`
+      : `${appUrl}/concept/board`
 
     let subject: string
     let htmlBody: string
@@ -114,6 +115,7 @@ Write only the message.`,
         quoteLine,
         draftSection,
         accountUrl,
+        appUrl,
         ctaLabel: "Draft retention response →",
         ctaBg: "#ea580c",
         footerText: `A competitor was mentioned in your WhatsApp conversation with ${accountName}. Act before the evaluation goes further.`,
@@ -155,6 +157,7 @@ Write only the message.`,
         quoteLine,
         draftSection,
         accountUrl,
+        appUrl,
         ctaLabel: "Approve response in Nectic →",
         ctaBg: "#171717",
         footerText: `${accountName} has a ${riskLevel} risk level. The draft above is AI-generated — review before sending.`,
@@ -209,6 +212,7 @@ function buildEmailHtml({
   quoteLine = "",
   draftSection = "",
   accountUrl,
+  appUrl,
   ctaLabel,
   ctaBg,
   footerText,
@@ -222,6 +226,7 @@ function buildEmailHtml({
   quoteLine?: string
   draftSection?: string
   accountUrl: string
+  appUrl: string
   ctaLabel: string
   ctaBg: string
   footerText: string
@@ -255,7 +260,7 @@ function buildEmailHtml({
         <tr>
           <td style="padding:24px;">
             <a href="${accountUrl}" style="display:inline-block;background:${ctaBg};color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;padding:12px 24px;border-radius:8px;">${ctaLabel}</a>
-            <p style="margin:16px 0 0;font-size:12px;color:#a3a3a3;line-height:1.6;">${footerText}<br>Manage alerts in <a href="https://nectic.vercel.app/concept/workspace" style="color:#404040;">workspace settings</a>.</p>
+            <p style="margin:16px 0 0;font-size:12px;color:#a3a3a3;line-height:1.6;">${footerText}<br>Manage alerts in <a href="${appUrl}/concept/workspace" style="color:#404040;">workspace settings</a>.</p>
           </td>
         </tr>
       </table>
