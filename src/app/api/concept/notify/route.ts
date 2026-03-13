@@ -195,6 +195,44 @@ Write only the message.`,
       } catch { /* non-fatal */ }
     }
 
+    // Push WhatsApp alert to CS lead's own phone via Baileys bridge (non-fatal)
+    if (uid) {
+      try {
+        const bridgeUrl = process.env.WHATSAPP_BRIDGE_URL
+        const bridgeSecret = process.env.WHATSAPP_BRIDGE_SECRET
+        if (bridgeUrl && bridgeSecret) {
+          const adminDb = getAdminDb()
+          const sessionSnap = await adminDb.collection("whatsappBridge").doc(uid).get()
+          const session = sessionSnap.exists ? sessionSnap.data() : null
+          const csPhone = session?.phoneNumber // e.g. "628123456789"
+
+          if (csPhone && session?.status === "connected") {
+            const csJid = `${csPhone}@s.whatsapp.net`
+            const actionUrl = accountId
+              ? `${appUrl}/concept/action/${accountId}`
+              : `${appUrl}/concept/board`
+
+            let waAlert: string
+            if (isCompetitorAlert && competitorNames?.length) {
+              waAlert = `⚡ *${accountName}* mentioned ${competitorNames.join(", ")}\n\n"${topSignalQuote ?? ""}"\n\n→ ${actionUrl}`
+            } else {
+              const riskLabel = riskLevel === "critical" ? "🔴 CRITICAL" : "🟠 HIGH"
+              waAlert = `${riskLabel} · *${accountName}*\n${topSignalTitle ?? "Risk signal detected"}\n\n"${topSignalQuote ?? ""}"\n\n→ ${actionUrl}`
+            }
+
+            await fetch(`${bridgeUrl}/session/${uid}/send`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "x-bridge-secret": bridgeSecret,
+              },
+              body: JSON.stringify({ jid: csJid, text: waAlert }),
+            })
+          }
+        }
+      } catch { /* non-fatal — email already sent */ }
+    }
+
     return NextResponse.json({ sent: true }, { status: 200 })
   } catch (err: unknown) {
     console.error("Notify error:", err)
