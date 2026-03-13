@@ -78,7 +78,7 @@ Write only the message.`,
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://app.nectic.xyz"
     const accountUrl = accountId
-      ? `${appUrl}/concept/board?account=${accountId}`
+      ? `${appUrl}/concept/action/${accountId}`
       : `${appUrl}/concept/board`
 
     let subject: string
@@ -116,7 +116,7 @@ Write only the message.`,
         draftSection,
         accountUrl,
         appUrl,
-        ctaLabel: "Draft retention response →",
+        ctaLabel: "Review &amp; send response →",
         ctaBg: "#ea580c",
         footerText: `A competitor was mentioned in your WhatsApp conversation with ${accountName}. Act before the evaluation goes further.`,
       })
@@ -158,7 +158,7 @@ Write only the message.`,
         draftSection,
         accountUrl,
         appUrl,
-        ctaLabel: "Approve response in Nectic →",
+        ctaLabel: "Send response →",
         ctaBg: "#171717",
         footerText: `${accountName} has a ${riskLevel} risk level. The draft above is AI-generated — review before sending.`,
       })
