@@ -8,6 +8,7 @@ import makeWASocket, {
   useMultiFileAuthState,
   DisconnectReason,
   fetchLatestBaileysVersion,
+  Browsers,
   proto,
   getContentType,
 } from "@whiskeysockets/baileys"
@@ -113,6 +114,7 @@ export async function startSession(uid: string, webhookToken: string): Promise<v
     logger: pino({ level: "silent" }) as Parameters<typeof makeWASocket>[0]["logger"],
     printQRInTerminal: false,
     auth: state,
+    browser: Browsers.macOS("Chrome"),
     // Don't cache all history — only what arrives during active session
     getMessage: async () => undefined,
   })
