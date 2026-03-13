@@ -4,8 +4,7 @@
  * Auth: Firebase ID token in Authorization header.
  */
 import { NextRequest, NextResponse } from "next/server"
-import { getAdminAuth } from "@/infrastructure/firebase/firebase-server"
-import { getWorkspace } from "@/lib/concept-firestore"
+import { getAdminAuth, getAdminDb } from "@/infrastructure/firebase/firebase-server"
 
 const BRIDGE_URL = process.env.WA_BRIDGE_URL ?? process.env.WHATSAPP_BRIDGE_URL ?? ""
 const BRIDGE_SECRET = process.env.WA_BRIDGE_SECRET ?? process.env.WHATSAPP_BRIDGE_SECRET ?? ""
@@ -27,9 +26,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "WhatsApp bridge not configured" }, { status: 503 })
     }
 
-    // Get or create webhook token for this user
-    const workspace = await getWorkspace(uid)
-    const webhookToken = workspace.webhookToken
+    // Get webhook token for this user
+    const userSnap = await getAdminDb().collection("users").doc(uid).get()
+    const webhookToken = userSnap.exists ? (userSnap.data()?.workspace?.webhookToken as string | undefined) : undefined
     if (!webhookToken) {
       return NextResponse.json({ error: "Save workspace settings first to generate a webhook token" }, { status: 400 })
     }
