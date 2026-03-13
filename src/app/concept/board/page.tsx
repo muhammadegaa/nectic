@@ -315,101 +315,57 @@ function QueuePageInner() {
 
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8 pb-24 sm:pb-8">
 
-        {/* Revenue header */}
+        {/* Page header */}
+        <div className="mb-6">
+          {loading ? (
+            <div className="h-8 w-48 bg-neutral-200 rounded animate-pulse mb-1" />
+          ) : queue.length > 0 ? (
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h1 className="text-2xl font-bold text-neutral-900 tracking-tight leading-none">
+                  {queue.length} account{queue.length !== 1 ? "s" : ""} need{queue.length === 1 ? "s" : ""} action
+                </h1>
+                {totalArrAtRisk > 0 && (
+                  <p className="text-sm text-red-600 font-semibold mt-1">{formatARR(totalArrAtRisk)} ARR at risk</p>
+                )}
+              </div>
+              <div className="flex items-center gap-1 border border-neutral-200 rounded-lg overflow-hidden shrink-0 mt-0.5">
+                <button onClick={() => setStatsView("week")} className={`text-xs px-2.5 py-1 font-medium transition-colors ${statsView === "week" ? "bg-neutral-900 text-white" : "text-neutral-500 hover:text-neutral-700"}`}>Week</button>
+                <button onClick={() => setStatsView("all")} className={`text-xs px-2.5 py-1 font-medium transition-colors ${statsView === "all" ? "bg-neutral-900 text-white" : "text-neutral-500 hover:text-neutral-700"}`}>All time</button>
+              </div>
+            </div>
+          ) : accounts.length > 0 ? (
+            <div>
+              <h1 className="text-2xl font-bold text-neutral-900 tracking-tight">All clear</h1>
+              <p className="text-sm text-neutral-500 mt-1">Every signal has been addressed.</p>
+            </div>
+          ) : null}
+        </div>
+
+        {/* Stats strip — only when there's data */}
         {!loading && accounts.length > 0 && (
-          <div className="mb-6">
-            {/* Stats view toggle */}
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Performance</p>
-              <div className="flex items-center gap-1 border border-neutral-200 rounded-lg overflow-hidden">
-                <button
-                  onClick={() => setStatsView("week")}
-                  className={`text-xs px-2.5 py-1 font-medium transition-colors ${statsView === "week" ? "bg-neutral-900 text-white" : "text-neutral-500 hover:text-neutral-700"}`}
-                >
-                  This week
-                </button>
-                <button
-                  onClick={() => setStatsView("all")}
-                  className={`text-xs px-2.5 py-1 font-medium transition-colors ${statsView === "all" ? "bg-neutral-900 text-white" : "text-neutral-500 hover:text-neutral-700"}`}
-                >
-                  All time
-                </button>
-              </div>
+          <div className="grid grid-cols-2 gap-3 mb-6">
+            <div className="bg-white border border-neutral-200 rounded-xl px-4 py-3.5 shadow-sm">
+              <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-1">ARR protected</p>
+              <p className="text-xl font-bold text-emerald-600 tabular-nums">
+                <motion.span key={`${arrProtected}-${statsView}`} initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 300 }} className="inline-block">
+                  {arrProtected > 0 ? formatARR(arrProtected) : "—"}
+                </motion.span>
+              </p>
+              <p className="text-[11px] text-neutral-400 mt-0.5">{statsView === "week" ? "this week" : "all time"}</p>
             </div>
-            <div className="grid grid-cols-4 gap-3">
-              <div className="bg-white border border-neutral-200 rounded-xl px-4 py-3.5 shadow-sm">
-                <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-1">ARR at risk</p>
-                <p className="text-2xl font-bold text-red-600 tabular-nums">
-                  <motion.span
-                    key={totalArrAtRisk}
-                    initial={{ scale: 0.8, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ type: "spring", stiffness: 300 }}
-                    className="inline-block"
-                  >
-                    {totalArrAtRisk > 0 ? formatARR(totalArrAtRisk) : "—"}
-                  </motion.span>
-                </p>
-                <p className="text-[11px] text-neutral-400 mt-0.5">{accounts.filter((a) => a.result.riskLevel === "critical" || a.result.riskLevel === "high").length} accounts</p>
-              </div>
-              <div className="bg-white border border-neutral-200 rounded-xl px-4 py-3.5 shadow-sm">
-                <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-1">ARR protected</p>
-                <p className="text-2xl font-bold text-emerald-600 tabular-nums">
-                  <motion.span
-                    key={`${arrProtected}-${statsView}`}
-                    initial={{ scale: 0.8, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ type: "spring", stiffness: 300 }}
-                    className="inline-block"
-                  >
-                    {arrProtected > 0 ? formatARR(arrProtected) : "—"}
-                  </motion.span>
-                </p>
-                <p className="text-[11px] text-neutral-400 mt-0.5">signals actioned</p>
-              </div>
-              <div className="bg-white border border-neutral-200 rounded-xl px-4 py-3.5 shadow-sm">
-                <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-1">Needs action</p>
-                <p className="text-2xl font-bold text-neutral-900 tabular-nums">
-                  <motion.span
-                    key={queue.length}
-                    initial={{ scale: 0.8, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ type: "spring", stiffness: 300 }}
-                    className="inline-block"
-                  >
-                    {queue.length}
-                  </motion.span>
-                </p>
-                <p className="text-[11px] text-neutral-400 mt-0.5">accounts in queue</p>
-              </div>
-              <div className="bg-white border border-neutral-200 rounded-xl px-4 py-3.5 shadow-sm">
-                <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-1">Actioned today</p>
-                <p className="text-2xl font-bold text-neutral-900 tabular-nums">
-                  <motion.span
-                    key={actionedToday}
-                    initial={{ scale: 0.8, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ type: "spring", stiffness: 300 }}
-                    className="inline-block"
-                  >
-                    {actionedToday > 0 ? actionedToday : "—"}
-                  </motion.span>
-                </p>
-                <p className="text-[11px] text-neutral-400 mt-0.5">signals resolved</p>
-              </div>
+            <div className="bg-white border border-neutral-200 rounded-xl px-4 py-3.5 shadow-sm">
+              <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-1">Actioned today</p>
+              <p className="text-xl font-bold text-neutral-900 tabular-nums">
+                <motion.span key={actionedToday} initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 300 }} className="inline-block">
+                  {actionedToday > 0 ? actionedToday : "—"}
+                </motion.span>
+              </p>
+              <p className="text-[11px] text-neutral-400 mt-0.5">signals resolved</p>
             </div>
-            <SavesPanel accounts={accounts} statsView={statsView} />
           </div>
         )}
-
-        <div className="mb-5">
-          <h1 className="text-xl font-semibold text-neutral-900 tracking-tight">Action inbox</h1>
-          <p className="text-sm text-neutral-500 mt-0.5">
-            {loading ? "Loading…" : queue.length === 0
-              ? "Inbox clear — all accounts healthy."
-              : `${queue.length} account${queue.length !== 1 ? "s" : ""} need${queue.length === 1 ? "s" : ""} attention.`}
-          </p>
-        </div>
+        {!loading && accounts.length > 0 && <SavesPanel accounts={accounts} statsView={statsView} />}
 
         {/* Inbox */}
         {loading ? (
@@ -645,7 +601,7 @@ function QueueCard({
   }
 
   const extraCount = openCount - 1
-  const [showEvidence, setShowEvidence] = useState(false)
+  const [showEvidence, setShowEvidence] = useState(risk === "critical")
 
   // Collect all evidence quotes across all signals for the evidence panel
   const allEvidence = [
@@ -668,50 +624,57 @@ function QueueCard({
         hidden: { y: 16, opacity: 0 },
         show: { y: 0, opacity: 1, transition: { duration: 0.35, ease: [0.16, 1, 0.3, 1] } },
       }}
-      className="bg-white border border-neutral-200 rounded-xl overflow-hidden shadow-sm transition-shadow"
+      className={`bg-white border border-neutral-200 rounded-xl overflow-hidden shadow-sm transition-shadow border-l-4 ${
+        risk === "critical" ? "border-l-red-500" : risk === "high" ? "border-l-orange-400" : risk === "medium" ? "border-l-amber-400" : "border-l-emerald-400"
+      }`}
     >
       {/* Card header */}
-      <div className="flex items-center gap-3 px-5 py-3.5 border-b border-neutral-100 bg-neutral-50">
-        <div className={`w-2 h-2 rounded-full shrink-0 ${riskDot[risk] ?? "bg-neutral-300"} ${risk === "critical" ? "animate-pulse" : ""}`} />
-        <Link
-          href={`/concept/account/${account.id}`}
-          className="text-sm font-semibold text-neutral-900 hover:underline flex-1 min-w-0 truncate"
-        >
-          {account.result.accountName}
-        </Link>
-        <div className="flex items-center gap-2 shrink-0">
-          {account.lastAlertSentAt && (
-            <span className="hidden sm:inline text-[10px] text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded-full">
-              Alert {timeAgo(account.lastAlertSentAt)}
+      <div className="flex items-center gap-3 px-5 py-3.5 border-b border-neutral-100">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-0.5">
+            <Link href={`/concept/account/${account.id}`} className="text-base font-bold text-neutral-900 hover:underline truncate">
+              {account.result.accountName}
+            </Link>
+            <span className={`text-[10px] font-bold px-1.5 py-0.5 border rounded-full shrink-0 ${riskBadge[risk] ?? ""}`}>
+              {risk.toUpperCase()}
             </span>
-          )}
-          {account.healthHistory && account.healthHistory.length >= 2 && (
-            <HealthSparkline history={account.healthHistory} width={56} height={20} />
-          )}
-          {(risk === "critical" || risk === "high") && (
-            <span className="text-xs font-semibold text-red-600 tabular-nums hidden sm:inline">
-              {formatARR(arrAtRisk)} at risk
-            </span>
-          )}
-          <span className={`text-xs font-semibold px-2 py-0.5 border rounded-full ${riskBadge[risk] ?? ""}`}>
-            {risk}
-          </span>
-          <span className="text-xs text-neutral-400 tabular-nums">
-            {account.result.healthScore ?? 0}/10
-          </span>
+          </div>
+          <div className="flex items-center gap-3">
+            {(risk === "critical" || risk === "high") && arrAtRisk > 0 && (
+              <span className="text-xs font-semibold text-red-600">{formatARR(arrAtRisk)} at risk</span>
+            )}
+            {account.healthHistory && account.healthHistory.length >= 2 && (
+              <HealthSparkline history={account.healthHistory} width={48} height={16} />
+            )}
+            <span className="text-xs text-neutral-400">{account.result.healthScore ?? 0}/10 health</span>
+            {account.lastAlertSentAt && (
+              <span className="text-[10px] text-neutral-400">Alert {timeAgo(account.lastAlertSentAt)}</span>
+            )}
+          </div>
         </div>
+        {openCount > 1 && (
+          <Link href={`/concept/account/${account.id}`} className="text-[11px] text-neutral-400 hover:text-neutral-700 shrink-0 transition-colors">
+            +{extraCount} more →
+          </Link>
+        )}
       </div>
 
       {/* Signal */}
       <div className="px-5 py-4">
-        <p className="text-sm font-semibold text-neutral-900 mb-2 leading-snug">{topSignal.title}</p>
-        <p className="text-xs text-neutral-400 italic leading-relaxed mb-4">&ldquo;{topSignal.quote}&rdquo;</p>
+        <p className="text-sm font-semibold text-neutral-900 mb-3 leading-snug">{topSignal.title}</p>
+
+        {/* WhatsApp-style quote bubble */}
+        <div className="flex items-start gap-2.5 mb-3">
+          <div className="w-6 h-6 rounded-full bg-neutral-200 flex-shrink-0 flex items-center justify-center mt-0.5">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+          </div>
+          <div className="bg-neutral-100 rounded-2xl rounded-tl-sm px-3.5 py-2.5 max-w-[90%]">
+            <p className="text-sm text-neutral-800 leading-relaxed">{topSignal.quote}</p>
+          </div>
+        </div>
 
         {topSignal.explanation && (
-          <div className="text-xs text-neutral-600 leading-relaxed bg-neutral-50 rounded-lg px-3 py-2.5 border border-neutral-100 mb-3">
-            <span className="block text-[10px] font-semibold text-neutral-400 uppercase tracking-wide mb-1">Why this matters</span>
-            {topSignal.explanation}
-          </div>
+          <p className="text-xs text-neutral-500 leading-relaxed mb-3 pl-[34px]">{topSignal.explanation}</p>
         )}
 
         {/* Evidence toggle */}
@@ -776,26 +739,23 @@ function QueueCard({
         )}
 
         {/* Draft panel */}
-        <div className="border border-neutral-200 rounded-lg overflow-hidden mb-4">
-          <div className="flex items-center justify-between px-3 py-2 bg-neutral-50 border-b border-neutral-100">
+        <div className="border border-neutral-200 rounded-xl overflow-hidden mb-3">
+          <div className="flex items-center justify-between px-4 py-2.5 border-b border-neutral-100 bg-neutral-50">
             <div className="flex items-center gap-1.5">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="text-[#25D366]">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" className="text-[#25D366]">
                 <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
               </svg>
-              <span className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wide">WhatsApp draft</span>
+              <span className="text-xs font-semibold text-neutral-600">Draft response</span>
             </div>
             {draft && (
-              <button
-                onClick={() => { setDraftTone(undefined); generateDraft() }}
-                className="text-[11px] text-neutral-400 hover:text-neutral-600 transition-colors"
-              >
+              <button onClick={() => { setDraftTone(undefined); generateDraft() }} className="text-[11px] text-neutral-400 hover:text-neutral-600 transition-colors">
                 Regenerate
               </button>
             )}
           </div>
-          <div className="px-3 py-2.5">
+          <div className="px-4 py-3">
             {draftLoading ? (
-              <div className="space-y-2">
+              <div className="space-y-2 py-1">
                 <div className="h-3 bg-neutral-100 rounded animate-pulse w-full" />
                 <div className="h-3 bg-neutral-100 rounded animate-pulse w-4/5" />
                 <div className="h-3 bg-neutral-100 rounded animate-pulse w-3/5" />
@@ -806,48 +766,38 @@ function QueueCard({
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                   onBlur={() => saveAction({ draftResponse: draft })}
-                  rows={3}
-                  className="w-full text-xs text-neutral-700 leading-relaxed resize-none focus:outline-none bg-transparent"
+                  rows={4}
+                  className="w-full text-sm text-neutral-800 leading-relaxed resize-none focus:outline-none bg-transparent"
                 />
                 <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-neutral-100">
                   <span className="text-[10px] text-neutral-400 mr-0.5">Adjust:</span>
                   {(["shorter", "more_formal", "bahasa"] as const).map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => { setDraftTone(t); generateDraft(t) }}
-                      className={`text-[10px] font-medium px-2 py-0.5 rounded-full border transition-colors ${
-                        draftTone === t
-                          ? "bg-neutral-900 text-white border-neutral-900"
-                          : "text-neutral-500 border-neutral-200 hover:border-neutral-400 hover:text-neutral-700"
-                      }`}
-                    >
+                    <button key={t} onClick={() => { setDraftTone(t); generateDraft(t) }}
+                      className={`text-[10px] font-medium px-2 py-0.5 rounded-full border transition-colors ${draftTone === t ? "bg-neutral-900 text-white border-neutral-900" : "text-neutral-500 border-neutral-200 hover:border-neutral-400 hover:text-neutral-700"}`}>
                       {t === "shorter" ? "Shorter" : t === "more_formal" ? "More formal" : "Bahasa"}
                     </button>
                   ))}
                 </div>
               </>
             ) : (
-              <button
-                onClick={() => generateDraft()}
-                className="w-full flex items-center justify-center gap-2 text-xs font-medium text-neutral-500 py-3 hover:text-neutral-900 transition-colors"
-              >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <button onClick={() => generateDraft()}
+                className="w-full flex items-center justify-center gap-2 text-sm font-medium text-neutral-500 py-4 hover:text-neutral-900 transition-colors">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
                 </svg>
-                Generate draft response
+                Generate AI draft
               </button>
             )}
           </div>
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleDismiss}
-            className="text-xs font-medium text-neutral-400 hover:text-neutral-700 px-3 py-1.5 rounded-lg border border-neutral-200 hover:border-neutral-400 transition-all"
-          >
-            Dismiss
-          </button>
+        <div className={`${canSend ? "flex-col" : "flex"} flex gap-2`}>
+          {!canSend && (
+            <button onClick={handleDismiss} className="text-xs font-medium text-neutral-400 hover:text-neutral-700 px-3 py-1.5 rounded-lg border border-neutral-200 hover:border-neutral-400 transition-all">
+              Dismiss
+            </button>
+          )}
 
           <AnimatePresence mode="wait">
             {draft && (
@@ -884,34 +834,45 @@ function QueueCard({
 
           {canSend && (
             <motion.button
-              whileHover={{ scale: 1.01 }}
               whileTap={{ scale: 0.99 }}
               onClick={handleSend}
               disabled={sending}
-              className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all disabled:opacity-60 ${
+              className={`w-full flex items-center justify-center gap-2 text-sm font-semibold py-3 rounded-xl border transition-all disabled:opacity-60 ${
                 sendDone
                   ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                   : "bg-green-600 text-white border-green-700 hover:bg-green-700"
               }`}
             >
-              {sendDone ? "Sent" : sending ? (
-                <span className="w-3 h-3 rounded-full border-2 border-white border-t-transparent animate-spin" />
+              {sendDone ? "Sent ✓" : sending ? (
+                <span className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
               ) : (
                 <>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
                   Send via WhatsApp
                 </>
               )}
             </motion.button>
           )}
 
-          {extraCount > 0 && (
-            <Link
-              href={`/concept/account/${account.id}`}
-              className="text-xs text-neutral-400 hover:text-neutral-700 transition-colors ml-auto"
-            >
-              +{extraCount} more signal{extraCount !== 1 ? "s" : ""} →
-            </Link>
+          {canSend && (
+            <div className="flex items-center gap-2">
+              <button onClick={handleDismiss} className="text-xs font-medium text-neutral-400 hover:text-neutral-700 px-3 py-1.5 rounded-lg border border-neutral-200 hover:border-neutral-400 transition-all">
+                Dismiss
+              </button>
+              <AnimatePresence mode="wait">
+                {draft && (
+                  <motion.button initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+                    onClick={handleCopyAndDone}
+                    title="Copy draft to clipboard — use if sending manually"
+                    className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border border-neutral-200 text-neutral-500 hover:border-neutral-400 hover:text-neutral-700 transition-all">
+                    {copyDone ? "Copied ✓" : <>
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                      Copy
+                    </>}
+                  </motion.button>
+                )}
+              </AnimatePresence>
+            </div>
           )}
         </div>
 
