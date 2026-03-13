@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useCallback, useRef } from "react"
+import { useEffect, useState, useCallback, useRef, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
@@ -181,7 +181,7 @@ function buildQueue(accounts: StoredAccount[], suppressed: string[] = []): Queue
 
 // ─── Page ───────────────────────────────────────────────────────────────────────
 
-export default function QueuePage() {
+function QueuePageInner() {
   const { user, loading: authLoading, signOut } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -1000,5 +1000,13 @@ function SavesPanel({ accounts, statsView }: { accounts: StoredAccount[]; statsV
         )}
       </AnimatePresence>
     </div>
+  )
+}
+
+export default function QueuePage() {
+  return (
+    <Suspense>
+      <QueuePageInner />
+    </Suspense>
   )
 }
