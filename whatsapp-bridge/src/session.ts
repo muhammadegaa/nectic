@@ -114,7 +114,8 @@ export async function startSession(uid: string, webhookToken: string): Promise<v
     logger: pino({ level: "silent" }) as Parameters<typeof makeWASocket>[0]["logger"],
     printQRInTerminal: false,
     auth: state,
-    browser: Browsers.macOS("Chrome"),
+    browser: Browsers.ubuntu("Chrome"),
+    syncFullHistory: false,
     // Don't cache all history — only what arrives during active session
     getMessage: async () => undefined,
   })

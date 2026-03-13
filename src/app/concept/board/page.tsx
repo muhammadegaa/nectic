@@ -625,6 +625,21 @@ function QueueCard({
   }
 
   const extraCount = openCount - 1
+  const [showEvidence, setShowEvidence] = useState(false)
+
+  // Collect all evidence quotes across all signals for the evidence panel
+  const allEvidence = [
+    ...(account.result.riskSignals ?? []).flatMap((s) => {
+      const title = (s as { title?: string }).title || s.explanation.slice(0, 60)
+      const severity = (s as { severity?: string }).severity ?? "medium"
+      const quotes = [s.quote, ...((s as { evidence?: string[] }).evidence ?? [])].filter(Boolean)
+      return quotes.map((q, i) => ({ quote: q, label: title, tag: "risk" as const, severity, isFirst: i === 0 }))
+    }),
+    ...(account.result.productSignals ?? []).flatMap((s) => {
+      const quotes = [s.quote].filter(Boolean)
+      return quotes.map((q, i) => ({ quote: q, label: s.title, tag: "product" as const, severity: s.priority, isFirst: i === 0 }))
+    }),
+  ]
 
   return (
     <motion.div
@@ -673,9 +688,70 @@ function QueueCard({
         <p className="text-xs text-neutral-400 italic leading-relaxed mb-4">&ldquo;{topSignal.quote}&rdquo;</p>
 
         {topSignal.explanation && (
-          <div className="text-xs text-neutral-600 leading-relaxed bg-neutral-50 rounded-lg px-3 py-2.5 border border-neutral-100 mb-4">
+          <div className="text-xs text-neutral-600 leading-relaxed bg-neutral-50 rounded-lg px-3 py-2.5 border border-neutral-100 mb-3">
             <span className="block text-[10px] font-semibold text-neutral-400 uppercase tracking-wide mb-1">Why this matters</span>
             {topSignal.explanation}
+          </div>
+        )}
+
+        {/* Evidence toggle */}
+        {allEvidence.length > 0 && (
+          <div className="mb-4">
+            <button
+              onClick={() => setShowEvidence((v) => !v)}
+              className="flex items-center gap-1.5 text-[11px] font-medium text-neutral-400 hover:text-neutral-700 transition-colors"
+            >
+              <svg
+                width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+                className={`transition-transform ${showEvidence ? "rotate-90" : ""}`}
+              >
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+              {showEvidence ? "Hide" : "See"} evidence · {allEvidence.length} message{allEvidence.length !== 1 ? "s" : ""}
+            </button>
+
+            <AnimatePresence>
+              {showEvidence && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div className="mt-3 space-y-2.5 pl-1">
+                    {allEvidence.map((item, i) => (
+                      <div key={i}>
+                        {item.isFirst && (
+                          <div className="flex items-center gap-1.5 mb-1.5">
+                            <span className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded border ${
+                              item.tag === "risk"
+                                ? item.severity === "critical" ? "bg-red-50 text-red-600 border-red-200"
+                                : item.severity === "high" ? "bg-orange-50 text-orange-600 border-orange-200"
+                                : "bg-amber-50 text-amber-600 border-amber-200"
+                                : "bg-blue-50 text-blue-600 border-blue-200"
+                            }`}>
+                              {item.label.length > 40 ? item.label.slice(0, 40) + "…" : item.label}
+                            </span>
+                          </div>
+                        )}
+                        {/* WhatsApp-style customer bubble */}
+                        <div className="flex items-start gap-2">
+                          <div className="w-5 h-5 rounded-full bg-neutral-200 flex-shrink-0 flex items-center justify-center mt-0.5">
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2">
+                              <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+                            </svg>
+                          </div>
+                          <div className="bg-neutral-100 rounded-2xl rounded-tl-sm px-3 py-2 max-w-[90%]">
+                            <p className="text-xs text-neutral-800 leading-relaxed">{item.quote}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         )}
 
