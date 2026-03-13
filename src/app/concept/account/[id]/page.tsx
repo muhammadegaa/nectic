@@ -824,7 +824,7 @@ function AnalysisQualityBanner({
   onSave: (ctx: string) => Promise<void>
   onReanalyze: (ctx: string) => Promise<void>
 }) {
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpanded] = useState(quality.confidence !== "high")
   const [context, setContext] = useState(savedContext ?? "")
   const [saving, setSaving] = useState(false)
   const [reanalysing, setReanalysing] = useState(false)
@@ -977,11 +977,11 @@ function SuggestedActionsList({ actions }: { actions: SuggestedAction[] }) {
 
 // ─── Signal action control ────────────────────────────────────────────────────
 
-const ACTION_OPTIONS: { value: SignalActionStatus; label: string; color: string }[] = [
-  { value: "open", label: "Open", color: "bg-neutral-100 text-neutral-500 border-neutral-200" },
-  { value: "in_progress", label: "In progress", color: "bg-amber-50 text-amber-700 border-amber-200" },
-  { value: "done", label: "Done", color: "bg-green-50 text-green-700 border-green-200" },
-  { value: "dismissed", label: "Dismissed", color: "bg-neutral-50 text-neutral-400 border-neutral-200" },
+const ACTION_OPTIONS: { value: SignalActionStatus; label: string; color: string; tooltip: string }[] = [
+  { value: "open", label: "Open", color: "bg-neutral-100 text-neutral-500 border-neutral-200", tooltip: "Signal is unaddressed" },
+  { value: "in_progress", label: "In progress", color: "bg-amber-50 text-amber-700 border-amber-200", tooltip: "You're actively working on this" },
+  { value: "done", label: "Done", color: "bg-green-50 text-green-700 border-green-200", tooltip: "Signal resolved — select a reason to log the outcome" },
+  { value: "dismissed", label: "Dismissed", color: "bg-neutral-50 text-neutral-400 border-neutral-200", tooltip: "Not relevant — remove from queue" },
 ]
 
 const RESOLVED_REASON_OPTIONS: { value: ResolvedReason; label: string }[] = [
@@ -1061,6 +1061,7 @@ function SignalActionControl({
             <button
               key={opt.value}
               onClick={() => handleStatusChange(opt.value)}
+              title={opt.tooltip}
               className={`text-xs font-medium px-2.5 py-1 rounded-md transition-all ${
                 status === opt.value
                   ? `${opt.color} border shadow-sm`

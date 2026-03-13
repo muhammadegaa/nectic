@@ -214,7 +214,20 @@ export default function QueuePage() {
       if (count > 11) { clearInterval(interval); return }
       const accs = await getAccounts(user.uid).catch(() => null)
       if (!accs) return
-      setAccounts(accs)
+      // Detect newly appeared drafts and notify
+      setAccounts((prev) => {
+        const prevDrafted = new Set(prev.flatMap(a =>
+          Object.values(a.signalActions ?? {}).filter(s => s.draftResponse).map(() => a.id)
+        ))
+        const newDrafts = accs.filter(a =>
+          !prevDrafted.has(a.id) &&
+          Object.values(a.signalActions ?? {}).some(s => s.draftResponse)
+        )
+        if (newDrafts.length > 0) {
+          toast.success(`Draft${newDrafts.length > 1 ? "s" : ""} ready — ${newDrafts.map(a => a.result.accountName).join(", ")}`)
+        }
+        return accs
+      })
       setQueue(buildQueue(accs, workspace.suppressedSignalTypes ?? []))
     }, 8000)
     return () => clearInterval(interval)
@@ -747,6 +760,7 @@ function QueueCard({
                 whileHover={{ scale: 1.01 }}
                 whileTap={{ scale: 0.99 }}
                 onClick={handleCopyAndDone}
+                title={canSend ? "Copy draft to clipboard and mark done — use if sending manually" : "Copy draft to clipboard and mark this signal as done"}
                 className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all border ${
                   copyDone
                     ? "bg-emerald-50 text-emerald-700 border-emerald-200"
