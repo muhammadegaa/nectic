@@ -40,6 +40,14 @@ export interface WorkspaceSnapshot {
   knownIssues?: string
 }
 
+// A real example of how the team rewrites an AI draft — captured automatically on send
+export interface DraftExample {
+  original: string   // what the AI wrote
+  edited: string     // what the CS lead actually sent
+  signalType: string // "risk" | "product" | "competitor"
+  savedAt: string    // ISO
+}
+
 export interface WorkspaceContext {
   productDescription?: string
   featureAreas?: string
@@ -52,6 +60,8 @@ export interface WorkspaceContext {
   communicationStyle?: "formal" | "warm" | "casual"  // how your team writes
   csEscalationProcess?: string  // what happens when a signal hits critical
   companyVoiceSamples?: string[] // extracted vendor-side messages from past conversations
+  // Learning — real edited drafts captured from CS lead's own sends
+  draftExamples?: DraftExample[] // last 10 edits; injected into future draft prompts
   // Notifications
   notificationEmail?: string
   // Alert preferences
@@ -397,6 +407,53 @@ export async function saveWorkspace(uid: string, ctx: WorkspaceContext): Promise
   if (isNewToken) {
     await setDoc(doc(db, "webhookTokens", webhookToken), { uid })
   }
+}
+
+// ─── Learning helpers ──────────────────────────────────────────────────────────
+
+// Called when CS lead edits an AI draft before sending — captures the delta as a voice example.
+// Skips if the edit is trivial (< 10 char difference) or drafts are identical.
+export async function saveDraftExample(
+  uid: string,
+  original: string,
+  edited: string,
+  signalType: string
+): Promise<void> {
+  if (original.trim() === edited.trim()) return
+  if (Math.abs(original.length - edited.length) < 10 && edited.includes(original.slice(0, 30))) return
+
+  const example: DraftExample = {
+    original: original.trim(),
+    edited: edited.trim(),
+    signalType,
+    savedAt: new Date().toISOString(),
+  }
+
+  const ws = await getWorkspace(uid)
+  const existing = ws.draftExamples ?? []
+  const updated = [example, ...existing].slice(0, 10) // keep last 10
+  await setDoc(doc(db, "users", uid), { workspace: { draftExamples: updated } }, { merge: true })
+}
+
+// Called on signal dismiss — if same type dismissed 3+ times, auto-add to suppressedSignalTypes.
+export async function checkAndAutoSuppress(uid: string, signalType: string): Promise<boolean> {
+  const accounts = await getAccounts(uid)
+  const dismissCount = accounts.reduce((sum, a) => {
+    return sum + Object.values(a.signalActions ?? {}).filter(
+      (action) => action.status === "dismissed"
+    ).length
+  }, 0)
+
+  if (dismissCount >= 3) {
+    const ws = await getWorkspace(uid)
+    const suppressed = ws.suppressedSignalTypes ?? []
+    if (!suppressed.includes(signalType)) {
+      const updated = [...suppressed, signalType]
+      await setDoc(doc(db, "users", uid), { workspace: { suppressedSignalTypes: updated } }, { merge: true })
+      return true // newly suppressed
+    }
+  }
+  return false
 }
 
 // ─── WATI Buffer CRUD ─────────────────────────────────────────────────────────

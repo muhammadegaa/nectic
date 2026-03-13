@@ -14,6 +14,8 @@ import {
   recalculateHealthFromResolutions,
   signalKey,
   getWorkspace,
+  saveDraftExample,
+  checkAndAutoSuppress,
   type StoredAccount,
   type SignalAction,
   type SignalActionStatus,
@@ -453,6 +455,7 @@ function QueuePageInner() {
                       workspace={workspace}
                       onUpdate={(key, action) => updateSignalAction(entry.account.id, key, action)}
                       getIdToken={() => user?.getIdToken() ?? Promise.resolve(undefined)}
+                      uid={user?.uid}
                       cardRef={(el) => { if (el) cardRefs.current.set(entry.account.id, el); else cardRefs.current.delete(entry.account.id) }}
                     />
                   ))}
@@ -482,6 +485,7 @@ function QueuePageInner() {
                       workspace={workspace}
                       onUpdate={(key, action) => updateSignalAction(entry.account.id, key, action)}
                       getIdToken={() => user?.getIdToken() ?? Promise.resolve(undefined)}
+                      uid={user?.uid}
                       cardRef={(el) => { if (el) cardRefs.current.set(entry.account.id, el); else cardRefs.current.delete(entry.account.id) }}
                     />
                   ))}
@@ -502,17 +506,20 @@ function QueueCard({
   workspace,
   onUpdate,
   getIdToken,
+  uid,
   cardRef,
 }: {
   entry: QueueEntry
   workspace: WorkspaceContext
   onUpdate: (key: string, action: SignalAction) => void
   getIdToken: () => Promise<string | undefined>
+  uid?: string
   cardRef?: (el: HTMLDivElement | null) => void
 }) {
   const { account, topSignal, openCount, arrAtRisk } = entry
   const risk = account.result.riskLevel
   const [draft, setDraft] = useState(topSignal.action?.draftResponse ?? "")
+  const originalDraft = topSignal.action?.draftResponse ?? ""
   const [draftLoading, setDraftLoading] = useState(false)
   const [draftTone, setDraftTone] = useState<"shorter" | "more_formal" | "bahasa" | undefined>(undefined)
   const [copyDone, setCopyDone] = useState(false)
@@ -536,12 +543,17 @@ function QueueCard({
     })
   }
 
-  const handleDismiss = () => {
+  const handleDismiss = async () => {
     onUpdate(topSignal.key, {
       status: "dismissed",
       draftResponse: draft || undefined,
       updatedAt: new Date().toISOString(),
     })
+    // Auto-suppress if this signal type keeps getting dismissed
+    if (uid) {
+      const suppressed = await checkAndAutoSuppress(uid, topSignal.type).catch(() => false)
+      if (suppressed) toast("Signal type auto-suppressed — you can re-enable it in workspace settings.", { icon: "🔕" })
+    }
   }
 
   const handleCopyAndDone = async () => {
@@ -555,6 +567,10 @@ function QueueCard({
       resolvedAt,
       updatedAt: resolvedAt,
     })
+    // Capture draft edit as learning example
+    if (uid && originalDraft && draft !== originalDraft) {
+      saveDraftExample(uid, originalDraft, draft, topSignal.type).catch(() => {})
+    }
     toast.success("Draft copied — signal marked done")
     setTimeout(() => setCopyDone(false), 3000)
   }
@@ -576,6 +592,10 @@ function QueueCard({
       setSendDone(true)
       const resolvedAt = new Date().toISOString()
       onUpdate(topSignal.key, { status: "done", draftResponse: draft, resolvedAt, updatedAt: resolvedAt })
+      // Capture draft edit as learning example
+      if (uid && originalDraft && draft !== originalDraft) {
+        saveDraftExample(uid, originalDraft, draft, topSignal.type).catch(() => {})
+      }
       toast.success("Message sent via WhatsApp — signal marked done")
       setTimeout(() => setSendDone(false), 4000)
     } catch (err) {

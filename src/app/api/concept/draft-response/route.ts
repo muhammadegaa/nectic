@@ -3,6 +3,12 @@ import { callAI } from "@/lib/ai-client"
 
 export const maxDuration = 30
 
+interface DraftExample {
+  original: string
+  edited: string
+  signalType: string
+}
+
 interface WorkspaceContext {
   productDescription?: string
   featureAreas?: string
@@ -11,6 +17,7 @@ interface WorkspaceContext {
   communicationStyle?: "formal" | "warm" | "casual"
   csEscalationProcess?: string
   companyVoiceSamples?: string[]
+  draftExamples?: DraftExample[]
 }
 
 interface RelationshipSignal {
@@ -111,6 +118,16 @@ export async function POST(req: NextRequest) {
       ? `Here are examples of how your team actually writes to customers:\n${workspace.companyVoiceSamples.slice(0, 3).map((s, i) => `${i + 1}. "${s}"`).join("\n")}\nMatch this voice — same register, same level of formality, similar length.`
       : ""
 
+    // Real learning: how this team actually rewrites AI drafts — highest-signal input
+    const relevantExamples = (workspace?.draftExamples ?? [])
+      .filter((e) => !signalCategory || e.signalType === signalCategory || e.signalType === "risk")
+      .slice(0, 3)
+    const draftLearningBlock = relevantExamples.length
+      ? `HOW THIS TEAM REWRITES AI DRAFTS (learn from these — they show what to fix):\n${relevantExamples.map((e, i) =>
+          `Example ${i + 1}:\n  AI wrote: "${e.original}"\n  Team sent: "${e.edited}"`
+        ).join("\n")}\nNotice the pattern: apply the same changes to your draft.`
+      : ""
+
     // Escalation process for critical signals
     const escalationBlock = accountContext?.riskLevel === "critical" && workspace?.csEscalationProcess
       ? `Your escalation process for critical accounts: ${workspace.csEscalationProcess}. Reference this if it affects the message.`
@@ -127,6 +144,7 @@ export async function POST(req: NextRequest) {
 ${productContext}
 ${styleInstruction ? `\nCOMMUNICATION STYLE: ${styleInstruction}` : ""}
 ${voiceSamplesBlock ? `\nYOUR TEAM'S VOICE:\n${voiceSamplesBlock}` : ""}
+${draftLearningBlock ? `\n${draftLearningBlock}` : ""}
 ${escalationBlock ? `\nESCALATION: ${escalationBlock}` : ""}
 
 WHAT YOU KNOW ABOUT THIS ACCOUNT:
