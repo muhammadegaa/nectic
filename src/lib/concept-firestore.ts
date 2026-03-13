@@ -52,9 +52,6 @@ export interface WorkspaceContext {
   communicationStyle?: "formal" | "warm" | "casual"  // how your team writes
   csEscalationProcess?: string  // what happens when a signal hits critical
   companyVoiceSamples?: string[] // extracted vendor-side messages from past conversations
-  // WATI BSP integration
-  watiEndpoint?: string
-  watiToken?: string
   // Notifications
   notificationEmail?: string
   // Alert preferences
@@ -66,7 +63,7 @@ export interface WorkspaceContext {
   // Context versioning — tracks when analysis-affecting fields change
   version?: number          // bumped whenever product/feature/roadmap fields change
   history?: WorkspaceSnapshot[]  // last 5 snapshots (kept lean, no credentials)
-  // WATI live integration — webhook token for real-time message ingestion
+  // WhatsApp live integration — webhook token for real-time message ingestion
   webhookToken?: string     // auto-generated UUID; used to verify incoming WATI webhooks
   // CRM integrations
   hubspotConnected?: boolean

@@ -66,7 +66,7 @@ async function forwardToNectic(
   timestamp: string,
   messageId: string,
 ): Promise<void> {
-  const url = `${NECTIC_BASE_URL}/api/wati/webhook?token=${encodeURIComponent(webhookToken)}`
+  const url = `${NECTIC_BASE_URL}/api/whatsapp/webhook?token=${encodeURIComponent(webhookToken)}`
   const payload = {
     id: messageId,
     eventType: "message",

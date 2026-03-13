@@ -8,7 +8,7 @@
 
 import express from "express"
 import { initializeApp, cert } from "firebase-admin/app"
-import { startSession, stopSession, setMonitoredGroups, restoreSessions } from "./session.js"
+import { startSession, stopSession, setMonitoredGroups, restoreSessions, sendMessage } from "./session.js"
 import { getSession, upsertSession } from "./store.js"
 
 // ── Firebase Admin init ────────────────────────────────────────────────────────
@@ -110,6 +110,26 @@ app.post("/session/:uid/monitor", async (req, res) => {
   try {
     await setMonitoredGroups(uid, groupJids)
     res.json({ ok: true, monitoring: groupJids.length })
+  } catch (err) {
+    res.status(500).json({ error: String(err) })
+  }
+})
+
+// ── Send message ──────────────────────────────────────────────────────────────
+// Body: { jid: string, text: string }
+// jid = group JID (120363xxxx@g.us) or phone (1234567890@s.whatsapp.net)
+app.post("/session/:uid/send", async (req, res) => {
+  const { uid } = req.params
+  const { jid, text } = req.body as { jid?: string; text?: string }
+
+  if (!jid || !text?.trim()) {
+    res.status(400).json({ error: "jid and text required" })
+    return
+  }
+
+  try {
+    await sendMessage(uid, jid, text.trim())
+    res.json({ ok: true })
   } catch (err) {
     res.status(500).json({ error: String(err) })
   }

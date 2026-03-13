@@ -1,33 +1,81 @@
+/**
+ * POST /api/whatsapp/webhook?token=<webhookToken>
+ *
+ * Receives messages forwarded from the Baileys bridge.
+ * The bridge formats payloads in WATI webhook shape — same structure,
+ * so we can use the same buffering + analysis pipeline.
+ */
 import { NextRequest, NextResponse } from "next/server"
+import { getUidFromWebhookToken, appendToWatiBuffer, type WatiBufferMessage } from "@/lib/concept-firestore"
 
-// WhatsApp Business API webhook verification
-export async function GET(req: NextRequest) {
-  const searchParams = req.nextUrl.searchParams
-  const mode = searchParams.get("hub.mode")
-  const token = searchParams.get("hub.verify_token")
-  const challenge = searchParams.get("hub.challenge")
+export const maxDuration = 10
 
-  if (mode === "subscribe" && token === process.env.WHATSAPP_VERIFY_TOKEN) {
-    return new NextResponse(challenge, { status: 200 })
-  }
-
-  return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+// Payload shape the Baileys bridge sends (mirrors WATI webhook format)
+interface BridgeWebhookPayload {
+  id?: string
+  eventType?: string   // always "message" from bridge
+  type?: string        // always "text" from bridge
+  text?: string
+  owner?: boolean      // always false from bridge (customer messages only)
+  waId?: string        // group JID (e.g. "120363xxxx@g.us") or phone
+  senderName?: string
+  timestamp?: string
 }
 
-// WhatsApp Business API webhook — receives messages
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json()
+    const token = req.nextUrl.searchParams.get("token")
+    if (!token) {
+      return NextResponse.json({ error: "Missing token" }, { status: 401 })
+    }
 
-    // TODO: Process incoming WhatsApp messages
-    // 1. Extract message content and sender
-    // 2. Store in Firestore
-    // 3. Trigger insight extraction pipeline
+    const uid = await getUidFromWebhookToken(token)
+    if (!uid) {
+      return NextResponse.json({ error: "Invalid token" }, { status: 401 })
+    }
 
-    console.log("WhatsApp webhook received:", JSON.stringify(body, null, 2))
+    const payload = await req.json() as BridgeWebhookPayload
 
-    return NextResponse.json({ status: "received" }, { status: 200 })
-  } catch {
-    return NextResponse.json({ error: "Invalid payload" }, { status: 400 })
+    if (payload.eventType !== "message") {
+      return NextResponse.json({ ok: true, skipped: "non-message event" })
+    }
+    if (payload.owner === true) {
+      return NextResponse.json({ ok: true, skipped: "outgoing message" })
+    }
+    if (payload.type !== "text" || !payload.text?.trim()) {
+      return NextResponse.json({ ok: true, skipped: "non-text message" })
+    }
+
+    const waId = payload.waId
+    if (!waId) {
+      return NextResponse.json({ error: "No waId in payload" }, { status: 400 })
+    }
+
+    const contactName = payload.senderName ?? waId
+    const messageId = payload.id ?? `${waId}-${Date.now()}`
+    const timestamp = payload.timestamp ?? new Date().toISOString()
+
+    const message: WatiBufferMessage = {
+      id: messageId,
+      text: payload.text.trim(),
+      senderName: contactName,
+      isCustomer: true,
+      timestamp,
+    }
+
+    const { messageCount, needsAnalysis } = await appendToWatiBuffer(uid, waId, message, contactName)
+
+    if (needsAnalysis) {
+      const flushUrl = new URL(req.url)
+      flushUrl.pathname = "/api/cron/flush-wati-buffers"
+      fetch(flushUrl.toString(), {
+        headers: { authorization: `Bearer ${process.env.CRON_SECRET}` },
+      }).catch(() => {})
+    }
+
+    return NextResponse.json({ ok: true, buffered: messageCount, needsAnalysis })
+  } catch (err: unknown) {
+    console.error("WhatsApp bridge webhook error:", err)
+    return NextResponse.json({ ok: true, error: String(err) })
   }
 }

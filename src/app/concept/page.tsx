@@ -1005,10 +1005,7 @@ function ReadyToSendCard({
   const [sending, setSending] = useState(false)
   const [gone, setGone] = useState(false)
   const phone = account.context?.watiPhone
-  const isGroupJid = !!(phone?.endsWith("@g.us"))
-  const canSendViaBaileys = !!(isGroupJid && phone)
-  const canSendViaWati = !!(phone && !isGroupJid && workspace.watiEndpoint && workspace.watiToken)
-  const canSend = canSendViaBaileys || canSendViaWati
+  const canSend = !!(phone && draft)
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(draft)
@@ -1021,26 +1018,12 @@ function ReadyToSendCard({
     if (!canSend) return
     setSending(true)
     try {
-      let res: Response
-      if (canSendViaBaileys) {
-        const token = await user?.getIdToken()
-        res = await fetch("/api/whatsapp/send", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ jid: phone, text: draft }),
-        })
-      } else {
-        res = await fetch("/api/wati/send", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            endpoint: workspace.watiEndpoint,
-            token: workspace.watiToken,
-            phoneNumber: phone,
-            message: draft,
-          }),
-        })
-      }
+      const token = await user?.getIdToken()
+      const res = await fetch("/api/whatsapp/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ jid: phone, text: draft }),
+      })
       if (!res.ok) throw new Error("Send failed")
       setGone(true)
       await onDone(account.id, sigKey, draft)
