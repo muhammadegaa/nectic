@@ -395,7 +395,7 @@ function QueuePageInner() {
                 <div className="flex items-center gap-2 mb-3">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
                   <p className="text-xs font-semibold text-neutral-700">
-                    Ready to review — {readyQueue.length} draft{readyQueue.length !== 1 ? "s" : ""} prepared by agent
+                    Ready to send — {readyQueue.length} response{readyQueue.length !== 1 ? "s" : ""} drafted
                   </p>
                 </div>
                 <motion.div
@@ -424,7 +424,7 @@ function QueuePageInner() {
                   <div className="flex items-center gap-2 mb-3">
                     <span className="w-1.5 h-1.5 rounded-full bg-neutral-300 flex-shrink-0" />
                     <p className="text-xs font-semibold text-neutral-400">
-                      Generate response — {pendingQueue.length} account{pendingQueue.length !== 1 ? "s" : ""}
+                      Needs attention — {pendingQueue.length} account{pendingQueue.length !== 1 ? "s" : ""}
                     </p>
                   </div>
                 )}
@@ -508,7 +508,7 @@ function QueueCard({
     // Auto-suppress if this signal type keeps getting dismissed
     if (uid) {
       const suppressed = await checkAndAutoSuppress(uid, topSignal.type).catch(() => false)
-      if (suppressed) toast("Signal type auto-suppressed — you can re-enable it in workspace settings.", { icon: "🔕" })
+      if (suppressed) toast("This alert type is now hidden — re-enable it in Settings → Alerts if needed.", { icon: "🔕" })
     }
   }
 
@@ -781,7 +781,7 @@ function QueueCard({
             )}
             {!canSend && !workspace.whatsappDirectConnected && (
               <Link href="/concept/workspace" className="text-[11px] text-neutral-400 hover:text-neutral-600 transition-colors ml-auto">
-                Connect WhatsApp to send →
+                Connect WhatsApp to reply directly →
               </Link>
             )}
             {extraCount > 0 && (

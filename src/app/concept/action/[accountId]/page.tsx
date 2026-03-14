@@ -221,7 +221,7 @@ function ActionPageInner() {
             {doneMode === "sent" ? "Message sent" : "Copied to clipboard"}
           </p>
           <p className="text-sm text-neutral-500 mb-6">
-            {account.result.accountName} · signal marked resolved
+            {account.result.accountName} · marked resolved
           </p>
           <button
             onClick={() => router.push("/concept/board")}
@@ -262,7 +262,7 @@ function ActionPageInner() {
         {topSignal && (
           <div className="bg-white border border-neutral-200 rounded-xl px-4 py-4 shadow-sm space-y-3">
             <div>
-              <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider mb-1">Signal detected</p>
+              <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider mb-1">Alert</p>
               <p className="text-sm font-semibold text-neutral-900 leading-snug">{topSignalTitle}</p>
             </div>
 

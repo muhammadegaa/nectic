@@ -1058,7 +1058,7 @@ export default function WorkspacePage() {
                 <div className="flex-1 h-px bg-neutral-200" />
               </div>
               <p className="text-xs text-neutral-400 mb-4 leading-relaxed">
-                Connect your data sources and CRMs. Nectic writes WhatsApp signals into your existing tools — no manual data entry.
+                Connect WhatsApp to start ingesting customer conversations. Connect your CRM to push alerts and health scores without manual entry.
               </p>
 
               {/* WhatsApp Direct — primary ingestion */}
@@ -1710,8 +1710,8 @@ function WhatsAppDirectCard({
           </svg>
         </div>
         <div className="flex-1 min-w-0">
-          <span className="text-xs font-medium text-neutral-400 uppercase tracking-wide">Direct connection</span>
-          <p className="text-sm font-semibold text-neutral-800 leading-tight">WhatsApp Direct</p>
+          <span className="text-xs font-medium text-neutral-400 uppercase tracking-wide">Group chat monitoring</span>
+          <p className="text-sm font-semibold text-neutral-800 leading-tight">WhatsApp</p>
         </div>
         {isConnected && (
           <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full flex-shrink-0">Connected</span>
@@ -1726,11 +1726,11 @@ function WhatsAppDirectCard({
         {(status === "none" || status === "disconnected") && !isPendingQR && (
           <div className="space-y-4">
             <p className="text-xs text-neutral-500 leading-relaxed">
-              Connect your WhatsApp account directly. Nectic monitors your selected group chats in real time — no WATI account needed. Scan once, stay connected.
+              Scan once to connect your WhatsApp. Nectic reads your selected customer group chats in real time and alerts you when something needs your attention. Free to use — works alongside your existing WhatsApp setup.
             </p>
             <div className="flex items-start gap-2 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2.5">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-amber-500 mt-0.5 shrink-0"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-              <p className="text-[11px] text-amber-800 leading-relaxed">Beta — uses WhatsApp Web (same as WhatsApp Desktop). Keep your phone online for the session to stay active. If your phone goes offline for extended periods, you&apos;ll need to re-scan the QR. Disconnect anytime from this page or your phone under Settings → Linked Devices.</p>
+              <p className="text-[11px] text-amber-800 leading-relaxed">Beta — works the same way as WhatsApp Desktop. Keep your phone connected. If your phone goes offline for an extended period, you&apos;ll need to re-scan once. You can disconnect anytime from this page or from your phone under Settings → Linked Devices.</p>
             </div>
             <button
               onClick={onConnect}
@@ -1784,7 +1784,7 @@ function WhatsAppDirectCard({
                 <p className="text-xs font-semibold text-neutral-700 mb-2">
                   Select groups to monitor ({monitored.length} selected)
                 </p>
-                <p className="text-[11px] text-neutral-400 mb-3">Nectic will analyze these groups when conversations reach 30+ messages or go quiet for 4 hours.</p>
+                <p className="text-[11px] text-neutral-400 mb-3">Nectic will watch these groups and alert you when a customer needs attention.</p>
                 <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
                   {groups.length === 0 ? (
                     <p className="text-xs text-neutral-400 py-4 text-center">No groups found — make sure you&apos;re in at least one WhatsApp group</p>
