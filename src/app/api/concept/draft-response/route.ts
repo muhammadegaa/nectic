@@ -182,7 +182,7 @@ Write only the message. Nothing else.`
 
     let draft: string
     try {
-      draft = (await callAI({ system: systemPrompt, user: userPrompt, maxTokens: 300, temperature: 0.4 })).trim()
+      draft = (await callAI({ system: systemPrompt, user: userPrompt, maxTokens: 450, temperature: 0.4 })).trim()
     } catch (aiErr) {
       console.error("AI error:", aiErr)
       return NextResponse.json({ error: "Draft generation failed" }, { status: 502 })

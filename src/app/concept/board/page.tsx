@@ -781,12 +781,7 @@ function QueueCard({
             )}
             {!canSend && !workspace.whatsappDirectConnected && (
               <Link href="/concept/workspace" className="text-[11px] text-neutral-400 hover:text-neutral-600 transition-colors ml-auto">
-                Connect WhatsApp to reply directly →
-              </Link>
-            )}
-            {extraCount > 0 && (
-              <Link href={`/concept/account/${account.id}`} className="text-xs text-neutral-400 hover:text-neutral-700 transition-colors ml-auto">
-                +{extraCount} more →
+                Connect WhatsApp →
               </Link>
             )}
           </div>
