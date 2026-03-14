@@ -188,6 +188,10 @@ export default function WorkspacePage() {
 
   // Handle OAuth callback results
   useEffect(() => {
+    const tab = searchParams.get("tab")
+    if (tab === "connections" || tab === "voice" || tab === "alerts" || tab === "intelligence") {
+      setActiveTab(tab)
+    }
     if (searchParams.get("hubspot_connected") === "1") {
       toast.success("HubSpot connected — risk signals will now sync automatically")
       setHubspotConnected(true)
