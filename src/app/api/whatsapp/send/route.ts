@@ -10,8 +10,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getAdminAuth } from "@/infrastructure/firebase/firebase-server"
 
-const BRIDGE_URL = process.env.WA_BRIDGE_URL ?? process.env.WHATSAPP_BRIDGE_URL ?? ""
-const BRIDGE_SECRET = process.env.WA_BRIDGE_SECRET ?? process.env.WHATSAPP_BRIDGE_SECRET ?? ""
+const BRIDGE_URL = process.env.WA_BRIDGE_URL || process.env.WHATSAPP_BRIDGE_URL || ""
+const BRIDGE_SECRET = process.env.WA_BRIDGE_SECRET || process.env.WHATSAPP_BRIDGE_SECRET || ""
 
 /** Normalise a bare phone number to a WhatsApp JID */
 function toJid(raw: string): string {
