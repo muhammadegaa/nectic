@@ -82,7 +82,7 @@ export default function AccountPage() {
     if (!user) return
     setDeleting(true)
     await deleteAccount(user.uid, id)
-    router.push("/concept")
+    router.push("/concept/board")
   }
 
   const copyShareLink = async () => {
@@ -166,8 +166,8 @@ export default function AccountPage() {
       <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
         <div className="text-center">
           <p className="text-sm text-neutral-500">Account not found.</p>
-          <Link href="/concept" className="mt-3 inline-block text-xs text-neutral-400 hover:text-neutral-700 transition-colors">
-            ← Back to dashboard
+          <Link href="/concept/board" className="mt-3 inline-block text-xs text-neutral-400 hover:text-neutral-700 transition-colors">
+            ← Back to inbox
           </Link>
         </div>
       </div>
@@ -179,11 +179,11 @@ export default function AccountPage() {
       {/* Nav */}
       <nav className="bg-white border-b border-neutral-200 px-4 sm:px-6 h-12 flex items-center justify-between sticky top-0 z-20">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-          <Link href="/concept" className="flex items-center gap-1.5 hover:opacity-70 transition-opacity flex-shrink-0">
+          <Link href="/concept/board" className="flex items-center gap-1.5 hover:opacity-70 transition-opacity flex-shrink-0">
             <LogoIcon size={18} />
           </Link>
           <span className="text-neutral-300 hidden sm:inline">/</span>
-          <Link href="/concept" className="text-sm text-neutral-500 hover:text-neutral-700 transition-colors hidden sm:inline">Dashboard</Link>
+          <Link href="/concept/board" className="text-sm text-neutral-500 hover:text-neutral-700 transition-colors hidden sm:inline">Inbox</Link>
           <span className="text-neutral-300 hidden sm:inline">/</span>
           <span className="text-sm text-neutral-700 truncate max-w-[120px] sm:max-w-[200px]">{account.result.accountName}</span>
         </div>
@@ -800,8 +800,8 @@ function AnalysisReport({
       )}
 
       <div className="pt-2 pb-4">
-        <Link href="/concept" className="inline-block border border-neutral-200 bg-white text-neutral-700 text-sm font-semibold px-5 py-2.5 rounded-lg hover:border-neutral-400 transition-colors">
-          ← Back to dashboard
+        <Link href="/concept/board" className="inline-block border border-neutral-200 bg-white text-neutral-700 text-sm font-semibold px-5 py-2.5 rounded-lg hover:border-neutral-400 transition-colors">
+          ← Back to inbox
         </Link>
       </div>
       <p className="text-xs text-neutral-400 pb-4">
