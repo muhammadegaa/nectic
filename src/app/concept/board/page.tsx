@@ -661,283 +661,160 @@ function QueueCard({
 
       {/* Signal */}
       <div className="px-5 py-4">
-        <p className="text-sm font-semibold text-neutral-900 mb-3 leading-snug">{topSignal.title}</p>
+        {/* ── CONVERSATION THREAD ─────────────────────────────────── */}
+        <div className="mb-1 space-y-1.5">
 
-        {/* WhatsApp-style quote bubble */}
-        <div className="flex items-start gap-2.5 mb-3">
-          <div className="w-6 h-6 rounded-full bg-neutral-200 flex-shrink-0 flex items-center justify-center mt-0.5">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-          </div>
-          <div className="bg-neutral-100 rounded-2xl rounded-tl-sm px-3.5 py-2.5 max-w-[90%]">
-            <p className="text-sm text-neutral-800 leading-relaxed">{topSignal.quote}</p>
-          </div>
-        </div>
+          {/* Context bubbles (evidence) — shown above the signal bubble */}
+          {(topSignal.action?.draftResponse !== undefined || allEvidence.length > 1) &&
+            allEvidence.slice(1).map((item, i) => (
+              <div key={i} className="flex items-end gap-2">
+                <div className="w-6 h-6 rounded-full bg-neutral-200 flex-shrink-0 flex items-center justify-center mb-0.5">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+                </div>
+                <div className="bg-neutral-100 rounded-2xl rounded-bl-sm px-3 py-2 max-w-[85%]">
+                  <p className="text-xs text-neutral-600 leading-relaxed">{item.quote}</p>
+                </div>
+              </div>
+            ))
+          }
 
-        {topSignal.explanation && (
-          <p className="text-xs text-neutral-500 leading-relaxed mb-3 pl-[34px]">{topSignal.explanation}</p>
-        )}
-
-        {/* Evidence toggle */}
-        {allEvidence.length > 0 && (
-          <div className="mb-4">
-            <button
-              onClick={() => setShowEvidence((v) => !v)}
-              className="flex items-center gap-1.5 text-[11px] font-medium text-neutral-400 hover:text-neutral-700 transition-colors"
-            >
-              <svg
-                width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
-                className={`transition-transform ${showEvidence ? "rotate-90" : ""}`}
-              >
-                <polyline points="9 18 15 12 9 6" />
-              </svg>
-              {showEvidence ? "Hide" : "See"} evidence · {allEvidence.length} message{allEvidence.length !== 1 ? "s" : ""}
-            </button>
-
-            <AnimatePresence>
-              {showEvidence && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="overflow-hidden"
-                >
-                  <div className="mt-3 space-y-2.5 pl-1">
-                    {allEvidence.map((item, i) => (
-                      <div key={i}>
-                        {item.isFirst && (
-                          <div className="flex items-center gap-1.5 mb-1.5">
-                            <span className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded border ${
-                              item.tag === "risk"
-                                ? item.severity === "critical" ? "bg-red-50 text-red-600 border-red-200"
-                                : item.severity === "high" ? "bg-orange-50 text-orange-600 border-orange-200"
-                                : "bg-amber-50 text-amber-600 border-amber-200"
-                                : "bg-blue-50 text-blue-600 border-blue-200"
-                            }`}>
-                              {item.label.length > 40 ? item.label.slice(0, 40) + "…" : item.label}
-                            </span>
-                          </div>
-                        )}
-                        {/* WhatsApp-style customer bubble */}
-                        <div className="flex items-start gap-2">
-                          <div className="w-5 h-5 rounded-full bg-neutral-200 flex-shrink-0 flex items-center justify-center mt-0.5">
-                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2">
-                              <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
-                            </svg>
-                          </div>
-                          <div className="bg-neutral-100 rounded-2xl rounded-tl-sm px-3 py-2 max-w-[90%]">
-                            <p className="text-xs text-neutral-800 leading-relaxed">{item.quote}</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        )}
-
-        {/* Draft panel */}
-        <div className="border border-neutral-200 rounded-xl overflow-hidden mb-3">
-          <div className="flex items-center justify-between px-4 py-2.5 border-b border-neutral-100 bg-neutral-50">
-            <div className="flex items-center gap-1.5">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" className="text-[#25D366]">
-                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-              </svg>
-              <span className="text-xs font-semibold text-neutral-600">Draft response</span>
+          {/* Signal bubble — the triggering message, highlighted */}
+          <div className="flex items-end gap-2">
+            <div className="w-6 h-6 rounded-full bg-neutral-200 flex-shrink-0 flex items-center justify-center mb-0.5">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
             </div>
-            {draft && (
-              <button onClick={() => { setDraftTone(undefined); generateDraft() }} className="text-[11px] text-neutral-400 hover:text-neutral-600 transition-colors">
-                Regenerate
-              </button>
-            )}
+            <div className="flex-1 min-w-0">
+              <div className={`rounded-2xl rounded-bl-sm px-3 py-2.5 inline-block max-w-[85%] ${
+                risk === "critical" ? "bg-red-50 border border-red-200" : risk === "high" ? "bg-orange-50 border border-orange-200" : "bg-neutral-100"
+              }`}>
+                <p className="text-sm text-neutral-800 leading-relaxed">{topSignal.quote}</p>
+              </div>
+              <div className="mt-1 flex items-center gap-1.5">
+                <span className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${
+                  risk === "critical" ? "bg-red-50 text-red-600 border-red-200" : risk === "high" ? "bg-orange-50 text-orange-600 border-orange-200" : "bg-amber-50 text-amber-600 border-amber-200"
+                }`}>{topSignal.title.length > 45 ? topSignal.title.slice(0, 45) + "…" : topSignal.title}</span>
+                {topSignal.explanation && (
+                  <span className="text-[10px] text-neutral-400 truncate hidden sm:inline">{topSignal.explanation.slice(0, 60)}…</span>
+                )}
+              </div>
+            </div>
           </div>
-          <div className="px-4 py-3">
+
+          {/* Divider with AI label */}
+          <div className="flex items-center gap-2 py-2">
+            <div className="flex-1 h-px bg-neutral-100" />
+            <span className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider flex items-center gap-1">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+              AI draft
+            </span>
+            <div className="flex-1 h-px bg-neutral-100" />
+          </div>
+
+          {/* Reply bubble — outgoing WA style, editable */}
+          <div className="flex justify-end">
             {draftLoading ? (
-              <div className="space-y-2 py-1">
-                <div className="h-3 bg-neutral-100 rounded animate-pulse w-full" />
-                <div className="h-3 bg-neutral-100 rounded animate-pulse w-4/5" />
-                <div className="h-3 bg-neutral-100 rounded animate-pulse w-3/5" />
+              <div className="bg-[#dcf8c6] rounded-2xl rounded-br-sm px-4 py-3 max-w-[85%] space-y-2 min-w-[160px]">
+                <div className="h-3 bg-green-200 rounded animate-pulse w-full" />
+                <div className="h-3 bg-green-200 rounded animate-pulse w-4/5" />
+                <div className="h-3 bg-green-200 rounded animate-pulse w-3/5" />
               </div>
             ) : draft ? (
-              <>
+              <div className="bg-[#dcf8c6] rounded-2xl rounded-br-sm px-4 py-3 max-w-[85%] relative group w-full">
                 <textarea
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                   onBlur={() => saveAction({ draftResponse: draft })}
-                  rows={4}
-                  className="w-full text-sm text-neutral-800 leading-relaxed resize-none focus:outline-none bg-transparent"
+                  rows={3}
+                  className="w-full text-sm text-neutral-900 leading-relaxed resize-none focus:outline-none bg-transparent"
                 />
-                <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-neutral-100">
-                  <span className="text-[10px] text-neutral-400 mr-0.5">Adjust:</span>
-                  {(["shorter", "more_formal", "bahasa"] as const).map((t) => (
-                    <button key={t} onClick={() => { setDraftTone(t); generateDraft(t) }}
-                      className={`text-[10px] font-medium px-2 py-0.5 rounded-full border transition-colors ${draftTone === t ? "bg-neutral-900 text-white border-neutral-900" : "text-neutral-500 border-neutral-200 hover:border-neutral-400 hover:text-neutral-700"}`}>
-                      {t === "shorter" ? "Shorter" : t === "more_formal" ? "More formal" : "Bahasa"}
-                    </button>
-                  ))}
+                <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-green-200">
+                  <div className="flex items-center gap-1">
+                    {(["shorter", "more_formal", "bahasa"] as const).map((t) => (
+                      <button key={t} onClick={() => { setDraftTone(t); generateDraft(t) }}
+                        className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full border transition-colors ${draftTone === t ? "bg-neutral-800 text-white border-neutral-800" : "text-neutral-500 border-neutral-300 hover:border-neutral-500 bg-white"}`}>
+                        {t === "shorter" ? "Shorter" : t === "more_formal" ? "Formal" : "Bahasa"}
+                      </button>
+                    ))}
+                  </div>
+                  <button onClick={() => { setDraftTone(undefined); generateDraft() }} className="text-[10px] text-neutral-400 hover:text-neutral-700 transition-colors">
+                    Regenerate
+                  </button>
                 </div>
-              </>
+              </div>
             ) : (
               <button onClick={() => generateDraft()}
-                className="w-full flex items-center justify-center gap-2 text-sm font-medium text-neutral-500 py-4 hover:text-neutral-900 transition-colors">
+                className="w-full border-2 border-dashed border-neutral-200 rounded-2xl flex items-center justify-center gap-2 text-sm font-medium text-neutral-400 py-5 hover:border-neutral-400 hover:text-neutral-700 transition-colors">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
                 </svg>
-                Generate AI draft
+                Generate AI reply
               </button>
             )}
           </div>
         </div>
 
-        {/* Actions */}
-        <div className={`${canSend ? "flex-col" : "flex"} flex gap-2`}>
-          {!canSend && (
-            <button onClick={handleDismiss} className="text-xs font-medium text-neutral-400 hover:text-neutral-700 px-3 py-1.5 rounded-lg border border-neutral-200 hover:border-neutral-400 transition-all">
-              Dismiss
-            </button>
-          )}
-
-          <AnimatePresence mode="wait">
-            {draft && (
-              <motion.button
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.99 }}
-                onClick={handleCopyAndDone}
-                title={canSend ? "Copy draft to clipboard and mark done — use if sending manually" : "Copy draft to clipboard and mark this signal as done"}
-                className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all border ${
-                  copyDone
-                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                    : canSend
-                    ? "bg-white text-neutral-600 border-neutral-200 hover:border-neutral-400"
-                    : "bg-neutral-900 text-white border-transparent hover:bg-neutral-700"
-                }`}
-              >
-                {copyDone ? (
-                  <>
-                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><polyline points="2 8 6 12 14 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    Copied
-                  </>
-                ) : (
-                  <>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-                    Copy &amp; done
-                  </>
-                )}
-              </motion.button>
-            )}
-          </AnimatePresence>
-
+        {/* ── ACTIONS ─────────────────────────────────────────────── */}
+        <div className="mt-4 space-y-2">
+          {/* Primary: Send */}
           {canSend && (
-            <motion.button
-              whileTap={{ scale: 0.99 }}
-              onClick={handleSend}
-              disabled={sending}
-              className={`w-full flex items-center justify-center gap-2 text-sm font-semibold py-3 rounded-xl border transition-all disabled:opacity-60 ${
-                sendDone
-                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                  : "bg-green-600 text-white border-green-700 hover:bg-green-700"
-              }`}
-            >
-              {sendDone ? "Sent ✓" : sending ? (
-                <span className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
-              ) : (
-                <>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
-                  Send via WhatsApp
-                </>
-              )}
+            <motion.button whileTap={{ scale: 0.99 }} onClick={handleSend} disabled={sending}
+              className={`w-full flex items-center justify-center gap-2 text-sm font-semibold py-3 rounded-xl transition-all disabled:opacity-60 ${
+                sendDone ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-[#25D366] text-white hover:bg-[#20b858]"
+              }`}>
+              {sendDone ? "Sent ✓" : sending
+                ? <span className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                : <><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>Send via WhatsApp</>
+              }
             </motion.button>
           )}
 
-          {canSend && (
-            <div className="flex items-center gap-2">
-              <button onClick={handleDismiss} className="text-xs font-medium text-neutral-400 hover:text-neutral-700 px-3 py-1.5 rounded-lg border border-neutral-200 hover:border-neutral-400 transition-all">
-                Dismiss
+          {/* Secondary row */}
+          <div className="flex items-center gap-2">
+            <button onClick={handleDismiss} className="text-xs font-medium text-neutral-400 hover:text-neutral-700 px-3 py-2 rounded-lg border border-neutral-200 hover:border-neutral-300 transition-all">
+              Dismiss
+            </button>
+            {draft && (
+              <button onClick={handleCopyAndDone}
+                className={`flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg border transition-all ${copyDone ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "text-neutral-500 border-neutral-200 hover:border-neutral-300 hover:text-neutral-700"}`}>
+                {copyDone ? "Copied ✓" : <><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Copy &amp; done</>}
               </button>
-              <AnimatePresence mode="wait">
-                {draft && (
-                  <motion.button initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
-                    onClick={handleCopyAndDone}
-                    title="Copy draft to clipboard — use if sending manually"
-                    className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border border-neutral-200 text-neutral-500 hover:border-neutral-400 hover:text-neutral-700 transition-all">
-                    {copyDone ? "Copied ✓" : <>
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-                      Copy
-                    </>}
-                  </motion.button>
-                )}
-              </AnimatePresence>
-            </div>
-          )}
-        </div>
-
-        {!canSend && !workspace.whatsappDirectConnected && (
-          <div className="mt-2 flex items-center gap-2 px-1">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" className="text-[#25D366] flex-shrink-0">
-              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-            </svg>
-            <Link href="/concept/workspace" className="text-[11px] text-neutral-400 hover:text-neutral-600 transition-colors">
-              Scan WhatsApp QR to send directly →
-            </Link>
+            )}
+            {!canSend && !workspace.whatsappDirectConnected && (
+              <Link href="/concept/workspace" className="text-[11px] text-neutral-400 hover:text-neutral-600 transition-colors ml-auto">
+                Connect WhatsApp to send →
+              </Link>
+            )}
+            {extraCount > 0 && (
+              <Link href={`/concept/account/${account.id}`} className="text-xs text-neutral-400 hover:text-neutral-700 transition-colors ml-auto">
+                +{extraCount} more →
+              </Link>
+            )}
           </div>
-        )}
 
-        {/* Ask Nectic */}
-        <div className="mt-4 border-t border-neutral-100 pt-3">
-          <form
-            onSubmit={async (e) => {
+          {/* Ask Nectic — collapsed by default */}
+          <div className="border-t border-neutral-100 pt-2">
+            <form onSubmit={async (e) => {
               e.preventDefault()
               if (!askQuestion.trim() || askLoading) return
-              setAskLoading(true)
-              setAskAnswer("")
+              setAskLoading(true); setAskAnswer("")
               try {
-                const res = await fetch("/api/concept/ask", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    question: askQuestion,
-                    result: account.result,
-                    accountName: account.result.accountName,
-                  }),
-                })
+                const res = await fetch("/api/concept/ask", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question: askQuestion, result: account.result, accountName: account.result.accountName }) })
                 const data = await res.json()
                 if (!res.ok) throw new Error(data.error ?? "Failed")
                 setAskAnswer(data.answer)
-              } catch {
-                setAskAnswer("Could not answer. Try again.")
-              } finally {
-                setAskLoading(false)
-              }
-            }}
-            className="flex items-center gap-2"
-          >
-            <input
-              type="text"
-              value={askQuestion}
-              onChange={(e) => { setAskQuestion(e.target.value); setAskAnswer("") }}
-              placeholder="Ask about this account…"
-              className="flex-1 text-xs border border-neutral-200 rounded-lg px-3 py-2 text-neutral-700 placeholder:text-neutral-400 focus:outline-none focus:border-neutral-400 bg-neutral-50 transition-colors"
-            />
-            <button
-              type="submit"
-              disabled={!askQuestion.trim() || askLoading}
-              className="text-xs font-medium px-3 py-2 bg-neutral-100 text-neutral-600 rounded-lg hover:bg-neutral-200 transition-colors disabled:opacity-40 shrink-0"
-            >
-              {askLoading ? (
-                <span className="w-3 h-3 rounded-full border border-neutral-400 border-t-neutral-700 animate-spin inline-block" />
-              ) : "Ask"}
-            </button>
-          </form>
-          {askAnswer && (
-            <div className="mt-2 text-xs text-neutral-600 leading-relaxed bg-neutral-50 border border-neutral-100 rounded-lg px-3 py-2.5">
-              {askAnswer}
-            </div>
-          )}
+              } catch { setAskAnswer("Could not answer. Try again.") }
+              finally { setAskLoading(false) }
+            }} className="flex items-center gap-2">
+              <input type="text" value={askQuestion} onChange={(e) => { setAskQuestion(e.target.value); setAskAnswer("") }}
+                placeholder="Ask about this account…"
+                className="flex-1 text-xs border border-neutral-200 rounded-lg px-3 py-2 text-neutral-700 placeholder:text-neutral-400 focus:outline-none focus:border-neutral-400 bg-transparent transition-colors" />
+              <button type="submit" disabled={!askQuestion.trim() || askLoading}
+                className="text-xs font-medium px-3 py-2 bg-neutral-100 text-neutral-600 rounded-lg hover:bg-neutral-200 transition-colors disabled:opacity-40 shrink-0">
+                {askLoading ? <span className="w-3 h-3 rounded-full border border-neutral-400 border-t-neutral-700 animate-spin inline-block" /> : "Ask"}
+              </button>
+            </form>
+            {askAnswer && <div className="mt-2 text-xs text-neutral-600 leading-relaxed bg-neutral-50 border border-neutral-100 rounded-lg px-3 py-2.5">{askAnswer}</div>}
+          </div>
         </div>
       </div>
     </motion.div>
