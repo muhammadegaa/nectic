@@ -20,12 +20,12 @@ const app = express()
 app.use(express.json())
 
 const PORT = parseInt(process.env.PORT ?? "3001", 10)
-const BRIDGE_SECRET = process.env.BRIDGE_SECRET ?? ""
+const BRIDGE_SECRET = (process.env.BRIDGE_SECRET ?? "").trim()
 
 // Auth middleware — all routes require X-Bridge-Secret header
 app.use((req, res, next) => {
   if (!BRIDGE_SECRET) return next() // dev: no secret set = open
-  const header = req.headers["x-bridge-secret"]
+  const header = (req.headers["x-bridge-secret"] as string ?? "").trim()
   if (header !== BRIDGE_SECRET) {
     res.status(401).json({ error: "Unauthorized" })
     return
